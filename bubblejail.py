@@ -46,6 +46,7 @@ class BwrapArgs:
     read_only_binds: List[ReadOnlyBind]
     dir_create: List[DirCreate]
     symlinks: List[Symlink]
+    share_network: bool = False
 
 
 DEFAULT_CONFIG = BwrapArgs(
@@ -73,8 +74,17 @@ def run_bwrap(args_to_target: list, bwrap_config: BwrapArgs = DEFAULT_CONFIG):
     for symlink in bwrap_config.symlinks:
         bwrap_args.extend(symlink.to_args())
 
+    # Proc
+    bwrap_args.extend(('--proc', '/proc'))
+    # Devtmpfs
+    bwrap_args.extend(('--dev', '/dev'))
     # Unshare all
     bwrap_args.append('--unshare-all')
+    # Die with parent
+    bwrap_args.append('--die-with-parent')
+
+    if bwrap_config.share_network:
+        bwrap_args.append('--share-net')
 
     bwrap_args.extend(args_to_target)
     return sub_run(bwrap_args)
