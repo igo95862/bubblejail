@@ -17,6 +17,9 @@ def run_bwrap(args_to_target: List[str],
               bwrap_config: BwrapArgs = DEFAULT_CONFIG) -> 'Popen[bytes]':
     bwrap_args: List[str] = ['bwrap']
 
+    for bind_entity in bwrap_config.binds:
+        bwrap_args.extend(bind_entity.to_args())
+
     for ro_entity in bwrap_config.read_only_binds:
         bwrap_args.extend(ro_entity.to_args())
 
