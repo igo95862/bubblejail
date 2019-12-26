@@ -1,0 +1,3 @@
+
+class BubblejailException(Exception):
+    ...
