@@ -2,7 +2,7 @@ from dataclasses import dataclass, field
 from typing import List, Dict
 from pathlib import Path
 from .services import X11
-from .bwrap_config import BwrapArgs
+from .bwrap_config import BwrapArgs, Bind, DEFAULT_CONFIG
 
 
 @dataclass
@@ -11,10 +11,12 @@ class BubblejailBaseProfile:
     import_paths: List[str] = field(default_factory=list)
     services: List[BwrapArgs] = field(default_factory=list)
 
-    def generate_bw_args(self) -> BwrapArgs:
+    def generate_bw_args(self, home_path: Path) -> BwrapArgs:
         new_args = BwrapArgs()
         for x in self.services:
             new_args.extend(x)
+        new_args.extend(DEFAULT_CONFIG)
+        new_args.binds.append(Bind(str(home_path), '/home/user'))
         return new_args
 
 
