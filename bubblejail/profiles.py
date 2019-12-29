@@ -1,7 +1,7 @@
 from dataclasses import dataclass, field
 from typing import List, Dict
 from pathlib import Path
-from .services import X11, Network, Wayland
+from .services import X11, Network, Wayland, PulseAudio
 from .bwrap_config import BwrapArgs, Bind, DEFAULT_CONFIG
 
 
@@ -22,12 +22,14 @@ class BubblejailBaseProfile:
 
 FIREFOX_PROFILE = BubblejailBaseProfile(
     import_paths=[f'{Path.home()}/.mozzila/firefox'],
-    services=[X11, Network],
-    executable_name='firefox',)
+    services=[X11, Network, PulseAudio],
+    executable_name='firefox',
+)
 
 FIREFOX_WAYLAND_PROFILE = BubblejailBaseProfile(
-    services=[Wayland, Network],
-    executable_name='firefox'
+    import_paths=[f'{Path.home()}/.mozzila/firefox'],
+    services=[Wayland, Network, PulseAudio],
+    executable_name='firefox',
 )
 
 applications: Dict[str, BubblejailBaseProfile] = {

@@ -16,4 +16,10 @@ Wayland = BwrapArgs(
 Network = BwrapArgs()
 Network.share_network = True
 
+PulseAudio = BwrapArgs(
+    binds=[
+        Bind('/run/user/1000/pulse/native'),
+    ]
+)
+
 __all__ = ["X11", "Network"]
