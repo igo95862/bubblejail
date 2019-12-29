@@ -1,4 +1,4 @@
-from subprocess import Popen
+from subprocess import Popen, PIPE, STDOUT
 from typing import List, IO, Optional, Iterator
 from os import environ
 from tempfile import TemporaryFile
@@ -106,8 +106,15 @@ def run_bwrap(args_to_target: List[str],
     # Change directory
     bwrap_args.extend(('--chdir', '/home/user'))
     bwrap_args.extend(args_to_target)
-    p = Popen(bwrap_args, pass_fds=file_descriptors_to_pass)
-    p.wait()
+    p = Popen(bwrap_args, pass_fds=file_descriptors_to_pass,
+              stdout=PIPE, stderr=STDOUT)
+    print("Bubblewrap started")
+    try:
+        while True:
+            print(p.communicate())
+    except ValueError:
+        print("Bubblewrap terminated")
+
     return p
 
 
