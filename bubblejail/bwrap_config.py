@@ -89,7 +89,8 @@ class BwrapArgs:
         self.files.extend(other_bwrap_args.files)
         self.enviromental_variables.extend(
             other_bwrap_args.enviromental_variables)
-        self.share_network = other_bwrap_args.share_network
+        self.share_network = (
+            self.share_network or other_bwrap_args.share_network)
         self.env_no_unset.update(other_bwrap_args.env_no_unset)
 
 

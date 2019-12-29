@@ -9,4 +9,4 @@ X11 = BwrapArgs(
 Network = BwrapArgs()
 Network.share_network = True
 
-__all__ = ["X11"]
+__all__ = ["X11", "Network"]
