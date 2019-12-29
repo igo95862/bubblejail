@@ -1,7 +1,7 @@
 from dataclasses import dataclass, field
 from typing import List, Dict
 from pathlib import Path
-from .services import X11, Network
+from .services import X11, Network, Wayland
 from .bwrap_config import BwrapArgs, Bind, DEFAULT_CONFIG
 
 
@@ -25,8 +25,14 @@ FIREFOX_PROFILE = BubblejailBaseProfile(
     services=[X11, Network],
     executable_name='firefox',)
 
+FIREFOX_WAYLAND_PROFILE = BubblejailBaseProfile(
+    services=[Wayland, Network],
+    executable_name='firefox'
+)
+
 applications: Dict[str, BubblejailBaseProfile] = {
     'firefox': FIREFOX_PROFILE,
+    'firefox_wayland': FIREFOX_WAYLAND_PROFILE,
 }
 
 __all__ = ["FIREFOX_PROFILE"]
