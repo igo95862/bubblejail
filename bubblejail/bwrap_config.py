@@ -99,6 +99,7 @@ DEFAULT_CONFIG = BwrapArgs(
         ReadOnlyBind('/usr'),
         ReadOnlyBind('/etc/resolv.conf'),
         ReadOnlyBind('/etc/login.defs'),  # ???: is this file needed
+        ReadOnlyBind('/etc/fonts/')
     ],
 
     dir_create=[
