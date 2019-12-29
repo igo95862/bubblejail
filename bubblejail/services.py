@@ -21,7 +21,9 @@ Network.share_network = True
 PulseAudio = BwrapArgs(
     binds=[
         Bind(f"{BaseDirectory.get_runtime_dir()}/pulse/native"),
-    ]
+    ],
+    env_no_unset={'XDG_RUNTIME_DIR'},
+
 )
 
 __all__ = ["X11", "Network"]
