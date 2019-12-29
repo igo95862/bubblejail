@@ -176,7 +176,12 @@ def run_bjail(args: Namespace) -> None:
 
 
 def bjail_list(args: Namespace) -> None:
-    ...
+    if args.list_what == 'instances':
+        for x in iter_instance_names():
+            print(x)
+    elif args.list_what == 'profiles':
+        for x in applications:
+            print(x)
 
 
 def bjail_create(args: Namespace) -> None:
@@ -195,6 +200,10 @@ def main() -> None:
     parser_create.set_defaults(func=bjail_create)
     # list subcommand
     parser_list = subparcers.add_parser('list')
+    parser_list.add_argument(
+        'list_what',
+        choices=('instances', 'profiles'),
+        default='instances',)
     parser_list.set_defaults(func=bjail_list)
 
     args = parser.parse_args()
