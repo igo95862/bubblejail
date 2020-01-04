@@ -8,8 +8,10 @@ from .profiles import applications
 from pathlib import Path
 from argparse import ArgumentParser, Namespace
 from dataclasses import dataclass
-from json import load as json_load
+from json import load as json_load, dump as json_dump
 from .exceptions import BubblejailException
+from xdg import IniFile
+from xdg.BaseDirectory import xdg_data_home
 
 
 @dataclass
@@ -162,6 +164,38 @@ class BubblejailInstance:
                   app_profile.generate_bw_args(
                       self.instance_directory / 'home'))
 
+    def generate_dot_desktop(self) -> None:
+        new_dot_desktop = IniFile.IniFile()
+        group_name = 'Desktop Entry'
+        new_dot_desktop.addGroup(group_name)
+        new_dot_desktop.set(
+            key='Type', value='Application', group=group_name)
+        new_dot_desktop.set(
+            key='Name', value=f"{self.name} bubble", group=group_name)
+        new_dot_desktop.set(
+            key='Exec', value=f"bubblejail run {self.name}", group=group_name)
+
+        dot_desktop_path = (
+            f"{xdg_data_home}/applications/bubble_{self.name}.desktop")
+
+        new_dot_desktop.write(filename=dot_desktop_path)
+
+    @staticmethod
+    def create_new(new_name: str, profile_name: str) -> 'BubblejailInstance':
+        instance_directory = get_data_directory() / new_name
+
+        # Exception will be raised if directory already exists
+        instance_directory.mkdir(mode=0o700)
+        # Make home directory
+        (instance_directory / 'home').mkdir(mode=0o700)
+        # Make config.json
+        with (instance_directory / 'config.json').open(mode='x') as f:
+            json_dump({'profile': profile_name}, f)
+
+        instance = BubblejailInstance(new_name)
+        instance.generate_dot_desktop()
+        return instance
+
 
 def iter_instance_names() -> Iterator[str]:
     data_dir = get_data_directory()
@@ -185,7 +219,10 @@ def bjail_list(args: Namespace) -> None:
 
 
 def bjail_create(args: Namespace) -> None:
-    ...
+    BubblejailInstance.create_new(
+        new_name=args.new_instance_name,
+        profile_name=args.profile,
+    )
 
 
 def main() -> None:
@@ -198,6 +235,12 @@ def main() -> None:
     # create subcommand
     parser_create = subparcers.add_parser('create')
     parser_create.set_defaults(func=bjail_create)
+    parser_create.add_argument(
+        '--profile',
+        choices=applications.keys(),
+        required=True,
+    )
+    parser_create.add_argument('new_instance_name')
     # list subcommand
     parser_list = subparcers.add_parser('list')
     parser_list.add_argument(
