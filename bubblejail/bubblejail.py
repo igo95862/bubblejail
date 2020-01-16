@@ -142,8 +142,9 @@ def load_instance(instance_name: str) -> InstanceConfig:
 
 
 class BubblejailInstance:
-    def __init__(self, name: str):
+    def __init__(self, name: str, args_to_run: Optional[List[str]] = None):
         self.name = name
+        self.args_to_run = args_to_run
         self.instance_directory = get_data_directory() / self.name
         if not (
             (self.instance_directory.exists())
@@ -160,20 +161,45 @@ class BubblejailInstance:
 
     def run(self) -> None:
         app_profile = applications[self._read_config()]
-        run_bwrap([app_profile.executable_name],
+        args = [app_profile.executable_name]
+        if self.args_to_run is not None:
+            args.extend(self.args_to_run)
+        run_bwrap(args,
                   app_profile.generate_bw_args(
                       self.instance_directory / 'home'))
 
     def generate_dot_desktop(self) -> None:
-        new_dot_desktop = IniFile.IniFile()
-        group_name = 'Desktop Entry'
-        new_dot_desktop.addGroup(group_name)
+        new_dot_desktop = IniFile.IniFile(
+            filename=(f"/usr/share/applications/"
+                      f"{applications[self._read_config()].executable_name}"
+                      f".desktop"))
+
+        # Strip non Desktop Entry groups
+        # TODO: Modify actions instead of removing
+        groups_to_remove = []
+        for g in new_dot_desktop.groups():
+            if g != "Desktop Entry":
+                groups_to_remove.append(g)
+
+        for g in groups_to_remove:
+            new_dot_desktop.removeGroup(g)
+        # Modify Exec
+        old_exec = new_dot_desktop.get(
+            key='Exec', group='Desktop Entry'
+        )
+
         new_dot_desktop.set(
-            key='Type', value='Application', group=group_name)
+            key='Exec',
+            value=(f"bubblejail run {self.name} "
+                   f"{' '.join(old_exec.split()[1:])}"),
+            group='Desktop Entry')
+
+        # Modify name
         new_dot_desktop.set(
-            key='Name', value=f"{self.name} bubble", group=group_name)
-        new_dot_desktop.set(
-            key='Exec', value=f"bubblejail run {self.name}", group=group_name)
+            key="Name",
+            group='Desktop Entry',
+            value=f"{self.name} bubble",
+        )
 
         dot_desktop_path = (
             f"{xdg_data_home}/applications/bubble_{self.name}.desktop")
@@ -206,7 +232,7 @@ def iter_instance_names() -> Iterator[str]:
 
 def run_bjail(args: Namespace) -> None:
     instance_name = args.instance_name
-    BubblejailInstance(instance_name).run()
+    BubblejailInstance(instance_name, args.args_to_instance).run()
 
 
 def bjail_list(args: Namespace) -> None:
@@ -231,6 +257,10 @@ def main() -> None:
     # run subcommand
     parser_run = subparcers.add_parser('run')
     parser_run.add_argument('instance_name')
+    parser_run.add_argument(
+        'args_to_instance',
+        nargs='*',
+    )
     parser_run.set_defaults(func=run_bjail)
     # create subcommand
     parser_create = subparcers.add_parser('create')
