@@ -16,3 +16,9 @@ It is in very early development phase so expect bugs and lack of features.
 > bubblejail create --profile=firefox myfirefox
 
 1. The desktop entry should be created and can be found under name _myfirefox bubble_
+
+
+# Avalible profiles
+
+* Firefox
+* Firefox on wayland
