@@ -22,14 +22,18 @@ from .bwrap_config import (BwrapArgs, Bind, ReadOnlyBind,
 
 X11 = BwrapArgs(
     binds=[Bind(f"/tmp/.X11-unix/X{environ['DISPLAY'][1:]}")],
-    env_no_unset={'DISPLAY', },
+    env_no_unset={'DISPLAY',
+                  'XDG_CURRENT_DESKTOP', 'DESKTOP_SESSION',
+                  'XDG_SESSION_TYPE', 'XDG_SESSION_DESKTOP'},
     read_only_binds=[ReadOnlyBind('/etc/fonts/fonts.conf')],
 )
 
 Wayland = BwrapArgs(
     binds=[Bind((f"{BaseDirectory.get_runtime_dir()}"
                  f"/{environ['WAYLAND_DISPLAY']}")), ],
-    env_no_unset={'WAYLAND_DISPLAY', 'XDG_RUNTIME_DIR'},
+    env_no_unset={'WAYLAND_DISPLAY', 'XDG_RUNTIME_DIR',
+                  'XDG_CURRENT_DESKTOP', 'DESKTOP_SESSION',
+                  'XDG_SESSION_TYPE', 'XDG_SESSION_DESKTOP'},
     enviromental_variables=[EnvrimentalVar('GDK_BACKEND', 'wayland')])
 
 Network = BwrapArgs()
