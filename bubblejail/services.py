@@ -20,8 +20,10 @@ from os import environ
 from .bwrap_config import (BwrapArgs, Bind, ReadOnlyBind,
                            EnvrimentalVar)
 
+# TODO: Better handle missing resources such as no Wayland under pure X11
+
 X11 = BwrapArgs(
-    binds=[Bind(f"/tmp/.X11-unix/X{environ['DISPLAY'][1:]}")],
+    binds=[Bind(f"/tmp/.X11-unix/X{environ.get('DISPLAY', ':None')[1:]}")],
     env_no_unset={'DISPLAY',
                   'XDG_CURRENT_DESKTOP', 'DESKTOP_SESSION',
                   'XDG_SESSION_TYPE', 'XDG_SESSION_DESKTOP'},
@@ -30,7 +32,7 @@ X11 = BwrapArgs(
 
 Wayland = BwrapArgs(
     binds=[Bind((f"{BaseDirectory.get_runtime_dir()}"
-                 f"/{environ['WAYLAND_DISPLAY']}")), ],
+                 f"/{environ.get('WAYLAND_DISPLAY')}")), ],
     env_no_unset={'WAYLAND_DISPLAY', 'XDG_RUNTIME_DIR',
                   'XDG_CURRENT_DESKTOP', 'DESKTOP_SESSION',
                   'XDG_SESSION_TYPE', 'XDG_SESSION_DESKTOP'},
