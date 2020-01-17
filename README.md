@@ -22,3 +22,7 @@ It is in very early development phase so expect bugs and lack of features.
 
 * Firefox
 * Firefox on wayland
+
+# Known issues
+
+* No way to spawn new commands inside already launched sandbox. This will cause issues with such things as opening links in a browser from another application. Possible solution is to use --userns option of bubblewrap.
