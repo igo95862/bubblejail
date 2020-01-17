@@ -228,6 +228,13 @@ class BubblejailInstance:
             value=f"{self.name} bubble",
         )
 
+        # Modify StartupWMClass
+        new_dot_desktop.set(
+            key="StartupWMClass",
+            group='Desktop Entry',
+            value=f"{self.name} bubble",
+        )
+
         dot_desktop_path = (
             f"{xdg_data_home}/applications/bubble_{self.name}.desktop")
 
