@@ -28,6 +28,7 @@ from dataclasses import dataclass
 from json import load as json_load, dump as json_dump
 from .exceptions import BubblejailException
 from xdg import IniFile
+from xdg.Exceptions import NoKeyError as XdgNoKeyError
 from xdg.BaseDirectory import xdg_data_home
 
 
@@ -200,6 +201,15 @@ class BubblejailInstance:
 
         for g in groups_to_remove:
             new_dot_desktop.removeGroup(g)
+
+        # Remove Actions= from Desktop Entry
+        try:
+            new_dot_desktop.removeKey(
+                key='Actions',
+                group='Desktop Entry'
+            )
+        except XdgNoKeyError:
+            ...
         # Modify Exec
         old_exec = new_dot_desktop.get(
             key='Exec', group='Desktop Entry'
