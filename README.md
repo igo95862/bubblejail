@@ -9,7 +9,7 @@ It is in very early development phase so expect bugs and lack of features.
 
 # How to use
 
-1. Install bubblejail from AUR
+1. Install bubblejail from [AUR](https://aur.archlinux.org/packages/bubblejail-git/)
 1. Install the application you want to sandbox. (for example, firefox)
 1. Create an instance using the application profile
 
