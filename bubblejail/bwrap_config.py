@@ -97,6 +97,7 @@ class BwrapArgs:
     enviromental_variables: List[EnvrimentalVar] = field(default_factory=list)
     share_network: bool = False
     env_no_unset: Set[str] = field(default_factory=set)
+    extra_args: List[str] = field(default_factory=list)
 
     def extend(self, other_bwrap_args: 'BwrapArgs') -> None:
         self.binds.extend(other_bwrap_args.binds)
@@ -109,6 +110,7 @@ class BwrapArgs:
         self.share_network = (
             self.share_network or other_bwrap_args.share_network)
         self.env_no_unset.update(other_bwrap_args.env_no_unset)
+        self.extra_args.extend(other_bwrap_args.extra_args)
 
 
 DEFAULT_CONFIG = BwrapArgs(

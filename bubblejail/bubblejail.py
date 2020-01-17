@@ -125,6 +125,8 @@ def run_bwrap(args_to_target: List[str],
 
     # Change directory
     bwrap_args.extend(('--chdir', '/home/user'))
+    # Append extra args
+    args_to_target.extend(bwrap_config.extra_args)
     bwrap_args.extend(args_to_target)
     p = Popen(bwrap_args, pass_fds=file_descriptors_to_pass,
               stdout=PIPE, stderr=STDOUT)
