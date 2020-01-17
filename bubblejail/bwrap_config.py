@@ -16,8 +16,8 @@
 
 
 from dataclasses import dataclass, field
-from typing import List, Tuple, Optional, Set
-from os import getuid, getgid
+from os import getgid, getuid
+from typing import List, Optional, Set, Tuple
 
 
 @dataclass

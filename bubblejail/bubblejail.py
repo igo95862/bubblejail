@@ -15,21 +15,19 @@
 # along with bubblejail.  If not, see <https://www.gnu.org/licenses/>.
 
 
-from subprocess import Popen, PIPE, STDOUT
-from typing import List, IO, Optional, Iterator
-from os import environ
-from tempfile import TemporaryFile
-from .bwrap_config import (
-    DEFAULT_CONFIG, BwrapArgs, Bind)
-from .profiles import applications
-from pathlib import Path
 from argparse import ArgumentParser, Namespace
 from dataclasses import dataclass
-from json import load as json_load, dump as json_dump
+from json import load as json_load
+from os import environ
+from pathlib import Path
+from subprocess import PIPE, STDOUT, Popen
+from tempfile import TemporaryFile
+from typing import IO, Iterator, List, Optional
+
+from .bubblejail_instance import BubblejailInstance
+from .bwrap_config import DEFAULT_CONFIG, Bind, BwrapArgs
 from .exceptions import BubblejailException
-from xdg import IniFile
-from xdg.Exceptions import NoKeyError as XdgNoKeyError
-from xdg.BaseDirectory import xdg_data_home
+from .profiles import applications
 
 
 @dataclass
@@ -161,102 +159,17 @@ def load_instance(instance_name: str) -> InstanceConfig:
     return instance_config
 
 
-class BubblejailInstance:
-    def __init__(self, name: str, args_to_run: Optional[List[str]] = None):
-        self.name = name
-        self.args_to_run = args_to_run
-        self.instance_directory = get_data_directory() / self.name
-        if not (
-            (self.instance_directory.exists())
-                and (self.instance_directory.is_dir())):
-            raise BubblejailException("Instance directory does not exists")
+def run_instance(instance: BubblejailInstance) -> None:
+    app_profile = applications[instance._read_config()]
+    args = [app_profile.executable_name]
 
-    def _read_config(self) -> str:
+    if instance.args_to_run is not None:
+        args.extend(instance.args_to_run)
 
-        with (self.instance_directory / "config.json").open() as f:
-            instance_config = json_load(f)
-
-        profile_name: str = instance_config['profile']
-        return profile_name
-
-    def run(self) -> None:
-        app_profile = applications[self._read_config()]
-        args = [app_profile.executable_name]
-        if self.args_to_run is not None:
-            args.extend(self.args_to_run)
-        run_bwrap(args,
-                  app_profile.generate_bw_args(
-                      self.instance_directory / 'home'))
-
-    def generate_dot_desktop(self) -> None:
-        new_dot_desktop = IniFile.IniFile(
-            filename=(f"/usr/share/applications/"
-                      f"{applications[self._read_config()].executable_name}"
-                      f".desktop"))
-
-        # Strip non Desktop Entry groups
-        # TODO: Modify actions instead of removing
-        groups_to_remove = []
-        for g in new_dot_desktop.groups():
-            if g != "Desktop Entry":
-                groups_to_remove.append(g)
-
-        for g in groups_to_remove:
-            new_dot_desktop.removeGroup(g)
-
-        # Remove Actions= from Desktop Entry
-        try:
-            new_dot_desktop.removeKey(
-                key='Actions',
-                group='Desktop Entry'
-            )
-        except XdgNoKeyError:
-            ...
-        # Modify Exec
-        old_exec = new_dot_desktop.get(
-            key='Exec', group='Desktop Entry'
-        )
-
-        new_dot_desktop.set(
-            key='Exec',
-            value=(f"bubblejail run {self.name} "
-                   f"{' '.join(old_exec.split()[1:])}"),
-            group='Desktop Entry')
-
-        # Modify name
-        new_dot_desktop.set(
-            key="Name",
-            group='Desktop Entry',
-            value=f"{self.name} bubble",
-        )
-
-        # Modify StartupWMClass
-        new_dot_desktop.set(
-            key="StartupWMClass",
-            group='Desktop Entry',
-            value=f"{self.name} bubble",
-        )
-
-        dot_desktop_path = (
-            f"{xdg_data_home}/applications/bubble_{self.name}.desktop")
-
-        new_dot_desktop.write(filename=dot_desktop_path)
-
-    @staticmethod
-    def create_new(new_name: str, profile_name: str) -> 'BubblejailInstance':
-        instance_directory = get_data_directory() / new_name
-
-        # Exception will be raised if directory already exists
-        instance_directory.mkdir(mode=0o700)
-        # Make home directory
-        (instance_directory / 'home').mkdir(mode=0o700)
-        # Make config.json
-        with (instance_directory / 'config.json').open(mode='x') as f:
-            json_dump({'profile': profile_name}, f)
-
-        instance = BubblejailInstance(new_name)
-        instance.generate_dot_desktop()
-        return instance
+    run_bwrap(args,
+              app_profile.generate_bw_args(
+                  home_path=instance.instance_directory / 'home',
+                  instance=instance))
 
 
 def iter_instance_names() -> Iterator[str]:
@@ -268,7 +181,7 @@ def iter_instance_names() -> Iterator[str]:
 
 def run_bjail(args: Namespace) -> None:
     instance_name = args.instance_name
-    BubblejailInstance(instance_name, args.args_to_instance).run()
+    run_instance(BubblejailInstance(instance_name, args.args_to_instance))
 
 
 def bjail_list(args: Namespace) -> None:
@@ -281,9 +194,14 @@ def bjail_list(args: Namespace) -> None:
 
 
 def bjail_create(args: Namespace) -> None:
-    BubblejailInstance.create_new(
+    new_instance = BubblejailInstance.create_new(
         new_name=args.new_instance_name,
         profile_name=args.profile,
+    )
+    new_instance.generate_dot_desktop(
+        (f"/usr/share/applications/"
+         f"{applications[new_instance._read_config()].executable_name}"
+         f".desktop")
     )
 
 

@@ -17,3 +17,7 @@
 
 class BubblejailException(Exception):
     ...
+
+
+class FailedInitializeServiceError(BubblejailException):
+    ...
