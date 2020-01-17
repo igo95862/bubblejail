@@ -23,11 +23,16 @@ from .bwrap_config import (BwrapArgs, Bind, ReadOnlyBind,
 # TODO: Better handle missing resources such as no Wayland under pure X11
 
 X11 = BwrapArgs(
-    binds=[Bind(f"/tmp/.X11-unix/X{environ.get('DISPLAY', ':None')[1:]}")],
+    binds=[
+        Bind(f"/tmp/.X11-unix/X{environ.get('DISPLAY', ':None')[1:]}"),
+    ],
     env_no_unset={'DISPLAY',
                   'XDG_CURRENT_DESKTOP', 'DESKTOP_SESSION',
                   'XDG_SESSION_TYPE', 'XDG_SESSION_DESKTOP'},
-    read_only_binds=[ReadOnlyBind('/etc/fonts/fonts.conf')],
+    read_only_binds=[
+        ReadOnlyBind('/etc/fonts/fonts.conf'),
+        ReadOnlyBind(environ['XAUTHORITY'], '/tmp/.Xauthority')],
+    enviromental_variables=[EnvrimentalVar('XAUTHORITY', '/tmp/.Xauthority')],
 )
 
 Wayland = BwrapArgs(
