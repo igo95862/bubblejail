@@ -14,14 +14,12 @@
 # You should have received a copy of the GNU General Public License
 # along with bubblejail.  If not, see <https://www.gnu.org/licenses/>.
 
-
-class BubblejailException(Exception):
-    ...
-
-
-class FailedInitializeServiceError(BubblejailException):
-    ...
+from dataclasses import dataclass
+from typing import Optional
 
 
-class MissingConfigurationError(BubblejailException):
-    ...
+@dataclass
+class BubblejailInstanceConfig:
+    """Represents config.json"""
+    profile: str
+    executable_name: Optional[str] = None

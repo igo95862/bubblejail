@@ -16,78 +16,86 @@
 
 
 from os import environ
+from typing import FrozenSet, Optional
 
 from xdg import BaseDirectory
 
-from .bubblejail_instance import BubblejailInstance
-from .bwrap_config import Bind, BwrapArgs, EnvrimentalVar, ReadOnlyBind
+from .bwrap_config import Bind, BwrapConfig, EnvrimentalVar, ReadOnlyBind
 
-# TODO: Better handle missing resources such as no Wayland under pure X11
-
-
-XDG_DESKTOP_VARS = (
+XDG_DESKTOP_VARS: FrozenSet[str] = frozenset({
     'XDG_CURRENT_DESKTOP', 'DESKTOP_SESSION',
-    'XDG_SESSION_TYPE', 'XDG_SESSION_DESKTOP')
+    'XDG_SESSION_TYPE', 'XDG_SESSION_DESKTOP'})
 
 
-class BubblejailService(BwrapArgs):
-    def __init__(self, instance: BubblejailInstance):
-        super().__init__()
-        self.instance = instance
+class BubblejailService:
+    wants: Optional[FrozenSet[str]] = None
+
+    @staticmethod
+    def gen_bwrap_config(name: Optional[str] = None) -> BwrapConfig:
+        ...
 
 
 class X11(BubblejailService):
-
-    def __init__(self, instance: BubblejailInstance) -> None:
-        super().__init__(instance)
-        self.env_no_unset.update(XDG_DESKTOP_VARS)
-        self.binds.append(Bind(f"/tmp/.X11-unix/X{environ['DISPLAY'][1:]}"))
-        self.env_no_unset.add('DISPLAY')
-        self.read_only_binds.append(
-            ReadOnlyBind(environ['XAUTHORITY'], '/tmp/.Xauthority'))
-        self.read_only_binds.append(ReadOnlyBind('/etc/fonts/fonts.conf'))
-        self.enviromental_variables.append(
-            EnvrimentalVar('XAUTHORITY', '/tmp/.Xauthority'))
+    @staticmethod
+    def gen_bwrap_config(name: Optional[str] = None) -> BwrapConfig:
+        return BwrapConfig(
+            env_no_unset=XDG_DESKTOP_VARS.union(('DISPLAY',)),
+            binds=(
+                Bind(f"/tmp/.X11-unix/X{environ['DISPLAY'][1:]}"),
+            ),
+            read_only_binds=(
+                ReadOnlyBind(environ['XAUTHORITY'], '/tmp/.Xauthority'),
+                ReadOnlyBind('/etc/fonts/fonts.conf'),
+            ),
+            enviromental_variables=(
+                EnvrimentalVar('XAUTHORITY', '/tmp/.Xauthority'),
+            ),
+        )
 
 
 class Wayland(BubblejailService):
-
-    def __init__(self, instance: BubblejailInstance):
-        super().__init__(instance)
-        self.env_no_unset.update(XDG_DESKTOP_VARS)
-        self.enviromental_variables.append(
-            EnvrimentalVar('GDK_BACKEND', 'wayland')
+    @staticmethod
+    def gen_bwrap_config(name: Optional[str] = None) -> BwrapConfig:
+        return BwrapConfig(
+            env_no_unset=XDG_DESKTOP_VARS.union(('WAYLAND_DISPLAY',)),
+            enviromental_variables=(
+                EnvrimentalVar('GDK_BACKEND', 'wayland'),
+            ),
+            binds=(
+                Bind((
+                    f"{BaseDirectory.get_runtime_dir()}"
+                    f"/{environ.get('WAYLAND_DISPLAY')}")),
+            ),
         )
-        self.binds.append(
-            Bind((
-                f"{BaseDirectory.get_runtime_dir()}"
-                f"/{environ.get('WAYLAND_DISPLAY')}"))
-        )
-        self.env_no_unset.add('WAYLAND_DISPLAY')
 
 
 class Network(BubblejailService):
-
-    def __init__(self, instance: BubblejailInstance):
-        super().__init__(instance)
-        self.share_network = True
+    @staticmethod
+    def gen_bwrap_config(name: Optional[str] = None) -> BwrapConfig:
+        return BwrapConfig(share_network=True)
 
 
 class PulseAudio(BubblejailService):
-
-    def __init__(self, instance: BubblejailInstance) -> None:
-        super().__init__(instance)
-        self.env_no_unset.add('XDG_RUNTIME_DIR')
-        self.binds.append(
-            Bind(f"{BaseDirectory.get_runtime_dir()}/pulse/native"))
+    @staticmethod
+    def gen_bwrap_config(name: Optional[str] = None) -> BwrapConfig:
+        return BwrapConfig(
+            env_no_unset=frozenset(('XDG_RUNTIME_DIR', )),
+            binds=(
+                Bind(f"{BaseDirectory.get_runtime_dir()}/pulse/native"),
+            ),
+        )
 
 
 class GnomeToolKit(BubblejailService):
-    def __init__(self, instance: BubblejailInstance):
-        super().__init__(instance)
-        self.extra_args.extend(
-            ('--class', f"bubble_{instance.name}",
-             '--name', f"bubble_{instance.name}"))
+    wants = frozenset(('name',))
+
+    @staticmethod
+    def gen_bwrap_config(name: Optional[str] = None) -> BwrapConfig:
+        return BwrapConfig(
+            extra_args=(
+                '--class', f"bubble_{name}",
+                '--name', f"bubble_{name}")
+        )
 
 
 __all__ = ["X11", "Wayland", "PulseAudio", "Network", "GnomeToolKit"]

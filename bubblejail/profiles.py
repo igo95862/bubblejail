@@ -19,8 +19,6 @@ from dataclasses import dataclass, field
 from pathlib import Path
 from typing import Dict, List, Type
 
-from .bubblejail_instance import BubblejailInstance
-from .bwrap_config import DEFAULT_CONFIG, Bind, BwrapArgs
 from .services import (X11, BubblejailService, GnomeToolKit, Network,
                        PulseAudio, Wayland)
 
@@ -30,16 +28,6 @@ class BubblejailBaseProfile:
     executable_name: str
     import_paths: List[str] = field(default_factory=list)
     services: List[Type[BubblejailService]] = field(default_factory=list)
-
-    def generate_bw_args(self, home_path: Path,
-                         instance: BubblejailInstance) -> BwrapArgs:
-        new_args = BwrapArgs()
-        for x in self.services:
-            service = x(instance)
-            new_args.extend(service)
-        new_args.extend(DEFAULT_CONFIG)
-        new_args.binds.append(Bind(str(home_path), '/home/user'))
-        return new_args
 
 
 FIREFOX_PROFILE = BubblejailBaseProfile(
@@ -54,7 +42,7 @@ FIREFOX_WAYLAND_PROFILE = BubblejailBaseProfile(
     executable_name='firefox',
 )
 
-applications: Dict[str, BubblejailBaseProfile] = {
+profiles: Dict[str, BubblejailBaseProfile] = {
     'firefox': FIREFOX_PROFILE,
     'firefox_wayland': FIREFOX_WAYLAND_PROFILE,
 }

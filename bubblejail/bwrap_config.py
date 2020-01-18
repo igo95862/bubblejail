@@ -17,7 +17,7 @@
 
 from dataclasses import dataclass, field
 from os import getgid, getuid
-from typing import List, Optional, Set, Tuple
+from typing import FrozenSet, Optional, Tuple
 
 
 @dataclass
@@ -88,51 +88,41 @@ class Bind(BwrapConfigBase):
 
 
 @dataclass
-class BwrapArgs:
-    binds: List[Bind] = field(default_factory=list)
-    read_only_binds: List[ReadOnlyBind] = field(default_factory=list)
-    dir_create: List[DirCreate] = field(default_factory=list)
-    symlinks: List[Symlink] = field(default_factory=list)
-    files: List[FileTransfer] = field(default_factory=list)
-    enviromental_variables: List[EnvrimentalVar] = field(default_factory=list)
+class BwrapConfig:
+    binds: Tuple[Bind, ...] = tuple()
+    read_only_binds: Tuple[ReadOnlyBind, ...] = tuple()
+    dir_create: Tuple[DirCreate, ...] = tuple()
+    symlinks: Tuple[Symlink, ...] = tuple()
+    files: Tuple[FileTransfer, ...] = tuple()
+    enviromental_variables: Tuple[EnvrimentalVar, ...] = tuple()
+    env_no_unset: FrozenSet[str] = frozenset()
+    extra_args: Tuple[str, ...] = tuple()
     share_network: bool = False
-    env_no_unset: Set[str] = field(default_factory=set)
-    extra_args: List[str] = field(default_factory=list)
-
-    def extend(self, other_bwrap_args: 'BwrapArgs') -> None:
-        self.binds.extend(other_bwrap_args.binds)
-        self.read_only_binds.extend(other_bwrap_args.read_only_binds)
-        self.dir_create.extend(other_bwrap_args.dir_create)
-        self.symlinks.extend(other_bwrap_args.symlinks)
-        self.files.extend(other_bwrap_args.files)
-        self.enviromental_variables.extend(
-            other_bwrap_args.enviromental_variables)
-        self.share_network = (
-            self.share_network or other_bwrap_args.share_network)
-        self.env_no_unset.update(other_bwrap_args.env_no_unset)
-        self.extra_args.extend(other_bwrap_args.extra_args)
 
 
-DEFAULT_CONFIG = BwrapArgs(
-    read_only_binds=[
+DEFAULT_CONFIG = BwrapConfig(
+    read_only_binds=(
         ReadOnlyBind('/usr'),
         ReadOnlyBind('/etc/resolv.conf'),
         ReadOnlyBind('/etc/login.defs'),  # ???: is this file needed
         ReadOnlyBind('/etc/fonts/')
-    ],
+    ),
 
-    dir_create=[
+    dir_create=(
         DirCreate('/tmp'),
         DirCreate('/var'),
-        DirCreate('/home/user')],
+        DirCreate('/home/user')
+    ),
 
-    symlinks=[
+    symlinks=(
         Symlink('usr/lib', '/lib'),
         Symlink('usr/lib64', '/lib64'),
         Symlink('usr/bin', '/bin'),
-        Symlink('usr/sbin', '/sbin')],
+        Symlink('usr/sbin', '/sbin')
+    ),
 
-    files=[
+    # TODO: We dont need to accurately transition
+    files=(
         FileTransfer(
             bytes(f'user:x:{getuid()}:{getuid()}::/home/user:/bin/sh',
                   encoding='utf-8'),
@@ -140,14 +130,16 @@ DEFAULT_CONFIG = BwrapArgs(
 
         FileTransfer(bytes(f'user:x:{getgid()}:', encoding='utf-8'),
                      '/etc/group'),
-    ],
+    ),
 
-    enviromental_variables=[
+    enviromental_variables=(
         EnvrimentalVar('USER', 'user'),
         EnvrimentalVar('USERNAME', 'user'),
-    ],
+    ),
 
-    env_no_unset={
-        'LANG',
-    },
+    env_no_unset=frozenset(
+        (
+            'LANG'
+        )
+    )
 )
