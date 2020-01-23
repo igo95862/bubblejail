@@ -213,6 +213,11 @@ class BubblejailInstance:
             if e not in env_no_unset:
                 bwrap_args.extend(('--unsetenv', e))
 
+        # Bind new home
+        bwrap_args.extend(
+            ('--bind',
+             str(self.instance_directory / 'home'),
+             '/home/user/'))
         # Change directory
         bwrap_args.extend(('--chdir', '/home/user'))
 
