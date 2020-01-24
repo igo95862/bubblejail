@@ -20,7 +20,7 @@ from json import load as json_load
 from os import environ
 from pathlib import Path
 from socket import AF_UNIX, SOCK_STREAM, socket
-from subprocess import PIPE, STDOUT
+from subprocess import PIPE, STDOUT  # nosec
 from tempfile import TemporaryFile
 from typing import IO, Iterator, List, Optional, Set
 
