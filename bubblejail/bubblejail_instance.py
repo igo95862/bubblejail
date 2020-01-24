@@ -21,7 +21,7 @@ from json import dump as json_dump
 from json import load as json_load
 from os import environ
 from pathlib import Path
-from socket import AF_UNIX, SOCK_STREAM, socket, SocketType
+from socket import AF_UNIX, SOCK_STREAM, SocketType, socket
 from subprocess import run as sub_run  # nosec
 from tempfile import TemporaryFile
 from typing import IO, Iterator, List, Optional, Set
@@ -33,7 +33,8 @@ from xdg.Exceptions import NoKeyError as XdgNoKeyError
 from .bubblejail_instance_config import BubblejailInstanceConfig
 from .bwrap_config import DEFAULT_CONFIG, Bind, BwrapConfig
 from .exceptions import BubblejailException
-from .profiles import profiles
+from .profiles import PROFILES
+from .services import SERVICES
 
 
 def copy_data_to_temp_file(data: bytes) -> IO[bytes]:
@@ -65,17 +66,13 @@ class BubblejailInstance:
         self.socket_path: Optional[Path] = None
 
         self.instance_directory = get_data_directory() / self.name
-        if not ((
-                self.instance_directory.exists())
-                and(
-                self.instance_directory.is_dir())):
-            raise BubblejailException("Instance directory does not exists")
 
-        self.instance_config: BubblejailInstanceConfig = self._read_config()
-        self.profile = profiles[self.instance_config.profile]
-        if self.instance_config.executable_name is None:
-            self.instance_config.executable_name = (
-                self.profile.executable_name)
+        if not self.instance_directory.exists():
+            raise BubblejailException("Instance directory does not exist")
+
+        instance_config = self._read_config()
+        self.executable_name = instance_config.executable_name
+        self.services_config = instance_config.services
 
     def _read_config(self) -> BubblejailInstanceConfig:
         with (self.instance_directory / "config.json").open() as f:
@@ -142,21 +139,30 @@ class BubblejailInstance:
         # Make home directory
         (instance_directory / 'home').mkdir(mode=0o700)
         # Make config.json
-        with (instance_directory / 'config.json').open(mode='x') as f:
-            json_dump({'profile': profile_name}, f)
+        with (instance_directory / 'config.json').open(mode='x') as inst_cf:
+            profile = PROFILES[profile_name]
+
+            default_config = profile.default_instance_config
+
+            # Update service keys
+
+            for service_dict in default_config.services.values():
+                key_updates = {}
+                for key in service_dict:
+                    if key == 'name':
+                        key_updates[key] = new_name
+
+                service_dict.update(key_updates)
+
+            json_dump(default_config.__dict__, inst_cf, indent=2)
 
         instance = BubblejailInstance(new_name)
         return instance
 
     def iter_bwrap_configs(self) -> Iterator[BwrapConfig]:
         yield DEFAULT_CONFIG
-        for service in self.profile.services:
-            kwargs = {}
-            if service.wants:
-                if 'name' in service.wants:
-                    kwargs['name'] = self.name
-
-            yield service.gen_bwrap_config(**kwargs)
+        for service_name, service_conf in self.services_config.items():
+            yield SERVICES[service_name](**service_conf)
 
         # Bind home
         yield BwrapConfig(
@@ -265,11 +271,14 @@ class BubblejailInstance:
 
         if not debug_shell:
             # Add executable name
-            executable_name = self.instance_config.executable_name
-            if executable_name is not None:
-                bwrap_args.append(executable_name)
+            if self.executable_name is None:
+                raise ValueError("No executable")
+
+            if isinstance(self.executable_name, str):
+                bwrap_args.append(self.executable_name)
             else:
-                raise TypeError()
+                bwrap_args.extend(self.executable_name)
+
             # Add extra args
             bwrap_args.extend(extra_args)
             # Add called args

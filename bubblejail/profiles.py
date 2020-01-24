@@ -17,34 +17,60 @@
 
 from dataclasses import dataclass, field
 from pathlib import Path
-from typing import Dict, List, Type
+from typing import Dict, List
 
-from .services import (X11, BubblejailService, GnomeToolKit, Network,
-                       PulseAudio, Wayland)
+from .bubblejail_instance_config import BubblejailInstanceConfig
 
 
 @dataclass
-class BubblejailBaseProfile:
-    executable_name: str
+class BubblejailProfile:
+    default_instance_config: BubblejailInstanceConfig
+    dot_desktop_path: Path
     import_paths: List[str] = field(default_factory=list)
-    services: List[Type[BubblejailService]] = field(default_factory=list)
 
 
-FIREFOX_PROFILE = BubblejailBaseProfile(
+FIREFOX_PROFILE = BubblejailProfile(
     import_paths=[f'{Path.home()}/.mozzila/firefox'],
-    services=[X11, Network, PulseAudio, GnomeToolKit],
-    executable_name='firefox',
+    default_instance_config=BubblejailInstanceConfig(
+        executable_name='firefox',
+        services={
+            'x11': {},
+            'network': {},
+            'pulse_audio': {},
+            'gnome_tool_kit': {'name': 'required'},
+        }
+    ),
+    dot_desktop_path=Path('/usr/share/applications/firefox.desktop')
 )
 
-FIREFOX_WAYLAND_PROFILE = BubblejailBaseProfile(
+FIREFOX_WAYLAND_PROFILE = BubblejailProfile(
     import_paths=[f'{Path.home()}/.mozzila/firefox'],
-    services=[Wayland, Network, PulseAudio, GnomeToolKit],
-    executable_name='firefox',
+    default_instance_config=BubblejailInstanceConfig(
+        executable_name='firefox',
+        services={
+            'wayland': {},
+            'network': {},
+            'pulse_audio': {},
+            'gnome_tool_kit': {'name': 'required'},
+        }
+    ),
+    dot_desktop_path=Path('/usr/share/applications/firefox.desktop')
 )
 
-profiles: Dict[str, BubblejailBaseProfile] = {
+CODE_OSS = BubblejailProfile(
+    import_paths=[''],
+    default_instance_config=BubblejailInstanceConfig(
+        executable_name=['code-oss', '--wait'],
+        services={
+            'x11': {},
+            'network': {},
+        }
+    ),
+    dot_desktop_path=Path('/usr/share/applications/code-oss.desktop')
+)
+
+PROFILES: Dict[str, BubblejailProfile] = {
     'firefox': FIREFOX_PROFILE,
     'firefox_wayland': FIREFOX_WAYLAND_PROFILE,
+    'code_oss': CODE_OSS,
 }
-
-__all__ = ["FIREFOX_PROFILE"]

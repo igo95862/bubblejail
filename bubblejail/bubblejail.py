@@ -15,12 +15,13 @@
 # along with bubblejail.  If not, see <https://www.gnu.org/licenses/>.
 
 
+from argparse import REMAINDER as ARG_REMAINDER
 from argparse import ArgumentParser, Namespace
 from asyncio import run as async_run
 from typing import Iterator
 
 from .bubblejail_instance import BubblejailInstance, get_data_directory
-from .profiles import profiles
+from .profiles import PROFILES
 
 
 def iter_instance_names() -> Iterator[str]:
@@ -49,20 +50,17 @@ def bjail_list(args: Namespace) -> None:
         for x in iter_instance_names():
             print(x)
     elif args.list_what == 'profiles':
-        for x in profiles:
+        for x in PROFILES:
             print(x)
 
 
 def bjail_create(args: Namespace) -> None:
+    profile = PROFILES[args.profile]
     new_instance = BubblejailInstance.create_new(
         new_name=args.new_instance_name,
         profile_name=args.profile,
     )
-    new_instance.generate_dot_desktop(
-        (f"/usr/share/applications/"
-         f"{new_instance.instance_config.executable_name}"
-         f".desktop")
-    )
+    new_instance.generate_dot_desktop(str(profile.dot_desktop_path))
 
 
 def main() -> None:
@@ -78,7 +76,7 @@ def main() -> None:
     parser_run.add_argument('instance_name')
     parser_run.add_argument(
         'args_to_instance',
-        nargs='*',
+        nargs=ARG_REMAINDER,
     )
     parser_run.set_defaults(func=run_bjail)
     # create subcommand
@@ -86,7 +84,7 @@ def main() -> None:
     parser_create.set_defaults(func=bjail_create)
     parser_create.add_argument(
         '--profile',
-        choices=profiles.keys(),
+        choices=PROFILES.keys(),
         required=True,
     )
     parser_create.add_argument('new_instance_name')

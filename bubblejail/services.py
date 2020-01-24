@@ -16,7 +16,7 @@
 
 
 from os import environ
-from typing import FrozenSet, Optional
+from typing import Callable, Dict, FrozenSet
 
 from xdg import BaseDirectory
 
@@ -27,75 +27,61 @@ XDG_DESKTOP_VARS: FrozenSet[str] = frozenset({
     'XDG_SESSION_TYPE', 'XDG_SESSION_DESKTOP'})
 
 
-class BubblejailService:
-    wants: Optional[FrozenSet[str]] = None
-
-    @staticmethod
-    def gen_bwrap_config(name: Optional[str] = None) -> BwrapConfig:
-        ...
-
-
-class X11(BubblejailService):
-    @staticmethod
-    def gen_bwrap_config(name: Optional[str] = None) -> BwrapConfig:
-        return BwrapConfig(
-            env_no_unset=XDG_DESKTOP_VARS.union(('DISPLAY',)),
-            binds=(
-                Bind(f"/tmp/.X11-unix/X{environ['DISPLAY'][1:]}"),
-            ),
-            read_only_binds=(
-                ReadOnlyBind(environ['XAUTHORITY'], '/tmp/.Xauthority'),
-                ReadOnlyBind('/etc/fonts/fonts.conf'),
-            ),
-            enviromental_variables=(
-                EnvrimentalVar('XAUTHORITY', '/tmp/.Xauthority'),
-            ),
+def x11() -> BwrapConfig:
+    return BwrapConfig(
+        env_no_unset=XDG_DESKTOP_VARS.union(('DISPLAY',)),
+        binds=(
+            Bind(f"/tmp/.X11-unix/X{environ['DISPLAY'][1:]}"),
+        ),
+        read_only_binds=(
+            ReadOnlyBind(environ['XAUTHORITY'], '/tmp/.Xauthority'),
+            ReadOnlyBind('/etc/fonts/fonts.conf'),
+        ),
+        enviromental_variables=(
+            EnvrimentalVar('XAUTHORITY', '/tmp/.Xauthority'),
         )
+    )
 
 
-class Wayland(BubblejailService):
-    @staticmethod
-    def gen_bwrap_config(name: Optional[str] = None) -> BwrapConfig:
-        return BwrapConfig(
-            env_no_unset=XDG_DESKTOP_VARS.union(('WAYLAND_DISPLAY',)),
-            enviromental_variables=(
-                EnvrimentalVar('GDK_BACKEND', 'wayland'),
-            ),
-            binds=(
-                Bind((
-                    f"{BaseDirectory.get_runtime_dir()}"
-                    f"/{environ.get('WAYLAND_DISPLAY')}")),
-            ),
-        )
+def wayland() -> BwrapConfig:
+    return BwrapConfig(
+        env_no_unset=XDG_DESKTOP_VARS.union(('WAYLAND_DISPLAY',)),
+        enviromental_variables=(
+            EnvrimentalVar('GDK_BACKEND', 'wayland'),
+        ),
+        binds=(
+            Bind((
+                f"{BaseDirectory.get_runtime_dir()}"
+                f"/{environ.get('WAYLAND_DISPLAY')}")),
+        ),
+    )
 
 
-class Network(BubblejailService):
-    @staticmethod
-    def gen_bwrap_config(name: Optional[str] = None) -> BwrapConfig:
-        return BwrapConfig(share_network=True)
+def network() -> BwrapConfig:
+    return BwrapConfig(share_network=True)
 
 
-class PulseAudio(BubblejailService):
-    @staticmethod
-    def gen_bwrap_config(name: Optional[str] = None) -> BwrapConfig:
-        return BwrapConfig(
-            env_no_unset=frozenset(('XDG_RUNTIME_DIR', )),
-            binds=(
-                Bind(f"{BaseDirectory.get_runtime_dir()}/pulse/native"),
-            ),
-        )
+def pulse_audio() -> BwrapConfig:
+    return BwrapConfig(
+        env_no_unset=frozenset(('XDG_RUNTIME_DIR', )),
+        binds=(
+            Bind(f"{BaseDirectory.get_runtime_dir()}/pulse/native"),
+        ),
+    )
 
 
-class GnomeToolKit(BubblejailService):
-    wants = frozenset(('name',))
-
-    @staticmethod
-    def gen_bwrap_config(name: Optional[str] = None) -> BwrapConfig:
-        return BwrapConfig(
-            extra_args=(
-                '--class', f"bubble_{name}",
-                '--name', f"bubble_{name}")
-        )
+def gnome_tool_kit(name: str) -> BwrapConfig:
+    return BwrapConfig(
+        extra_args=(
+            '--class', f"bubble_{name}",
+            '--name', f"bubble_{name}")
+    )
 
 
-__all__ = ["X11", "Wayland", "PulseAudio", "Network", "GnomeToolKit"]
+SERVICES: Dict[str, Callable[..., BwrapConfig]] = {
+    'x11': x11,
+    'wayland': wayland,
+    'network': network,
+    'pulse_audio': pulse_audio,
+    'gnome_tool_kit': gnome_tool_kit,
+}

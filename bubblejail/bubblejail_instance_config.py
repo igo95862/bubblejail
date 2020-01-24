@@ -14,12 +14,12 @@
 # You should have received a copy of the GNU General Public License
 # along with bubblejail.  If not, see <https://www.gnu.org/licenses/>.
 
-from dataclasses import dataclass
-from typing import Optional
+from dataclasses import dataclass, field
+from typing import Dict, List, Optional, Union
 
 
 @dataclass
 class BubblejailInstanceConfig:
     """Represents config.json"""
-    profile: str
-    executable_name: Optional[str] = None
+    executable_name: Optional[Union[str, List[str]]] = None
+    services: Dict[str, Dict[str, str]] = field(default_factory=dict)
