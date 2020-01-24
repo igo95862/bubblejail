@@ -21,7 +21,7 @@ from json import dump as json_dump
 from json import load as json_load
 from os import environ
 from pathlib import Path
-from socket import AF_UNIX, SOCK_STREAM, socket
+from socket import AF_UNIX, SOCK_STREAM, socket, SocketType
 from subprocess import run as sub_run  # nosec
 from tempfile import TemporaryFile
 from typing import IO, Iterator, List, Optional, Set
@@ -56,6 +56,14 @@ def get_data_directory() -> Path:
 class BubblejailInstance:
     def __init__(self, name: str):
         self.name = name
+
+        # Prevent our temporary file from being garbage collected
+        self.temp_files: List[IO[bytes]] = []
+
+        # Unix Socket
+        self.socket: Optional[SocketType] = None
+        self.socket_path: Optional[Path] = None
+
         self.instance_directory = get_data_directory() / self.name
         if not ((
                 self.instance_directory.exists())
@@ -163,6 +171,31 @@ class BubblejailInstance:
         debug_shell: bool = False,
         dry_run: bool = False,
     ) -> None:
+        try:
+            await self.init_bwrap(
+                args_to_run=args_to_run,
+                debug_print_args=debug_print_args,
+                debug_shell=debug_shell,
+                dry_run=dry_run,
+            )
+        finally:
+            # Cleanup
+            for t in self.temp_files:
+                t.close()
+
+            if self.socket_path is not None:
+                self.socket_path.unlink()
+
+            if self.socket is not None:
+                self.socket.close()
+
+    async def init_bwrap(
+        self,
+        args_to_run: Optional[List[str]] = None,
+        debug_print_args: bool = False,
+        debug_shell: bool = False,
+        dry_run: bool = False,
+    ) -> None:
         bwrap_args: List[str] = ['bwrap']
 
         extra_args: List[str] = []
@@ -170,8 +203,6 @@ class BubblejailInstance:
 
         share_network: bool = False
 
-        # Prevent our temporary file from being garbage collected
-        temp_files: List[IO[bytes]] = []
         file_descriptors_to_pass: List[int] = []
 
         for bwrap_config in self.iter_bwrap_configs():
@@ -193,7 +224,7 @@ class BubblejailInstance:
             # Copy files
             for f in bwrap_config.files:
                 temp_f = copy_data_to_temp_file(f.content)
-                temp_files.append(temp_f)
+                self.temp_files.append(temp_f)
                 temp_file_descriptor = temp_f.fileno()
                 file_descriptors_to_pass.append(temp_file_descriptor)
                 bwrap_args.extend(
@@ -256,11 +287,11 @@ class BubblejailInstance:
             return
 
         # Create and bind socket
-        new_socket = socket(AF_UNIX, SOCK_STREAM)
+        self.socket = socket(AF_UNIX, SOCK_STREAM)
         socket_dir = Path(environ['XDG_RUNTIME_DIR']) / 'bubblejail'
         socket_dir.mkdir(mode=0o700, exist_ok=True)
-        socket_path = socket_dir / self.name
-        new_socket.bind(str(socket_path))
+        self.socket_path = socket_dir / self.name
+        self.socket.bind(str(self.socket_path))
         # Bind socket inside sandbox
 
         if not debug_shell:
@@ -277,5 +308,3 @@ class BubblejailInstance:
                 pass_fds=file_descriptors_to_pass,
             )
             print("Debug shell ended")
-
-        socket_path.unlink()
