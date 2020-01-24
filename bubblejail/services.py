@@ -16,7 +16,7 @@
 
 
 from os import environ
-from typing import Callable, Dict, FrozenSet
+from typing import Callable, Dict, FrozenSet, List
 
 from xdg import BaseDirectory
 
@@ -78,10 +78,18 @@ def gnome_tool_kit(name: str) -> BwrapConfig:
     )
 
 
+def home_share(home_paths: List[str]) -> BwrapConfig:
+    return BwrapConfig(
+        binds=tuple((Bind(environ['HOME'] + x, '/home/user' + x)
+                     for x in home_paths))
+    )
+
+
 SERVICES: Dict[str, Callable[..., BwrapConfig]] = {
     'x11': x11,
     'wayland': wayland,
     'network': network,
     'pulse_audio': pulse_audio,
     'gnome_tool_kit': gnome_tool_kit,
+    'home_share': home_share,
 }
