@@ -29,7 +29,7 @@ from xdg.BaseDirectory import xdg_data_home
 from xdg.Exceptions import NoKeyError as XdgNoKeyError
 
 from .bubblejail_instance_config import BubblejailInstanceConfig
-from .bwrap_config import DEFAULT_CONFIG, BwrapConfig
+from .bwrap_config import DEFAULT_CONFIG, Bind, BwrapConfig
 from .exceptions import BubblejailException
 from .profiles import profiles
 
@@ -148,6 +148,12 @@ class BubblejailInstance:
 
             yield service.gen_bwrap_config(**kwargs)
 
+        # Bind home
+        yield BwrapConfig(
+            binds=(Bind(str(self.instance_directory / 'home'), '/home/user/'),
+                   )
+        )
+
     async def async_run(self, args_to_run: Optional[List[str]] = None) -> None:
         bwrap_args: List[str] = ['bwrap']
 
@@ -215,11 +221,6 @@ class BubblejailInstance:
             if e not in env_no_unset:
                 bwrap_args.extend(('--unsetenv', e))
 
-        # Bind new home
-        bwrap_args.extend(
-            ('--bind',
-             str(self.instance_directory / 'home'),
-             '/home/user/'))
         # Change directory
         bwrap_args.extend(('--chdir', '/home/user'))
 
