@@ -188,6 +188,8 @@ class BubblejailInstance:
             # Set enviromental variables
             for env_var in bwrap_config.enviromental_variables:
                 bwrap_args.extend(env_var.to_args())
+                # Put them in to no unset as well
+                env_no_unset.add(env_var.var_name)
 
             # Append extra args
             extra_args.extend(bwrap_config.extra_args)
