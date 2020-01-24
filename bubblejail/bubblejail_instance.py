@@ -15,12 +15,14 @@
 # along with bubblejail.  If not, see <https://www.gnu.org/licenses/>.
 
 from asyncio import create_subprocess_exec
+from asyncio.subprocess import PIPE as asyncio_pipe
+from asyncio.subprocess import STDOUT as asyncio_stdout
 from json import dump as json_dump
 from json import load as json_load
 from os import environ
 from pathlib import Path
 from socket import AF_UNIX, SOCK_STREAM, socket
-from subprocess import PIPE, STDOUT  # nosec
+from subprocess import run as sub_run  # nosec
 from tempfile import TemporaryFile
 from typing import IO, Iterator, List, Optional, Set
 
@@ -154,7 +156,13 @@ class BubblejailInstance:
                    )
         )
 
-    async def async_run(self, args_to_run: Optional[List[str]] = None) -> None:
+    async def async_run(
+        self,
+        args_to_run: Optional[List[str]] = None,
+        debug_print_args: bool = False,
+        debug_shell: bool = False,
+        dry_run: bool = False,
+    ) -> None:
         bwrap_args: List[str] = ['bwrap']
 
         extra_args: List[str] = []
@@ -224,17 +232,28 @@ class BubblejailInstance:
         # Change directory
         bwrap_args.extend(('--chdir', '/home/user'))
 
-        # Add executable name
-        executable_name = self.instance_config.executable_name
-        if executable_name is not None:
-            bwrap_args.append(executable_name)
+        if not debug_shell:
+            # Add executable name
+            executable_name = self.instance_config.executable_name
+            if executable_name is not None:
+                bwrap_args.append(executable_name)
+            else:
+                raise TypeError()
+            # Add extra args
+            bwrap_args.extend(extra_args)
+            # Add called args
+            if args_to_run:
+                bwrap_args.extend(args_to_run)
         else:
-            raise TypeError()
-        # Add extra args
-        bwrap_args.extend(extra_args)
-        # Add called args
-        if args_to_run:
-            bwrap_args.extend(args_to_run)
+            # Run debug shell
+            bwrap_args.append('/bin/sh')
+
+        # Dump args if requested and exit
+        if debug_print_args:
+            print(' '.join(bwrap_args))
+
+        if dry_run:
+            return
 
         # Create and bind socket
         new_socket = socket(AF_UNIX, SOCK_STREAM)
@@ -244,11 +263,19 @@ class BubblejailInstance:
         new_socket.bind(str(socket_path))
         # Bind socket inside sandbox
 
-        p = await create_subprocess_exec(
-            *bwrap_args, pass_fds=file_descriptors_to_pass,
-            stdout=PIPE, stderr=STDOUT)
-        print("Bubblewrap started")
-        print(await p.communicate())
-        print("Bubblewrap terminated")
+        if not debug_shell:
+            p = await create_subprocess_exec(
+                *bwrap_args, pass_fds=file_descriptors_to_pass,
+                stdout=asyncio_pipe, stderr=asyncio_stdout)
+            print("Bubblewrap started")
+            print(await p.communicate())
+            print("Bubblewrap terminated")
+        else:
+            print("Starting debug shell")
+            sub_run(  # nosec
+                args=bwrap_args,
+                pass_fds=file_descriptors_to_pass,
+            )
+            print("Debug shell ended")
 
         socket_path.unlink()

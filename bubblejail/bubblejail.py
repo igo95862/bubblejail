@@ -32,8 +32,16 @@ def iter_instance_names() -> Iterator[str]:
 
 def run_bjail(args: Namespace) -> None:
     instance_name = args.instance_name
+
     async_run(
-        BubblejailInstance(instance_name).async_run(args.args_to_instance))
+        BubblejailInstance(
+            instance_name
+        ).async_run(
+            args_to_run=args.args_to_instance,
+            debug_print_args=args.debug_print_args,
+            debug_shell=args.debug_shell,
+            dry_run=args.dry_run,
+        ))
 
 
 def bjail_list(args: Namespace) -> None:
@@ -62,6 +70,11 @@ def main() -> None:
     subparcers = parser.add_subparsers()
     # run subcommand
     parser_run = subparcers.add_parser('run')
+    if __debug__:
+        parser_run.add_argument('--debug-print-args', action='store_true')
+        parser_run.add_argument('--debug-shell', action='store_true')
+        parser_run.add_argument('--dry-run', action='store_true')
+
     parser_run.add_argument('instance_name')
     parser_run.add_argument(
         'args_to_instance',
