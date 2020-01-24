@@ -161,14 +161,15 @@ class BubblejailInstance:
 
     def iter_bwrap_configs(self) -> Iterator[BwrapConfig]:
         yield DEFAULT_CONFIG
-        for service_name, service_conf in self.services_config.items():
-            yield SERVICES[service_name](**service_conf)
 
         # Bind home
         yield BwrapConfig(
             binds=(Bind(str(self.instance_directory / 'home'), '/home/user/'),
                    )
         )
+
+        for service_name, service_conf in self.services_config.items():
+            yield SERVICES[service_name](**service_conf)
 
     async def async_run(
         self,
