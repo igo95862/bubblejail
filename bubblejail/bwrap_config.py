@@ -105,7 +105,8 @@ DEFAULT_CONFIG = BwrapConfig(
         ReadOnlyBind('/usr'),
         ReadOnlyBind('/etc/resolv.conf'),
         ReadOnlyBind('/etc/login.defs'),  # ???: is this file needed
-        ReadOnlyBind('/etc/fonts/')
+        ReadOnlyBind('/etc/fonts/'),
+        ReadOnlyBind('/opt'),
     ),
 
     dir_create=(
@@ -135,6 +136,7 @@ DEFAULT_CONFIG = BwrapConfig(
     enviromental_variables=(
         EnvrimentalVar('USER', 'user'),
         EnvrimentalVar('USERNAME', 'user'),
+        EnvrimentalVar('HOME', '/home/user/')
     ),
 
     env_no_unset=frozenset(
