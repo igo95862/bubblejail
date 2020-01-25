@@ -17,9 +17,11 @@
 from dataclasses import dataclass, field
 from typing import Dict, List, Optional, Union
 
+TypeServiceConfig = Dict[str, Dict[str, Union[str, List[str]]]]
+
 
 @dataclass
 class BubblejailInstanceConfig:
     """Represents config.json"""
     executable_name: Optional[Union[str, List[str]]] = None
-    services: Dict[str, Dict[str, str]] = field(default_factory=dict)
+    services: TypeServiceConfig = field(default_factory=dict)
