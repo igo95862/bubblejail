@@ -38,6 +38,7 @@ FIREFOX_PROFILE = BubblejailProfile(
             'network': {},
             'pulse_audio': {},
             'gnome_tool_kit': {'name': 'required'},
+            'home_share': {'home_paths': ['/Downloads']},
         }
     ),
     dot_desktop_path=Path('/usr/share/applications/firefox.desktop')
@@ -52,6 +53,7 @@ FIREFOX_WAYLAND_PROFILE = BubblejailProfile(
             'network': {},
             'pulse_audio': {},
             'gnome_tool_kit': {'name': 'required'},
+            'home_share': {'home_paths': ['/Downloads']},
         }
     ),
     dot_desktop_path=Path('/usr/share/applications/firefox.desktop')
@@ -64,6 +66,7 @@ CODE_OSS = BubblejailProfile(
         services={
             'x11': {},
             'network': {},
+            'home_share': {'home_paths': ['/Projects']},
         }
     ),
     dot_desktop_path=Path('/usr/share/applications/code-oss.desktop')
