@@ -84,6 +84,12 @@ Firefox running on wayland without Xwayland access. Tested on GNOME not sure if 
 
 Profile name: firefox_wayland
 
+### Code OSS
+
+Open source build of VScode.
+
+Profile name: code_oss
+
 ## Known issues
 
 * No way to spawn new commands inside already launched sandbox. This will cause issues with such things as opening links in a browser from another application. Possible solution is to use --userns option of bubblewrap.
