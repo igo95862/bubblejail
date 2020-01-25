@@ -55,12 +55,13 @@ def bjail_list(args: Namespace) -> None:
 
 
 def bjail_create(args: Namespace) -> None:
-    profile = PROFILES[args.profile]
+    profile = PROFILES.get(args.profile)
     new_instance = BubblejailInstance.create_new(
         new_name=args.new_instance_name,
         profile_name=args.profile,
     )
-    new_instance.generate_dot_desktop(str(profile.dot_desktop_path))
+    if profile is not None:
+        new_instance.generate_dot_desktop(str(profile.dot_desktop_path))
 
 
 def main() -> None:
@@ -85,7 +86,6 @@ def main() -> None:
     parser_create.add_argument(
         '--profile',
         choices=PROFILES.keys(),
-        required=True,
     )
     parser_create.add_argument('new_instance_name')
     # list subcommand

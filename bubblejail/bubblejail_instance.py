@@ -131,7 +131,10 @@ class BubblejailInstance:
         new_dot_desktop.write(filename=dot_desktop_path)
 
     @staticmethod
-    def create_new(new_name: str, profile_name: str) -> 'BubblejailInstance':
+    def create_new(
+            new_name: str,
+            profile_name: Optional[str] = None
+    ) -> 'BubblejailInstance':
         instance_directory = get_data_directory() / new_name
 
         # Exception will be raised if directory already exists
@@ -140,12 +143,13 @@ class BubblejailInstance:
         (instance_directory / 'home').mkdir(mode=0o700)
         # Make config.json
         with (instance_directory / 'config.json').open(mode='x') as inst_cf:
-            profile = PROFILES[profile_name]
-
-            default_config = profile.default_instance_config
+            if profile_name is not None:
+                profile = PROFILES[profile_name]
+                default_config = profile.default_instance_config
+            else:
+                default_config = BubblejailInstanceConfig()
 
             # Update service keys
-
             for service_dict in default_config.services.values():
                 key_updates = {}
                 for key in service_dict:
