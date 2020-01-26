@@ -16,11 +16,13 @@
 
 
 from os import environ
-from typing import Callable, Dict, FrozenSet, List
+from pathlib import Path
+from typing import Callable, Dict, FrozenSet, List, Set
 
 from xdg import BaseDirectory
 
-from .bwrap_config import Bind, BwrapConfig, EnvrimentalVar, ReadOnlyBind
+from .bwrap_config import (Bind, BwrapConfig, EnvrimentalVar, ReadOnlyBind,
+                           Symlink)
 
 XDG_DESKTOP_VARS: FrozenSet[str] = frozenset({
     'XDG_CURRENT_DESKTOP', 'DESKTOP_SESSION',
@@ -85,6 +87,45 @@ def home_share(home_paths: List[str]) -> BwrapConfig:
     )
 
 
+def direct_rendering() -> BwrapConfig:
+    # TODO: Allow to select which DRM devices to pass
+
+    # Bind /dev/dri and /sys/dev/char and /sys/devices
+    symlinks: List[Symlink] = []
+
+    final_paths: Set[str] = set()
+    # Get names of cardX and renderX in /dev/dri
+    dev_dri_path = Path('/dev/dri/')
+    device_names = set()
+    for x in dev_dri_path.iterdir():
+        if x.is_char_device():
+            device_names.add(x.stem)
+
+    # Resolve links in /sys/dev/char/
+    sys_dev_char_path = Path('/sys/dev/char/')
+    # For each symlink in /sys/dev/char/ resolve
+    # and see if they point to cardX or renderX
+    for x in sys_dev_char_path.iterdir():
+        x_resolved = x.resolve()
+        if x_resolved.stem in device_names:
+            # Found the dri device
+            # Add the /sys/dev/char/ path
+            symlinks.append(Symlink(str(x_resolved), str(x)))
+            # Add the two times parent (parents[1])
+            # Seems like the dri devices are stored as
+            # /sys/devices/..pcie_id../drm/dri
+            # We want to bind the /sys/devices/..pcie_id../
+            final_paths.add(str(x_resolved.parents[1]))
+
+    dri_binds = [Bind('/dev/dri')]
+    dri_binds.extend((Bind(x) for x in final_paths))
+
+    return BwrapConfig(
+        binds=tuple(dri_binds),
+        symlinks=tuple(symlinks),
+    )
+
+
 SERVICES: Dict[str, Callable[..., BwrapConfig]] = {
     'x11': x11,
     'wayland': wayland,
@@ -92,4 +133,5 @@ SERVICES: Dict[str, Callable[..., BwrapConfig]] = {
     'pulse_audio': pulse_audio,
     'gnome_tool_kit': gnome_tool_kit,
     'home_share': home_share,
+    'direct_rendering': direct_rendering,
 }
