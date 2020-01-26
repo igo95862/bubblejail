@@ -146,7 +146,7 @@ DEFAULT_CONFIG = BwrapConfig(
     enviromental_variables=(
         EnvrimentalVar('USER', 'user'),
         EnvrimentalVar('USERNAME', 'user'),
-        EnvrimentalVar('HOME', '/home/user/'),
+        EnvrimentalVar('HOME', '/home/user'),
         EnvrimentalVar('PATH', generate_path_var()),
     ),
 
