@@ -19,6 +19,7 @@ from argparse import REMAINDER as ARG_REMAINDER
 from argparse import ArgumentParser, Namespace
 from asyncio import run as async_run
 from typing import Iterator
+from sys import exit
 
 from .bubblejail_instance import BubblejailInstance, get_data_directory
 from .profiles import PROFILES
@@ -97,4 +98,9 @@ def main() -> None:
     parser_list.set_defaults(func=bjail_list)
 
     args = parser.parse_args()
-    args.func(args)
+
+    try:
+        args.func(args)
+    except AttributeError:
+        parser.error("No command specified")
+        exit(1)
