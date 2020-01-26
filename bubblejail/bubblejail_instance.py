@@ -218,6 +218,15 @@ class BubblejailInstance:
 
         file_descriptors_to_pass: List[int] = []
 
+        # Proc
+        bwrap_args.extend(('--proc', '/proc'))
+        # Devtmpfs
+        bwrap_args.extend(('--dev', '/dev'))
+        # Unshare all
+        bwrap_args.append('--unshare-all')
+        # Die with parent
+        bwrap_args.append('--die-with-parent')
+
         for bwrap_config in self.iter_bwrap_configs():
             for bind_entity in bwrap_config.binds:
                 bwrap_args.extend(bind_entity.to_args())
@@ -254,15 +263,6 @@ class BubblejailInstance:
 
             # Add env vars to no unset set
             env_no_unset.update(bwrap_config.env_no_unset)
-
-        # Proc
-        bwrap_args.extend(('--proc', '/proc'))
-        # Devtmpfs
-        bwrap_args.extend(('--dev', '/dev'))
-        # Unshare all
-        bwrap_args.append('--unshare-all')
-        # Die with parent
-        bwrap_args.append('--die-with-parent')
 
         # Share network if set
         if share_network:
