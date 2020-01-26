@@ -207,6 +207,8 @@ class BubblejailInstance:
         debug_shell: bool = False,
         dry_run: bool = False,
     ) -> None:
+        # TODO: Reorganize the order to allow for
+        # better binding multiple resources in same filesystem path
         bwrap_args: List[str] = ['bwrap']
 
         extra_args: List[str] = []
