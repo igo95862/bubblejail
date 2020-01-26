@@ -18,6 +18,7 @@
 from dataclasses import dataclass, field
 from os import getgid, getuid
 from typing import FrozenSet, Optional, Tuple
+from os import environ
 
 
 @dataclass
@@ -100,6 +101,15 @@ class BwrapConfig:
     share_network: bool = False
 
 
+def generate_path_var() -> str:
+    """Filters PATH variable to locations with /usr prefix"""
+
+    # Split by semicolon
+    paths = environ['PATH'].split(':')
+    # Filter by /usr/ then join by semicolon
+    return ':'.join(filter(lambda s: s.startswith('/usr/'), paths))
+
+
 DEFAULT_CONFIG = BwrapConfig(
     read_only_binds=(
         ReadOnlyBind('/usr'),
@@ -136,7 +146,8 @@ DEFAULT_CONFIG = BwrapConfig(
     enviromental_variables=(
         EnvrimentalVar('USER', 'user'),
         EnvrimentalVar('USERNAME', 'user'),
-        EnvrimentalVar('HOME', '/home/user/')
+        EnvrimentalVar('HOME', '/home/user/'),
+        EnvrimentalVar('PATH', generate_path_var()),
     ),
 
     env_no_unset=frozenset(
