@@ -60,7 +60,13 @@ def wayland() -> BwrapConfig:
 
 
 def network() -> BwrapConfig:
-    return BwrapConfig(share_network=True)
+    return BwrapConfig(
+        share_network=True,
+        read_only_binds=(
+            ReadOnlyBind('/etc/ca-certificates'),
+            ReadOnlyBind('/etc/ssl'),
+        )
+    )
 
 
 def pulse_audio() -> BwrapConfig:
