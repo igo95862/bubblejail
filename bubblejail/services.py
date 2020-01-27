@@ -21,12 +21,75 @@ from typing import Callable, Dict, FrozenSet, List, Set
 
 from xdg import BaseDirectory
 
-from .bwrap_config import (Bind, BwrapConfig, DevBind, EnvrimentalVar,
-                           ReadOnlyBind, Symlink)
+from .bwrap_config import (Bind, BwrapConfig, DevBind, DirCreate,
+                           EnvrimentalVar, FileTransfer, ReadOnlyBind, Symlink)
 
 XDG_DESKTOP_VARS: FrozenSet[str] = frozenset({
     'XDG_CURRENT_DESKTOP', 'DESKTOP_SESSION',
     'XDG_SESSION_TYPE', 'XDG_SESSION_DESKTOP'})
+
+
+def generate_path_var() -> str:
+    """Filters PATH variable to locations with /usr prefix"""
+
+    # Split by semicolon
+    paths = environ['PATH'].split(':')
+    # Insert /tmp/bin infront for hacks like steam with pulseaudio
+    # O(n) insertion but PATH should never be large
+    paths.insert(0, '/tmp/bin')
+    # Filter by /usr and /tmp then join by semicolon
+    return ':'.join(filter(
+        lambda s: s.startswith('/usr/') or s.startswith('/tmp/'),
+        paths))
+
+
+DEFAULT_CONFIG = BwrapConfig(
+    read_only_binds=(
+        ReadOnlyBind('/usr'),
+        ReadOnlyBind('/etc/resolv.conf'),
+        ReadOnlyBind('/etc/login.defs'),  # ???: is this file needed
+        ReadOnlyBind('/etc/fonts/'),
+        ReadOnlyBind('/opt'),
+    ),
+
+    dir_create=(
+        DirCreate('/tmp'),
+        DirCreate('/var'),
+        DirCreate('/home/user'),
+        DirCreate('/run/user/1000'),
+    ),
+
+    symlinks=(
+        Symlink('usr/lib', '/lib'),
+        Symlink('usr/lib64', '/lib64'),
+        Symlink('usr/bin', '/bin'),
+        Symlink('usr/sbin', '/sbin')
+    ),
+
+    files=(
+        FileTransfer(
+            b'user:x:1000:1000::/home/user:/bin/sh',
+            '/etc/passwd'),
+
+        FileTransfer(
+            b'user:x:1000:',
+            '/etc/group'),
+    ),
+
+    enviromental_variables=(
+        EnvrimentalVar('USER', 'user'),
+        EnvrimentalVar('USERNAME', 'user'),
+        EnvrimentalVar('HOME', '/home/user'),
+        EnvrimentalVar('PATH', generate_path_var()),
+        EnvrimentalVar('XDG_RUNTIME_DIR', '/run/user/1000'),
+    ),
+
+    env_no_unset=frozenset(
+        (
+            'LANG'
+        )
+    )
+)
 
 
 def x11() -> BwrapConfig:

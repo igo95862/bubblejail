@@ -31,10 +31,10 @@ from xdg.BaseDirectory import xdg_data_home
 from xdg.Exceptions import NoKeyError as XdgNoKeyError
 
 from .bubblejail_instance_config import BubblejailInstanceConfig
-from .bwrap_config import DEFAULT_CONFIG, Bind, BwrapConfig
+from .bwrap_config import Bind, BwrapConfig
 from .exceptions import BubblejailException
 from .profiles import PROFILES
-from .services import SERVICES
+from .services import DEFAULT_CONFIG, SERVICES
 
 
 def copy_data_to_temp_file(data: bytes) -> IO[bytes]:

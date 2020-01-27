@@ -16,7 +16,6 @@
 
 
 from dataclasses import dataclass, field
-from os import environ, getgid, getuid
 from typing import FrozenSet, Optional, Tuple, Union
 
 
@@ -103,65 +102,3 @@ class BwrapConfig:
     env_no_unset: FrozenSet[str] = frozenset()
     extra_args: Tuple[str, ...] = tuple()
     share_network: bool = False
-
-
-def generate_path_var() -> str:
-    """Filters PATH variable to locations with /usr prefix"""
-
-    # Split by semicolon
-    paths = environ['PATH'].split(':')
-    # Insert /tmp/bin infront for hacks like steam with pulseaudio
-    # O(n) insertion but PATH should never be large
-    paths.insert(0, '/tmp/bin')
-    # Filter by /usr and /tmp then join by semicolon
-    return ':'.join(filter(
-        lambda s: s.startswith('/usr/') or s.startswith('/tmp/'),
-        paths))
-
-
-DEFAULT_CONFIG = BwrapConfig(
-    read_only_binds=(
-        ReadOnlyBind('/usr'),
-        ReadOnlyBind('/etc/resolv.conf'),
-        ReadOnlyBind('/etc/login.defs'),  # ???: is this file needed
-        ReadOnlyBind('/etc/fonts/'),
-        ReadOnlyBind('/opt'),
-    ),
-
-    dir_create=(
-        DirCreate('/tmp'),
-        DirCreate('/var'),
-        DirCreate('/home/user')
-    ),
-
-    symlinks=(
-        Symlink('usr/lib', '/lib'),
-        Symlink('usr/lib64', '/lib64'),
-        Symlink('usr/bin', '/bin'),
-        Symlink('usr/sbin', '/sbin')
-    ),
-
-    # TODO: We dont need to accurately transition
-    files=(
-        FileTransfer(
-            bytes(f'user:x:{getuid()}:{getuid()}::/home/user:/bin/sh',
-                  encoding='utf-8'),
-            '/etc/passwd'),
-
-        FileTransfer(bytes(f'user:x:{getgid()}:', encoding='utf-8'),
-                     '/etc/group'),
-    ),
-
-    enviromental_variables=(
-        EnvrimentalVar('USER', 'user'),
-        EnvrimentalVar('USERNAME', 'user'),
-        EnvrimentalVar('HOME', '/home/user'),
-        EnvrimentalVar('PATH', generate_path_var()),
-    ),
-
-    env_no_unset=frozenset(
-        (
-            'LANG'
-        )
-    )
-)
