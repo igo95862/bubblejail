@@ -75,6 +75,9 @@ def pulse_audio() -> BwrapConfig:
         binds=(
             Bind(f"{BaseDirectory.get_runtime_dir()}/pulse/native"),
         ),
+        symlinks=(  # Steam hack but seems to be caused by arch linux patch
+            Symlink('/usr/bin/true', '/tmp/bin/pulseaudio'),
+        )
     )
 
 

@@ -110,8 +110,13 @@ def generate_path_var() -> str:
 
     # Split by semicolon
     paths = environ['PATH'].split(':')
-    # Filter by /usr/ then join by semicolon
-    return ':'.join(filter(lambda s: s.startswith('/usr/'), paths))
+    # Insert /tmp/bin infront for hacks like steam with pulseaudio
+    # O(n) insertion but PATH should never be large
+    paths.insert(0, '/tmp/bin')
+    # Filter by /usr and /tmp then join by semicolon
+    return ':'.join(filter(
+        lambda s: s.startswith('/usr/') or s.startswith('/tmp/'),
+        paths))
 
 
 DEFAULT_CONFIG = BwrapConfig(
