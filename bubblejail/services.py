@@ -21,8 +21,8 @@ from typing import Callable, Dict, FrozenSet, List, Set
 
 from xdg import BaseDirectory
 
-from .bwrap_config import (Bind, BwrapConfig, EnvrimentalVar, ReadOnlyBind,
-                           Symlink)
+from .bwrap_config import (Bind, BwrapConfig, DevBind, EnvrimentalVar,
+                           ReadOnlyBind, Symlink)
 
 XDG_DESKTOP_VARS: FrozenSet[str] = frozenset({
     'XDG_CURRENT_DESKTOP', 'DESKTOP_SESSION',
@@ -123,8 +123,8 @@ def direct_rendering() -> BwrapConfig:
             # We want to bind the /sys/devices/..pcie_id../
             final_paths.add(str(x_resolved.parents[1]))
 
-    dri_binds = [Bind('/dev/dri')]
-    dri_binds.extend((Bind(x) for x in final_paths))
+    dri_binds = [DevBind('/dev/dri')]
+    dri_binds.extend((DevBind(x) for x in final_paths))
 
     return BwrapConfig(
         binds=tuple(dri_binds),

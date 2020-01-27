@@ -16,9 +16,8 @@
 
 
 from dataclasses import dataclass, field
-from os import getgid, getuid
-from typing import FrozenSet, Optional, Tuple
-from os import environ
+from os import environ, getgid, getuid
+from typing import FrozenSet, Optional, Tuple, Union
 
 
 @dataclass
@@ -89,8 +88,13 @@ class Bind(BwrapConfigBase):
 
 
 @dataclass
+class DevBind(Bind):
+    arg_word = '--dev-bind'
+
+
+@dataclass
 class BwrapConfig:
-    binds: Tuple[Bind, ...] = tuple()
+    binds: Tuple[Union[Bind, DevBind], ...] = tuple()
     read_only_binds: Tuple[ReadOnlyBind, ...] = tuple()
     dir_create: Tuple[DirCreate, ...] = tuple()
     symlinks: Tuple[Symlink, ...] = tuple()
