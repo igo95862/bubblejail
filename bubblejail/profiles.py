@@ -72,8 +72,23 @@ CODE_OSS = BubblejailProfile(
     dot_desktop_path=Path('/usr/share/applications/code-oss.desktop')
 )
 
+STEAM = BubblejailProfile(
+    import_paths=[''],
+    default_instance_config=BubblejailInstanceConfig(
+        executable_name='steam-native',
+        services={
+            'x11': {},
+            'pulse_audio': {},
+            'network': {},
+            'direct_rendering': {},
+        }
+    ),
+    dot_desktop_path=Path('/usr/share/applications/steam.desktop'),
+)
+
 PROFILES: Dict[str, BubblejailProfile] = {
     'firefox': FIREFOX_PROFILE,
     'firefox_wayland': FIREFOX_WAYLAND_PROFILE,
     'code_oss': CODE_OSS,
+    'steam': STEAM,
 }
