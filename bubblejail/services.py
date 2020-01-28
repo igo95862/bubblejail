@@ -58,6 +58,31 @@ def generate_group() -> FileTransfer:
     return FileTransfer(group.encode(), '/etc/group')
 
 
+def generate_nssswitch() -> FileTransfer:
+    """
+    Based on what Arch Linux packages by default
+
+    Disables some systemd stuff that we don't need in sandbox
+    """
+
+    nsswitch = '''passwd: files
+group: files
+shadow: files
+
+publickey: files
+
+hosts: files myhostname dns
+networks: files
+
+protocols: files
+services: files
+ethers: files
+rpc: files
+
+netgroup: files'''
+    return FileTransfer(nsswitch.encode(), '/etc/nsswitch.conf')
+
+
 DEFAULT_CONFIG = BwrapConfig(
     read_only_binds=(
         ReadOnlyBind('/usr/bin'),
@@ -92,6 +117,7 @@ DEFAULT_CONFIG = BwrapConfig(
     files=(
         generate_passwd(),
         generate_group(),
+        generate_nssswitch(),
     ),
 
     enviromental_variables=(
