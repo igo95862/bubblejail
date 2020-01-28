@@ -34,9 +34,6 @@ def generate_path_var() -> str:
 
     # Split by semicolon
     paths = environ['PATH'].split(':')
-    # Insert /tmp/bin infront for hacks like steam with pulseaudio
-    # O(n) insertion but PATH should never be large
-    paths.insert(0, '/tmp/bin')
     # Filter by /usr and /tmp then join by semicolon
     return ':'.join(filter(
         lambda s: s.startswith('/usr/') or s.startswith('/tmp/'),
@@ -45,7 +42,12 @@ def generate_path_var() -> str:
 
 DEFAULT_CONFIG = BwrapConfig(
     read_only_binds=(
-        ReadOnlyBind('/usr'),
+        ReadOnlyBind('/usr/bin'),
+        ReadOnlyBind('/usr/include'),
+        ReadOnlyBind('/usr/lib'),
+        ReadOnlyBind('/usr/lib32'),
+        ReadOnlyBind('/usr/share'),
+        ReadOnlyBind('/usr/src'),
         ReadOnlyBind('/etc/resolv.conf'),
         ReadOnlyBind('/etc/login.defs'),  # ???: is this file needed
         ReadOnlyBind('/etc/fonts/'),
@@ -57,13 +59,16 @@ DEFAULT_CONFIG = BwrapConfig(
         DirCreate('/var'),
         DirCreate('/home/user'),
         DirCreate('/run/user/1000'),
+        DirCreate('/usr/local'),
     ),
 
     symlinks=(
-        Symlink('usr/lib', '/lib'),
-        Symlink('usr/lib64', '/lib64'),
-        Symlink('usr/bin', '/bin'),
-        Symlink('usr/sbin', '/sbin')
+        Symlink('/usr/lib', '/lib'),
+        Symlink('/usr/lib64', '/lib64'),
+        Symlink('/usr/bin', '/bin'),
+        Symlink('/usr/sbin', '/sbin'),
+        Symlink('/usr/lib', '/usr/lib64'),
+        Symlink('/usr/bin', '/usr/sbin'),
     ),
 
     files=(
@@ -139,7 +144,7 @@ def pulse_audio() -> BwrapConfig:
             Bind(f"{BaseDirectory.get_runtime_dir()}/pulse/native"),
         ),
         symlinks=(  # Steam hack but seems to be caused by arch linux patch
-            Symlink('/usr/bin/true', '/tmp/bin/pulseaudio'),
+            Symlink('/usr/bin/true', '/usr/local/bin/pulseaudio'),
         )
     )
 
