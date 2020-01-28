@@ -40,6 +40,24 @@ def generate_path_var() -> str:
         paths))
 
 
+def generate_passwd() -> FileTransfer:
+    passwd = '\n'.join((
+        'root:x:0:0::/root:/bin/bash',
+        'user:x:1000:1000::/home/user:/bin/sh',
+    ))
+
+    return FileTransfer(passwd.encode(), '/etc/passwd')
+
+
+def generate_group() -> FileTransfer:
+    group = '\n'.join((
+        'root:x:0:root',
+        'user:x:1000:',
+    ))
+
+    return FileTransfer(group.encode(), '/etc/group')
+
+
 DEFAULT_CONFIG = BwrapConfig(
     read_only_binds=(
         ReadOnlyBind('/usr/bin'),
@@ -72,13 +90,8 @@ DEFAULT_CONFIG = BwrapConfig(
     ),
 
     files=(
-        FileTransfer(
-            b'user:x:1000:1000::/home/user:/bin/sh',
-            '/etc/passwd'),
-
-        FileTransfer(
-            b'user:x:1000:',
-            '/etc/group'),
+        generate_passwd(),
+        generate_group(),
     ),
 
     enviromental_variables=(
