@@ -27,7 +27,7 @@ from tempfile import TemporaryFile
 from typing import IO, Iterator, List, Optional, Set
 
 from xdg import IniFile
-from xdg.BaseDirectory import xdg_data_home
+from xdg.BaseDirectory import get_runtime_dir, xdg_data_home
 from xdg.Exceptions import NoKeyError as XdgNoKeyError
 
 from .bubblejail_instance_config import BubblejailInstanceConfig
@@ -66,6 +66,7 @@ class BubblejailInstance:
         self.socket_path: Optional[Path] = None
 
         self.instance_directory = get_data_directory() / self.name
+        self.runtime_dir: Optional[Path] = None
 
         if not self.instance_directory.exists():
             raise BubblejailException("Instance directory does not exist")
@@ -175,6 +176,9 @@ class BubblejailInstance:
         for service_name, service_conf in self.services_config.items():
             yield SERVICES[service_name](**service_conf)
 
+    def get_runtime_dir_path(self) -> Path:
+        return Path(get_runtime_dir() + f'/bubblejail/{self.name}')
+
     async def async_run(
         self,
         args_to_run: Optional[List[str]] = None,
@@ -199,6 +203,9 @@ class BubblejailInstance:
 
             if self.socket is not None:
                 self.socket.close()
+
+            if self.runtime_dir is not None:
+                self.runtime_dir.rmdir()
 
     async def init_bwrap(
         self,
@@ -302,11 +309,15 @@ class BubblejailInstance:
         if dry_run:
             return
 
+        # Create runtime dir
+        # If the dir exists exception will be raised inidicating that
+        # instance is already running or did not clean-up properly.
+        self.runtime_dir = self.get_runtime_dir_path()
+        self.runtime_dir.mkdir(mode=0o700, exist_ok=False)
+
         # Create and bind socket
         self.socket = socket(AF_UNIX, SOCK_STREAM)
-        socket_dir = Path(environ['XDG_RUNTIME_DIR']) / 'bubblejail'
-        socket_dir.mkdir(mode=0o700, exist_ok=True)
-        self.socket_path = socket_dir / self.name
+        self.socket_path = self.runtime_dir / 'helper_socket'
         self.socket.bind(str(self.socket_path))
         # Bind socket inside sandbox
 
