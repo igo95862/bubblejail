@@ -17,7 +17,9 @@
 
 from os import environ
 from pathlib import Path
-from typing import Callable, Dict, FrozenSet, List, Set
+from random import choices
+from string import ascii_letters
+from typing import Callable, Dict, FrozenSet, List, Set, Tuple
 
 from xdg import BaseDirectory
 
@@ -83,6 +85,25 @@ netgroup: files'''
     return FileTransfer(nsswitch.encode(), '/etc/nsswitch.conf')
 
 
+def random_hostname() -> str:
+    random_hostname = choices(
+        population=ascii_letters,
+        k=10,
+    )
+    return ''.join(random_hostname)
+
+
+def generate_hosts() -> Tuple[FileTransfer, FileTransfer]:
+    hostname = random_hostname()
+    hosts = '\n'.join((
+        '127.0.0.1               localhost',
+        '::1                     localhost',
+        f'127.0.1.1               {hostname}.localdomain {hostname}',
+    ))
+    return (FileTransfer(hostname.encode(), '/etc/hostname'),
+            FileTransfer(hosts.encode(), '/etc/hosts'))
+
+
 DEFAULT_CONFIG = BwrapConfig(
     read_only_binds=(
         ReadOnlyBind('/usr/bin'),
@@ -118,6 +139,8 @@ DEFAULT_CONFIG = BwrapConfig(
         generate_passwd(),
         generate_group(),
         generate_nssswitch(),
+        FileTransfer(b'multi on', '/etc/host.conf'),
+        *generate_hosts()
     ),
 
     enviromental_variables=(
