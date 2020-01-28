@@ -1,6 +1,6 @@
 # SPDX-License-Identifier: GPL-3.0-or-later
 
-# Copyright 2019 igo95862
+# Copyright 2019, 2020 igo95862
 
 # This file is part of bubblejail.
 # bubblejail is free software: you can redistribute it and/or modify
