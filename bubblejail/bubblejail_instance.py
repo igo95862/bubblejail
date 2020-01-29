@@ -14,9 +14,10 @@
 # You should have received a copy of the GNU General Public License
 # along with bubblejail.  If not, see <https://www.gnu.org/licenses/>.
 
-from asyncio import create_subprocess_exec
+from asyncio import create_subprocess_exec, create_task
 from asyncio.subprocess import PIPE as asyncio_pipe
 from asyncio.subprocess import STDOUT as asyncio_stdout
+from asyncio.subprocess import Process
 from json import dump as json_dump
 from json import load as json_load
 from os import environ
@@ -310,6 +311,20 @@ class BubblejailInstance:
 
         return bwrap_args
 
+    async def bwrap_watcher(self, bwrap_procces: Process) -> None:
+        """Reads stdout of bwrap and prints"""
+        bwrap_stdout = bwrap_procces.stdout
+
+        if bwrap_stdout is None:
+            return
+
+        while True:
+            new_line_data = await bwrap_stdout.readline()
+            if new_line_data:
+                print(new_line_data)
+            else:
+                return
+
     async def init_bwrap(
         self,
         args_to_run: Optional[List[str]] = None,
@@ -341,7 +356,8 @@ class BubblejailInstance:
                 *bwrap_args, pass_fds=self.file_descriptors_to_pass,
                 stdout=asyncio_pipe, stderr=asyncio_stdout)
             print("Bubblewrap started")
-            print(await p.communicate())
+            t = create_task(self.bwrap_watcher(p), name='bwrap main')
+            await t
             print("Bubblewrap terminated")
         else:
             print("Starting debug shell")
