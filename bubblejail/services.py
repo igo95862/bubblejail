@@ -23,8 +23,9 @@ from typing import Callable, Dict, FrozenSet, List, Set, Tuple
 
 from xdg import BaseDirectory
 
-from .bwrap_config import (Bind, BwrapConfig, DevBind, DirCreate,
-                           EnvrimentalVar, FileTransfer, ReadOnlyBind, Symlink)
+from .bwrap_config import (Bind, BwrapConfig, DbusSessionTalkTo, DevBind,
+                           DirCreate, EnvrimentalVar, FileTransfer,
+                           ReadOnlyBind, Symlink)
 
 XDG_DESKTOP_VARS: FrozenSet[str] = frozenset({
     'XDG_CURRENT_DESKTOP', 'DESKTOP_SESSION',
@@ -171,7 +172,8 @@ def x11() -> BwrapConfig:
         ),
         enviromental_variables=(
             EnvrimentalVar('XAUTHORITY', '/tmp/.Xauthority'),
-        )
+        ),
+
     )
 
 
@@ -265,6 +267,14 @@ def direct_rendering() -> BwrapConfig:
     )
 
 
+def systray() -> BwrapConfig:
+    return BwrapConfig(
+        dbus_session=(
+            DbusSessionTalkTo('org.kde.StatusNotifierWatcher'),
+        ),
+    )
+
+
 SERVICES: Dict[str, Callable[..., BwrapConfig]] = {
     'x11': x11,
     'wayland': wayland,
@@ -273,4 +283,5 @@ SERVICES: Dict[str, Callable[..., BwrapConfig]] = {
     'gnome_tool_kit': gnome_tool_kit,
     'home_share': home_share,
     'direct_rendering': direct_rendering,
+    'systray': systray,
 }

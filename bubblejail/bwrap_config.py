@@ -91,6 +91,16 @@ class DevBind(Bind):
     arg_word = '--dev-bind'
 
 
+@dataclass(frozen=False)
+class DbusSessionTalkTo(BwrapConfigBase):
+    arg_word = '--talk'
+
+    bus_name: str
+
+    def to_args(self) -> Tuple[str]:
+        return (f"{self.arg_word}={self.bus_name}", )
+
+
 @dataclass
 class BwrapConfig:
     binds: Tuple[Union[Bind, DevBind], ...] = tuple()
@@ -102,3 +112,4 @@ class BwrapConfig:
     env_no_unset: FrozenSet[str] = frozenset()
     extra_args: Tuple[str, ...] = tuple()
     share_network: bool = False
+    dbus_session: Tuple[DbusSessionTalkTo, ...] = tuple()

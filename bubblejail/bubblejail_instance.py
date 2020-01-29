@@ -25,14 +25,14 @@ from pathlib import Path
 from socket import AF_UNIX, SOCK_STREAM, SocketType, socket
 from subprocess import run as sub_run  # nosec
 from tempfile import TemporaryFile
-from typing import IO, Iterator, List, Optional, Set
+from typing import IO, Iterator, List, Optional, Set, Tuple
 
 from xdg import IniFile
 from xdg.BaseDirectory import get_runtime_dir, xdg_data_home
 from xdg.Exceptions import NoKeyError as XdgNoKeyError
 
 from .bubblejail_instance_config import BubblejailInstanceConfig
-from .bwrap_config import Bind, BwrapConfig
+from .bwrap_config import Bind, BwrapConfig, EnvrimentalVar
 from .exceptions import BubblejailException
 from .profiles import PROFILES
 from .services import DEFAULT_CONFIG, SERVICES
@@ -66,6 +66,9 @@ class BubblejailInstance:
         # Unix Socket
         self.socket: Optional[SocketType] = None
         self.socket_path: Optional[Path] = None
+        # Dbus session proxy path
+        self.dbus_session_socket: Optional[SocketType] = None
+        self.dbus_session_socket_path: Optional[Path] = None
 
         self.instance_directory = get_data_directory() / self.name
         self.runtime_dir: Optional[Path] = None
@@ -206,16 +209,27 @@ class BubblejailInstance:
             if self.socket is not None:
                 self.socket.close()
 
+            if self.dbus_session_socket_path is not None:
+                self.dbus_session_socket_path.unlink()
+
+            if self.dbus_session_socket is not None:
+                self.dbus_session_socket.close()
+
             if self.runtime_dir is not None:
                 self.runtime_dir.rmdir()
 
-    def genetate_args(self,
-                      args_to_run: Optional[List[str]] = None,
-                      debug_print_args: bool = False,
-                      debug_shell: bool = False) -> List[str]:
+    def genetate_args(
+        self,
+        args_to_run: Optional[List[str]] = None,
+        debug_print_args: bool = False,
+        debug_shell: bool = False
+    ) -> Tuple[List[str], List[str]]:
         # TODO: Reorganize the order to allow for
         # better binding multiple resources in same filesystem path
         bwrap_args: List[str] = ['bwrap']
+        dbus_session_args: List[str] = []
+
+        dbus_session_opts: Set[str] = set()
 
         extra_args: List[str] = []
         env_no_unset: Set[str] = set()
@@ -279,6 +293,39 @@ class BubblejailInstance:
                     if __debug__:
                         print(f'Env {e} is not set.')
 
+            # Add dbus session args
+            for de in bwrap_config.dbus_session:
+                dbus_session_opts.update(de.to_args())
+
+        # If we found any dbus args
+        if dbus_session_opts:
+            print('Dbus args found')
+            env_dbus_session_addr = 'DBUS_SESSION_BUS_ADDRESS'
+            self.dbus_session_socket_path = (
+                self.get_runtime_dir_path() / 'dbus_session_proxy')
+
+            dbus_session_args = [
+                'xdg-dbus-proxy',
+                environ[env_dbus_session_addr],
+                str(self.dbus_session_socket_path),
+            ]
+            dbus_session_args.extend(dbus_session_opts)
+            dbus_session_args.append('--filter')
+            dbus_session_args.append('--log')
+
+            # Bind socket inside the sandbox
+            bwrap_args.extend(
+                EnvrimentalVar(
+                    env_dbus_session_addr,
+                    'unix:path=/run/user/1000/bus').to_args()
+            )
+
+            bwrap_args.extend(
+                Bind(
+                    str(self.dbus_session_socket_path),
+                    '/run/user/1000/bus').to_args()
+            )
+
         # Share network if set
         if share_network:
             bwrap_args.append('--share-net')
@@ -309,7 +356,7 @@ class BubblejailInstance:
         if debug_print_args:
             print(' '.join(bwrap_args))
 
-        return bwrap_args
+        return bwrap_args, dbus_session_args
 
     async def bwrap_watcher(self, bwrap_procces: Process) -> None:
         """Reads stdout of bwrap and prints"""
@@ -332,7 +379,7 @@ class BubblejailInstance:
         debug_shell: bool = False,
         dry_run: bool = False,
     ) -> None:
-        bwrap_args = self.genetate_args(
+        bwrap_args, dbus_session_proxy_args = self.genetate_args(
             debug_print_args=debug_print_args,
             debug_shell=debug_shell,)
 
@@ -345,19 +392,39 @@ class BubblejailInstance:
         self.runtime_dir = self.get_runtime_dir_path()
         self.runtime_dir.mkdir(mode=0o700, exist_ok=False)
 
-        # Create and bind socket
+        # Create and bind helper socket
         self.socket = socket(AF_UNIX, SOCK_STREAM)
         self.socket_path = self.runtime_dir / 'helper_socket'
         self.socket.bind(str(self.socket_path))
         # Bind socket inside sandbox
+        # TODO: Helper socket
+
+        # Dbus session proxy
+        if dbus_session_proxy_args:
+            self.dbus_session_socket = socket(AF_UNIX, SOCK_STREAM)
+            self.dbus_session_socket.bind(str(self.dbus_session_socket_path))
+
+            # Pylint does not recognize *args for some reason
+            # pylint: disable=E1120
+            dbus_session_proxy_process = await create_subprocess_exec(
+                *dbus_session_proxy_args,
+                stdout=asyncio_pipe,
+                stderr=asyncio_stdout,
+            )
+
+            create_task(
+                self.bwrap_watcher(dbus_session_proxy_process),
+                name='dbus session proxy',
+            )
 
         if not debug_shell:
             p = await create_subprocess_exec(
                 *bwrap_args, pass_fds=self.file_descriptors_to_pass,
                 stdout=asyncio_pipe, stderr=asyncio_stdout)
             print("Bubblewrap started")
-            t = create_task(self.bwrap_watcher(p), name='bwrap main')
-            await t
+            task_bwrap_main = create_task(
+                self.bwrap_watcher(p), name='bwrap main')
+            await task_bwrap_main
             print("Bubblewrap terminated")
         else:
             print("Starting debug shell")
