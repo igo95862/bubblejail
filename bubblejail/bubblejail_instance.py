@@ -60,6 +60,7 @@ class BubblejailInstance:
 
         # Prevent our temporary file from being garbage collected
         self.temp_files: List[IO[bytes]] = []
+        self.file_descriptors_to_pass: List[int] = []
 
         # Unix Socket
         self.socket: Optional[SocketType] = None
@@ -207,13 +208,10 @@ class BubblejailInstance:
             if self.runtime_dir is not None:
                 self.runtime_dir.rmdir()
 
-    async def init_bwrap(
-        self,
-        args_to_run: Optional[List[str]] = None,
-        debug_print_args: bool = False,
-        debug_shell: bool = False,
-        dry_run: bool = False,
-    ) -> None:
+    def genetate_args(self,
+                      args_to_run: Optional[List[str]] = None,
+                      debug_print_args: bool = False,
+                      debug_shell: bool = False) -> List[str]:
         # TODO: Reorganize the order to allow for
         # better binding multiple resources in same filesystem path
         bwrap_args: List[str] = ['bwrap']
@@ -223,8 +221,6 @@ class BubblejailInstance:
 
         share_network: bool = False
 
-        file_descriptors_to_pass: List[int] = []
-
         # Proc
         bwrap_args.extend(('--proc', '/proc'))
         # Devtmpfs
@@ -233,6 +229,10 @@ class BubblejailInstance:
         bwrap_args.append('--unshare-all')
         # Die with parent
         bwrap_args.append('--die-with-parent')
+
+        # Unset all variables
+        for e in environ:
+            bwrap_args.extend(('--unsetenv', e))
 
         for bwrap_config in self.iter_bwrap_configs():
             for bind_entity in bwrap_config.binds:
@@ -255,7 +255,7 @@ class BubblejailInstance:
                 temp_f = copy_data_to_temp_file(f.content)
                 self.temp_files.append(temp_f)
                 temp_file_descriptor = temp_f.fileno()
-                file_descriptors_to_pass.append(temp_file_descriptor)
+                self.file_descriptors_to_pass.append(temp_file_descriptor)
                 bwrap_args.extend(
                     ('--file', str(temp_file_descriptor), f.dest))
 
@@ -271,14 +271,16 @@ class BubblejailInstance:
             # Add env vars to no unset set
             env_no_unset.update(bwrap_config.env_no_unset)
 
+            for e in bwrap_config.env_no_unset:
+                try:
+                    bwrap_args.extend(('--setenv', e, environ[e]))
+                except KeyError:
+                    if __debug__:
+                        print(f'Env {e} is not set.')
+
         # Share network if set
         if share_network:
             bwrap_args.append('--share-net')
-
-        # Unset all variables
-        for e in environ:
-            if e not in env_no_unset:
-                bwrap_args.extend(('--unsetenv', e))
 
         # Change directory
         bwrap_args.extend(('--chdir', '/home/user'))
@@ -302,9 +304,22 @@ class BubblejailInstance:
             # Run debug shell
             bwrap_args.append('/bin/sh')
 
-        # Dump args if requested and exit
+        # Dump args if requested
         if debug_print_args:
             print(' '.join(bwrap_args))
+
+        return bwrap_args
+
+    async def init_bwrap(
+        self,
+        args_to_run: Optional[List[str]] = None,
+        debug_print_args: bool = False,
+        debug_shell: bool = False,
+        dry_run: bool = False,
+    ) -> None:
+        bwrap_args = self.genetate_args(
+            debug_print_args=debug_print_args,
+            debug_shell=debug_shell,)
 
         if dry_run:
             return
@@ -323,7 +338,7 @@ class BubblejailInstance:
 
         if not debug_shell:
             p = await create_subprocess_exec(
-                *bwrap_args, pass_fds=file_descriptors_to_pass,
+                *bwrap_args, pass_fds=self.file_descriptors_to_pass,
                 stdout=asyncio_pipe, stderr=asyncio_stdout)
             print("Bubblewrap started")
             print(await p.communicate())
@@ -332,6 +347,6 @@ class BubblejailInstance:
             print("Starting debug shell")
             sub_run(  # nosec
                 args=bwrap_args,
-                pass_fds=file_descriptors_to_pass,
+                pass_fds=self.file_descriptors_to_pass,
             )
             print("Debug shell ended")
