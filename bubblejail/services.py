@@ -153,7 +153,7 @@ DEFAULT_CONFIG = BwrapConfig(
 
     env_no_unset=frozenset(
         (
-            'LANG'
+            'LANG',
         )
     )
 )
