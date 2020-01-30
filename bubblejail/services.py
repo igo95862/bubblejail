@@ -228,7 +228,7 @@ def home_share(home_paths: List[str]) -> BwrapConfig:
     )
 
 
-def direct_rendering() -> BwrapConfig:
+def direct_rendering(enable_aco: bool = False) -> BwrapConfig:
     # TODO: Allow to select which DRM devices to pass
 
     # Bind /dev/dri and /sys/dev/char and /sys/devices
@@ -261,9 +261,14 @@ def direct_rendering() -> BwrapConfig:
     dri_binds = [DevBind('/dev/dri')]
     dri_binds.extend((DevBind(x) for x in final_paths))
 
+    env_vars = []
+    if enable_aco:
+        env_vars.append(EnvrimentalVar('RADV_PERFTEST', 'aco'))
+
     return BwrapConfig(
         binds=tuple(dri_binds),
         symlinks=tuple(symlinks),
+        enviromental_variables=tuple(env_vars),
     )
 
 
