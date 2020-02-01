@@ -86,9 +86,26 @@ STEAM = BubblejailProfile(
     dot_desktop_path=Path('/usr/share/applications/steam.desktop'),
 )
 
+LUTRIS = BubblejailProfile(
+    import_paths=[''],
+    default_instance_config=BubblejailInstanceConfig(
+        executable_name='lutris',
+        services={
+            'x11': {},
+            'pulse_audio': {},
+            'network': {},
+            'direct_rendering': {},
+            'joystick': {},
+        }
+    ),
+    dot_desktop_path=Path('/usr/share/applications/net.lutris.Lutris.desktop'),
+)
+
+
 PROFILES: Dict[str, BubblejailProfile] = {
     'firefox': FIREFOX_PROFILE,
     'firefox_wayland': FIREFOX_WAYLAND_PROFILE,
     'code_oss': CODE_OSS,
     'steam': STEAM,
+    'lutris': LUTRIS,
 }
