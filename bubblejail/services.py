@@ -116,6 +116,10 @@ DEFAULT_CONFIG = BwrapConfig(
         ReadOnlyBind('/etc/resolv.conf'),
         ReadOnlyBind('/etc/login.defs'),  # ???: is this file needed
         ReadOnlyBind('/etc/fonts/'),
+        # ldconfig
+        ReadOnlyBind('/etc/ld.so.cache'),
+        ReadOnlyBind('/etc/ld.so.conf'),
+        ReadOnlyBind('/etc/ld.so.conf.d'),
         ReadOnlyBind('/opt'),
     ),
 
