@@ -284,6 +284,41 @@ def systray() -> BwrapConfig:
     )
 
 
+def joystick() -> BwrapConfig:
+    symlinks = []
+    dev_binds = []
+    look_for_names: Set[str] = set()
+    # Find the *-joystick in /dev/input/by-path/
+    dev_input_path = Path('/dev/input')
+    for x in (dev_input_path / 'by-path').iterdir():
+        name = x.name
+        if name.split('-')[-1] == 'joystick':
+            # Add both symlink and device it self
+            joystick_dev_path = x.resolve()
+            look_for_names.add(joystick_dev_path.name)
+            dev_binds.append(DevBind(str(joystick_dev_path)))
+            symlinks.append(Symlink(str(joystick_dev_path), str(x)))
+
+    # Add device under /sys/
+    for x in Path('/sys/class/input').iterdir():
+        if x.name in look_for_names:
+            resolved_path = x.resolve()
+            symlinks.append(
+                Symlink(
+                    str(resolved_path),
+                    str(x)
+                )
+            )
+            dev_binds.append(
+                DevBind(str(resolved_path.parents[2]))
+            )
+
+    return BwrapConfig(
+        binds=tuple(dev_binds),
+        symlinks=tuple(symlinks),
+    )
+
+
 SERVICES: Dict[str, Callable[..., BwrapConfig]] = {
     'x11': x11,
     'wayland': wayland,
@@ -293,4 +328,5 @@ SERVICES: Dict[str, Callable[..., BwrapConfig]] = {
     'home_share': home_share,
     'direct_rendering': direct_rendering,
     'systray': systray,
+    'joystick': joystick,
 }
