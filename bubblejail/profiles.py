@@ -75,12 +75,13 @@ CODE_OSS = BubblejailProfile(
 STEAM = BubblejailProfile(
     import_paths=[''],
     default_instance_config=BubblejailInstanceConfig(
-        executable_name='steam-native',
+        executable_name='steam',
         services={
             'x11': {},
             'pulse_audio': {},
             'network': {},
             'direct_rendering': {},
+            'joystick': {},
         }
     ),
     dot_desktop_path=Path('/usr/share/applications/steam.desktop'),
