@@ -390,7 +390,7 @@ class BubblejailInstance:
         # If the dir exists exception will be raised inidicating that
         # instance is already running or did not clean-up properly.
         self.runtime_dir = self.get_runtime_dir_path()
-        self.runtime_dir.mkdir(mode=0o700, exist_ok=False)
+        self.runtime_dir.mkdir(mode=0o700, parents=True, exist_ok=False)
 
         # Create and bind helper socket
         self.socket = socket(AF_UNIX, SOCK_STREAM)
