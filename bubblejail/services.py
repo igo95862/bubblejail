@@ -319,6 +319,12 @@ def joystick() -> BwrapConfig:
     )
 
 
+def root_share(paths: List[str]) -> BwrapConfig:
+    return BwrapConfig(
+        binds=tuple((Bind(x) for x in paths)),
+    )
+
+
 SERVICES: Dict[str, Callable[..., BwrapConfig]] = {
     'x11': x11,
     'wayland': wayland,
@@ -329,4 +335,5 @@ SERVICES: Dict[str, Callable[..., BwrapConfig]] = {
     'direct_rendering': direct_rendering,
     'systray': systray,
     'joystick': joystick,
+    'root_share': root_share,
 }
