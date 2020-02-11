@@ -15,6 +15,7 @@
 # along with bubblejail.  If not, see <https://www.gnu.org/licenses/>.
 
 from asyncio import create_subprocess_exec, create_task
+from asyncio.subprocess import DEVNULL as asyncio_devnull
 from asyncio.subprocess import PIPE as asyncio_pipe
 from asyncio.subprocess import STDOUT as asyncio_stdout
 from asyncio.subprocess import Process
@@ -408,7 +409,7 @@ class BubblejailInstance:
             # pylint: disable=E1120
             dbus_session_proxy_process = await create_subprocess_exec(
                 *dbus_session_proxy_args,
-                stdout=asyncio_pipe,
+                stdout=asyncio_pipe if not debug_shell else asyncio_devnull,
                 stderr=asyncio_stdout,
             )
 
