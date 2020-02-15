@@ -155,4 +155,5 @@ class BubblejailHelper:
         create_task(self.child_reaper())
         await self.termination.wait()
         server.close()
+        await server.wait_closed()
         print('Terminated')
