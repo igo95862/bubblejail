@@ -45,8 +45,9 @@ def generate_path_var() -> str:
 
 def generate_passwd() -> FileTransfer:
     passwd = '\n'.join((
-        'root:x:0:0::/root:/bin/bash',
-        'user:x:1000:1000::/home/user:/bin/sh',
+        'root:x:0:0::/root:/bin/nologin',
+        'user:x:1000:1000::/home/user:/bin/nologin',
+        'nobody:x:65534:65534:Nobody:/:/usr/bin/nologin',
     ))
 
     return FileTransfer(passwd.encode(), '/etc/passwd')
@@ -55,7 +56,8 @@ def generate_passwd() -> FileTransfer:
 def generate_group() -> FileTransfer:
     group = '\n'.join((
         'root:x:0:root',
-        'user:x:1000:',
+        'user:x:1000:user',
+        'nobody:x:65534:',
     ))
 
     return FileTransfer(group.encode(), '/etc/group')
