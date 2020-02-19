@@ -15,7 +15,7 @@
 # along with bubblejail.  If not, see <https://www.gnu.org/licenses/>.
 
 
-from os import environ
+from os import environ, readlink
 from pathlib import Path
 from random import choices
 from string import ascii_letters
@@ -301,14 +301,14 @@ def joystick() -> BwrapConfig:
             dev_binds.append(DevBind(str(joystick_dev_path)))
             symlinks.append(Symlink(str(joystick_dev_path), str(x)))
 
-    # Add device under /sys/
-    for x in Path('/sys/class/input').iterdir():
-        if x.name in look_for_names:
-            resolved_path = x.resolve()
+    # Add device under /sys/ and a symlink from /sys/class/input
+    for sys_class_input_symlink in Path('/sys/class/input').iterdir():
+        if sys_class_input_symlink.name in look_for_names:
+            resolved_path = sys_class_input_symlink.resolve()
             symlinks.append(
                 Symlink(
-                    str(resolved_path),
-                    str(x)
+                    str(readlink(sys_class_input_symlink)),
+                    str(sys_class_input_symlink)
                 )
             )
             dev_binds.append(
