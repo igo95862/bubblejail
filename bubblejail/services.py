@@ -327,6 +327,16 @@ def root_share(paths: List[str]) -> BwrapConfig:
     )
 
 
+def openjdk() -> BwrapConfig:
+    return BwrapConfig(
+        read_only_binds=(
+            ReadOnlyBind('/etc/java-openjdk'),
+            ReadOnlyBind('/etc/profile.d/jre.csh'),
+            ReadOnlyBind('/etc/profile.d/jre.sh'),
+        )
+    )
+
+
 SERVICES: Dict[str, Callable[..., BwrapConfig]] = {
     'x11': x11,
     'wayland': wayland,
@@ -338,4 +348,5 @@ SERVICES: Dict[str, Callable[..., BwrapConfig]] = {
     'systray': systray,
     'joystick': joystick,
     'root_share': root_share,
+    'openjdk': openjdk,
 }
