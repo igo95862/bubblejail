@@ -97,6 +97,7 @@ LUTRIS = BubblejailProfile(
             'network': {},
             'direct_rendering': {},
             'joystick': {},
+            'openjdk': {},
         }
     ),
     dot_desktop_path=Path('/usr/share/applications/net.lutris.Lutris.desktop'),
