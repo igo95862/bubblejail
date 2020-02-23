@@ -3,5 +3,5 @@
 *.pyc
 __pycache__
 build
-test*.py
+cmd*.py
 strace*.txt
