@@ -15,8 +15,7 @@
 # along with bubblejail.  If not, see <https://www.gnu.org/licenses/>.
 
 from asyncio import (AbstractServer, CancelledError, Event, StreamReader,
-                     StreamWriter, Task, create_subprocess_exec, create_task,
-                     gather)
+                     StreamWriter, Task, create_subprocess_exec, create_task)
 from asyncio import run as async_run
 from asyncio import sleep, start_unix_server
 from asyncio.subprocess import DEVNULL, PIPE, STDOUT
@@ -289,6 +288,7 @@ if __name__ == '__main__':
 
     async def run_helper() -> None:
         helper = BubblejailHelper()
-        await gather(helper.start_async(), helper)
+        await helper.start_async()
+        await helper
 
     async_run(run_helper())
