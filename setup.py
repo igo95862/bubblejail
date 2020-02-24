@@ -19,11 +19,11 @@ from setuptools import setup, find_packages
 
 setup(
     name="bubblejail",
-    version="0.1a",
+    version="0.2",
     packages=find_packages(),
     entry_points={
         'console_scripts': [
-            'bubblejail = bubblejail.bubblejail:main'
+            'bubblejail = bubblejail.bubblejail:bubblejail_main'
         ],
     },
 )

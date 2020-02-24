@@ -14,6 +14,8 @@
 # You should have received a copy of the GNU General Public License
 # along with bubblejail.  If not, see <https://www.gnu.org/licenses/>.
 
+from argparse import REMAINDER as ARG_REMAINDER
+from argparse import ArgumentParser
 from asyncio import (AbstractServer, CancelledError, Event, StreamReader,
                      StreamWriter, Task, create_subprocess_exec, create_task)
 from asyncio import run as async_run
@@ -23,7 +25,6 @@ from json import dumps as json_dumps
 from json import loads as json_loads
 from os import P_NOWAIT, waitpid
 from pathlib import Path
-from sys import argv
 from typing import (Any, Awaitable, Dict, Generator, List, Literal, Optional,
                     Union)
 
@@ -128,12 +129,13 @@ def request_selector(data: bytes) -> RpcRequests:
 class BubblejailHelper(Awaitable[bool]):
     def __init__(
         self,
+            startup_args: List[str],
             helper_socket_path: Path = Path('/run/bubblehelp/helper.socket'),
             no_child_timeout: Optional[int] = 3,
             reaper_pool_timer: int = 5,
             use_fixups: bool = True,
-            exec_argv: bool = True,
     ):
+        self.startup_args = startup_args
         self.helper_socket_path = helper_socket_path
 
         # Server
@@ -147,8 +149,6 @@ class BubblejailHelper(Awaitable[bool]):
         self.no_child_countdown = no_child_timeout
         self.reaper_pool_timer = reaper_pool_timer
         self.child_reaper_task: Optional[Task[None]] = None
-
-        self.exec_argv = exec_argv
 
         # Fix-ups
         if not use_fixups:
@@ -191,29 +191,37 @@ class BubblejailHelper(Awaitable[bool]):
                         return
 
     async def run_command(
-            self,
-            args_to_run: List[str],
-            wait_completion: bool = False,) -> Optional[str]:
+        self,
+        args_to_run: List[str],
+        std_in_out_mode: Optional[int] = None,
+    ) -> Optional[str]:
 
-        if wait_completion:
+        if std_in_out_mode == DEVNULL:
+            p = await create_subprocess_exec(
+                *args_to_run,
+                stdout=DEVNULL,
+                stderr=DEVNULL,
+                stdin=DEVNULL,
+            )
+        elif std_in_out_mode == PIPE:
             p = await create_subprocess_exec(
                 *args_to_run,
                 stdout=PIPE,
                 stderr=STDOUT,
                 stdin=PIPE,
             )
+        else:
+            p = await create_subprocess_exec(
+                *args_to_run,
+            )
+
+        if std_in_out_mode is None:
+            await p.wait()
+        elif std_in_out_mode == PIPE:
             (stdout_data, _) = await p.communicate()
             return str(stdout_data)
-        else:
-            create_task(
-                create_subprocess_exec(
-                    *args_to_run,
-                    stdout=DEVNULL,
-                    stderr=DEVNULL,
-                    stdin=DEVNULL,
-                )
-            )
-            return None
+
+        return None
 
     async def client_handler(
             self,
@@ -235,8 +243,6 @@ class BubblejailHelper(Awaitable[bool]):
             elif isinstance(request, RequestRun):
                 run_stdout = await self.run_command(
                     args_to_run=request.args_to_run,
-                    wait_completion=(True if request.request_id is not None
-                                     else False),
                 )
                 if run_stdout is None:
                     continue
@@ -255,10 +261,8 @@ class BubblejailHelper(Awaitable[bool]):
         )
         print('Started unix server', flush=True)
         self.child_reaper_task = create_task(self.child_reaper())
-        if self.exec_argv:
-            print(argv, flush=True)
-            if len(argv) > 1:
-                await self.run_command(argv[1:])
+        if self.startup_args:
+            await self.run_command(self.startup_args)
 
     async def stop_async(self) -> None:
 
@@ -283,12 +287,41 @@ class BubblejailHelper(Awaitable[bool]):
         return coroutine.__await__()
 
 
-if __name__ == '__main__':
-    print('Main helper script starts', flush=True)
+def get_helper_argument_parser() -> ArgumentParser:
+    parser = ArgumentParser()
+
+    parser.add_argument(
+        '--shell',
+        action='store_true',
+    )
+
+    parser.add_argument(
+        'args_to_run',
+        nargs=ARG_REMAINDER,
+    )
+
+    return parser
+
+
+def bubblejail_helper_main() -> None:
+    parser = get_helper_argument_parser()
+
+    parsed_args = parser.parse_args()
 
     async def run_helper() -> None:
-        helper = BubblejailHelper()
+        if not parsed_args.shell:
+            startup_args = parsed_args.args_to_run
+        else:
+            startup_args = ['/bin/sh']
+
+        helper = BubblejailHelper(
+            startup_args=startup_args
+        )
         await helper.start_async()
         await helper
 
     async_run(run_helper())
+
+
+if __name__ == '__main__':
+    bubblejail_helper_main()

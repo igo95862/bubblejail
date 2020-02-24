@@ -14,7 +14,8 @@
 # You should have received a copy of the GNU General Public License
 # along with bubblejail.  If not, see <https://www.gnu.org/licenses/>.
 
-from asyncio import create_subprocess_exec, create_task
+from asyncio import (CancelledError, Task, create_subprocess_exec, create_task,
+                     open_unix_connection)
 from asyncio.subprocess import DEVNULL as asyncio_devnull
 from asyncio.subprocess import PIPE as asyncio_pipe
 from asyncio.subprocess import STDOUT as asyncio_stdout
@@ -24,19 +25,20 @@ from json import load as json_load
 from os import environ
 from pathlib import Path
 from socket import AF_UNIX, SOCK_STREAM, SocketType, socket
-from subprocess import run as sub_run  # nosec
 from tempfile import TemporaryFile
-from typing import IO, Iterator, List, Optional, Set, Tuple
+from typing import IO, Any, Iterator, List, Optional, Set, Type
 
 from xdg import IniFile
 from xdg.BaseDirectory import get_runtime_dir, xdg_data_home
 from xdg.Exceptions import NoKeyError as XdgNoKeyError
 
+from .bubblejail_helper import RequestRun
 from .bubblejail_instance_config import BubblejailInstanceConfig
-from .bwrap_config import Bind, BwrapConfig, EnvrimentalVar
+from .bwrap_config import (Bind, BwrapConfigBase,
+                           DbusSessionTalkTo, EnvrimentalVar, FileTransfer)
 from .exceptions import BubblejailException
 from .profiles import PROFILES
-from .services import DEFAULT_CONFIG, SERVICES
+from .services import SERVICES, BubblejailDefaults, BubblejailService
 
 
 def copy_data_to_temp_file(data: bytes) -> IO[bytes]:
@@ -56,30 +58,46 @@ def get_data_directory() -> Path:
     return data_path
 
 
+async def process_watcher(process: Process) -> None:
+    """Reads stdout of process and prints"""
+    process_stdout = process.stdout
+
+    if process_stdout is None:
+        return
+
+    while True:
+        new_line_data = await process_stdout.readline()
+
+        if new_line_data:
+            print(new_line_data)
+        else:
+            return
+
+
 class BubblejailInstance:
     def __init__(self, name: str):
         self.name = name
-
-        # Prevent our temporary file from being garbage collected
-        self.temp_files: List[IO[bytes]] = []
-        self.file_descriptors_to_pass: List[int] = []
-
-        # Unix Socket
-        self.socket: Optional[SocketType] = None
-        self.socket_path: Optional[Path] = None
-        # Dbus session proxy path
-        self.dbus_session_socket: Optional[SocketType] = None
-        self.dbus_session_socket_path: Optional[Path] = None
-
+        # Instance directory located at $XDG_DATA_HOME/bubblejail/
         self.instance_directory = get_data_directory() / self.name
-        self.runtime_dir: Optional[Path] = None
-
+        self.home_bind_path = self.instance_directory / 'home'
+        # If instance directory does not exists we can't do much
+        # Probably someone used 'run' command before 'create'
         if not self.instance_directory.exists():
             raise BubblejailException("Instance directory does not exist")
 
-        instance_config = self._read_config()
-        self.executable_name = instance_config.executable_name
-        self.services_config = instance_config.services
+        # Run-time directory
+        self.runtime_dir: Path = Path(
+            get_runtime_dir() + f'/bubblejail/{self.name}')
+
+        # Helper run-time directory
+        self.helper_runtime_dir: Path = self.runtime_dir / 'helper'
+
+        # Unix Socket used to communicate with helper
+        self.helper_socket_path: Path = (
+            self.helper_runtime_dir / 'helper.socket')
+        # Dbus session proxy path
+        self.dbus_session_socket_path: Path = (
+            self.runtime_dir / 'dbus_session_proxy')
 
     def _read_config(self) -> BubblejailInstanceConfig:
         with (self.instance_directory / "config.json").open() as f:
@@ -170,267 +188,290 @@ class BubblejailInstance:
         instance = BubblejailInstance(new_name)
         return instance
 
-    def iter_bwrap_configs(self) -> Iterator[BwrapConfig]:
-        yield DEFAULT_CONFIG
-
-        # Bind home
-        yield BwrapConfig(
-            binds=(Bind(str(self.instance_directory / 'home'), '/home/user/'),
-                   )
+    async def send_run_rpc(self, args_to_run: List[str]) -> None:
+        (_, writter) = await open_unix_connection(
+            path=self.helper_socket_path,
         )
 
-        for service_name, service_conf in self.services_config.items():
-            yield SERVICES[service_name](**service_conf)
+        request = RequestRun(
+            args_to_run=args_to_run,
+        )
+        writter.write(request.to_json_byte_line())
+        await writter.drain()
 
-    def get_runtime_dir_path(self) -> Path:
-        return Path(get_runtime_dir() + f'/bubblejail/{self.name}')
+        writter.close()
+        await writter.wait_closed()
 
     async def async_run(
         self,
-        args_to_run: Optional[List[str]] = None,
-        debug_print_args: bool = False,
+        args_to_run: List[str],
         debug_shell: bool = False,
         dry_run: bool = False,
+        debug_helper_script: Optional[Path] = None,
     ) -> None:
-        try:
-            await self.init_bwrap(
-                args_to_run=args_to_run,
-                debug_print_args=debug_print_args,
-                debug_shell=debug_shell,
-                dry_run=dry_run,
+
+        instance_config = self._read_config()
+
+        # Insert the executable name
+        if isinstance(instance_config.executable_name, str):
+            args_to_run.insert(0, instance_config.executable_name)
+        elif isinstance(instance_config.executable_name, list):
+            new_arg_list = instance_config.executable_name
+            new_arg_list.extend(args_to_run)
+            args_to_run = new_arg_list
+
+        # Use IPC to run new command inside the namespace
+        if self.helper_socket_path.exists():
+            if not dry_run:
+                await self.send_run_rpc(args_to_run)
+            else:
+                print('Found helper socket.')
+                print('Args to be send: ', args_to_run)
+
+            return
+
+        # Create init
+        init = BubblejailInit(
+            parent=self,
+            instance_config=instance_config,
+            is_shell_debug=debug_shell,
+            is_helper_debug=debug_helper_script is not None,
+        )
+
+        async with init:
+            if dry_run:
+                print('Bwrap args: ')
+                print(' '.join(init.bwrap_args))
+
+                if init.dbus_session_args:
+                    print('Dbus session args')
+                    print(' '.join(init.dbus_session_args))
+
+                return
+
+            if debug_helper_script is not None:
+                with open(debug_helper_script) as f:
+                    script_text = f.read()
+
+                init.bwrap_args.append(script_text)
+
+            if debug_shell:
+                args_to_run = ['--shell']
+
+            process = await create_subprocess_exec(
+                *init.bwrap_args, *args_to_run,
+                pass_fds=init.file_descriptors_to_pass,
+                stdout=(asyncio_pipe
+                        if not debug_shell
+                        else None),
+                stderr=asyncio_stdout,
             )
-        finally:
-            # Cleanup
-            for t in self.temp_files:
-                t.close()
+            print("Bubblewrap started")
 
-            if self.socket_path is not None:
-                self.socket_path.unlink()
+            if not debug_shell:
+                task_bwrap_main = create_task(
+                    process_watcher(process), name='bwrap main')
+                await task_bwrap_main
+            else:
+                print("Starting debug shell")
+                await process.wait()
+                print("Debug shell ended")
 
-            if self.socket is not None:
-                self.socket.close()
+            print("Bubblewrap terminated")
 
-            if self.dbus_session_socket_path is not None:
-                self.dbus_session_socket_path.unlink()
 
-            if self.dbus_session_socket is not None:
-                self.dbus_session_socket.close()
-
-            if self.runtime_dir is not None:
-                self.runtime_dir.rmdir()
-
-    def genetate_args(
+class BubblejailInit:
+    def __init__(
         self,
-        args_to_run: Optional[List[str]] = None,
-        debug_print_args: bool = False,
-        debug_shell: bool = False
-    ) -> Tuple[List[str], List[str]]:
+        parent: BubblejailInstance,
+        instance_config: BubblejailInstanceConfig,
+        is_shell_debug: bool = False,
+        is_helper_debug: bool = False,
+    ) -> None:
+        self.home_bind_path = parent.home_bind_path
+        self.runtime_dir = parent.runtime_dir
+        # Prevent our temporary file from being garbage collected
+        self.temp_files: List[IO[bytes]] = []
+        self.file_descriptors_to_pass: List[int] = []
+        # Helper
+        self.helper_runtime_dir = parent.helper_runtime_dir
+        self.helper_socket_path = parent.helper_socket_path
+        # Dbus socket needs to be cleaned up
+        self.dbus_session_socket: Optional[SocketType] = None
+        self.dbus_session_socket_path = parent.dbus_session_socket_path
+        # Args to dbus proxy
+        self.dbus_session_args: List[str] = []
+        # Args to bwrap
+        self.bwrap_args: List[str] = []
+        # Debug mode
+        self.is_helper_debug = is_helper_debug
+        self.is_shell_debug = is_shell_debug
+        # Instance config
+        self.instance_config = instance_config
+
+        # Tasks
+        self.watch_dbus_proxy_task: Optional[Task[None]] = None
+
+    def iter_bwrap_configs(self) -> Iterator[BubblejailService]:
+        yield BubblejailDefaults(self.home_bind_path)
+
+        for service_name, service_conf in (
+                self.instance_config.services.items()):
+            yield SERVICES[service_name](**service_conf)
+
+    def genetate_args(self) -> None:
         # TODO: Reorganize the order to allow for
         # better binding multiple resources in same filesystem path
-        bwrap_args: List[str] = ['bwrap']
-        dbus_session_args: List[str] = []
+        self.bwrap_args.append('bwrap')
 
         dbus_session_opts: Set[str] = set()
 
-        extra_args: List[str] = []
-        env_no_unset: Set[str] = set()
+        # As pid 1
+        self.bwrap_args.append('--as-pid-1')
 
-        share_network: bool = False
+        # Unshare all
+        self.bwrap_args.append('--unshare-all')
+        # Die with parent
+        self.bwrap_args.append('--die-with-parent')
+
+        # Set user and group id to pseudo user
+        self.bwrap_args.extend(
+            ('--uid', '1000', '--gid', '1000')
+        )
 
         # Proc
-        bwrap_args.extend(('--proc', '/proc'))
+        self.bwrap_args.extend(('--proc', '/proc'))
         # Devtmpfs
-        bwrap_args.extend(('--dev', '/dev'))
-        # Unshare all
-        bwrap_args.append('--unshare-all')
-        # Die with parent
-        bwrap_args.append('--die-with-parent')
+        self.bwrap_args.extend(('--dev', '/dev'))
 
         # Unset all variables
         for e in environ:
-            bwrap_args.extend(('--unsetenv', e))
+            self.bwrap_args.extend(('--unsetenv', e))
 
         for bwrap_config in self.iter_bwrap_configs():
-            for bind_entity in bwrap_config.binds:
-                bwrap_args.extend(bind_entity.to_args())
 
-            for ro_entity in bwrap_config.read_only_binds:
-                bwrap_args.extend(ro_entity.to_args())
-
-            for dir_entity in bwrap_config.dir_create:
-                bwrap_args.extend(dir_entity.to_args())
-
-            for symlink in bwrap_config.symlinks:
-                bwrap_args.extend(symlink.to_args())
-
-            if bwrap_config.share_network:
-                share_network = True
-
-            # Copy files
-            for f in bwrap_config.files:
-                temp_f = copy_data_to_temp_file(f.content)
-                self.temp_files.append(temp_f)
-                temp_file_descriptor = temp_f.fileno()
-                self.file_descriptors_to_pass.append(temp_file_descriptor)
-                bwrap_args.extend(
-                    ('--file', str(temp_file_descriptor), f.dest))
-
-            # Set enviromental variables
-            for env_var in bwrap_config.enviromental_variables:
-                bwrap_args.extend(env_var.to_args())
-                # Put them in to no unset as well
-                env_no_unset.add(env_var.var_name)
-
-            # Append extra args
-            extra_args.extend(bwrap_config.extra_args)
-
-            # Add env vars to no unset set
-            env_no_unset.update(bwrap_config.env_no_unset)
-
-            for e in bwrap_config.env_no_unset:
-                try:
-                    bwrap_args.extend(('--setenv', e, environ[e]))
-                except KeyError:
-                    if __debug__:
-                        print(f'Env {e} is not set.')
-
-            # Add dbus session args
-            for de in bwrap_config.dbus_session:
-                dbus_session_opts.update(de.to_args())
+            for config in bwrap_config:
+                if isinstance(config, BwrapConfigBase):
+                    self.bwrap_args.extend(config.to_args())
+                elif isinstance(config, FileTransfer):
+                    # Copy files
+                    temp_f = copy_data_to_temp_file(config.content)
+                    self.temp_files.append(temp_f)
+                    temp_file_descriptor = temp_f.fileno()
+                    self.file_descriptors_to_pass.append(
+                        temp_file_descriptor)
+                    self.bwrap_args.extend(
+                        ('--file', str(temp_file_descriptor), config.dest))
+                elif isinstance(config, DbusSessionTalkTo):
+                    dbus_session_opts.update(config.to_args())
 
         # If we found any dbus args
         if dbus_session_opts:
             print('Dbus args found')
             env_dbus_session_addr = 'DBUS_SESSION_BUS_ADDRESS'
-            self.dbus_session_socket_path = (
-                self.get_runtime_dir_path() / 'dbus_session_proxy')
 
-            dbus_session_args = [
+            self.dbus_session_args.extend((
                 'xdg-dbus-proxy',
                 environ[env_dbus_session_addr],
                 str(self.dbus_session_socket_path),
-            ]
-            dbus_session_args.extend(dbus_session_opts)
-            dbus_session_args.append('--filter')
-            dbus_session_args.append('--log')
+            ))
+            self.dbus_session_args.extend(dbus_session_opts)
+            self.dbus_session_args.append('--filter')
+            if __debug__:
+                self.dbus_session_args.append('--log')
 
             # Bind socket inside the sandbox
-            bwrap_args.extend(
+            self.bwrap_args.extend(
                 EnvrimentalVar(
                     env_dbus_session_addr,
                     'unix:path=/run/user/1000/bus').to_args()
             )
-
-            bwrap_args.extend(
+            self.bwrap_args.extend(
                 Bind(
                     str(self.dbus_session_socket_path),
                     '/run/user/1000/bus').to_args()
             )
 
         # Share network if set
-        if share_network:
-            bwrap_args.append('--share-net')
+        if 'network' in self.instance_config.services:
+            self.bwrap_args.append('--share-net')
+
+        # Bind helper directory
+        self.bwrap_args.extend(
+            Bind(str(self.helper_runtime_dir), '/run/bubblehelp').to_args())
 
         # Change directory
-        bwrap_args.extend(('--chdir', '/home/user'))
+        self.bwrap_args.extend(('--chdir', '/home/user'))
 
-        if not debug_shell:
-            # Add executable name
-            if self.executable_name is None:
-                raise ValueError("No executable")
-
-            if isinstance(self.executable_name, str):
-                bwrap_args.append(self.executable_name)
-            else:
-                bwrap_args.extend(self.executable_name)
-
-            # Add extra args
-            bwrap_args.extend(extra_args)
-            # Add called args
-            if args_to_run:
-                bwrap_args.extend(args_to_run)
+        # Append command to bwrap depending on debug helper
+        if self.is_helper_debug:
+            self.bwrap_args.extend(('python', '-X', 'dev', '-c'))
         else:
-            # Run debug shell
-            bwrap_args.append('/bin/sh')
+            self.bwrap_args.append('bubblejail-helper')
 
-        # Dump args if requested
-        if debug_print_args:
-            print(' '.join(bwrap_args))
-
-        return bwrap_args, dbus_session_args
-
-    async def bwrap_watcher(self, bwrap_procces: Process) -> None:
-        """Reads stdout of bwrap and prints"""
-        bwrap_stdout = bwrap_procces.stdout
-
-        if bwrap_stdout is None:
-            return
-
-        while True:
-            new_line_data = await bwrap_stdout.readline()
-            if new_line_data:
-                print(new_line_data)
-            else:
-                return
-
-    async def init_bwrap(
-        self,
-        args_to_run: Optional[List[str]] = None,
-        debug_print_args: bool = False,
-        debug_shell: bool = False,
-        dry_run: bool = False,
-    ) -> None:
-        bwrap_args, dbus_session_proxy_args = self.genetate_args(
-            debug_print_args=debug_print_args,
-            debug_shell=debug_shell,)
-
-        if dry_run:
-            return
-
+    async def __aenter__(self) -> None:
         # Create runtime dir
         # If the dir exists exception will be raised inidicating that
         # instance is already running or did not clean-up properly.
-        self.runtime_dir = self.get_runtime_dir_path()
         self.runtime_dir.mkdir(mode=0o700, parents=True, exist_ok=False)
+        # Create helper directory
+        self.helper_runtime_dir.mkdir(mode=0o700)
 
-        # Create and bind helper socket
-        self.socket = socket(AF_UNIX, SOCK_STREAM)
-        self.socket_path = self.runtime_dir / 'helper_socket'
-        self.socket.bind(str(self.socket_path))
-        # Bind socket inside sandbox
-        # TODO: Helper socket
+        # Generate args
+        self.genetate_args()
 
         # Dbus session proxy
-        if dbus_session_proxy_args:
+        if self.dbus_session_args:
             self.dbus_session_socket = socket(AF_UNIX, SOCK_STREAM)
-            self.dbus_session_socket.bind(str(self.dbus_session_socket_path))
+            self.dbus_session_socket.bind(
+                str(self.dbus_session_socket_path))
 
             # Pylint does not recognize *args for some reason
             # pylint: disable=E1120
             dbus_session_proxy_process = await create_subprocess_exec(
-                *dbus_session_proxy_args,
-                stdout=asyncio_pipe if not debug_shell else asyncio_devnull,
+                *self.dbus_session_args,
+                stdout=(asyncio_pipe
+                        if not self.is_shell_debug
+                        else asyncio_devnull),
                 stderr=asyncio_stdout,
+                stdin=asyncio_devnull,
             )
 
-            create_task(
-                self.bwrap_watcher(dbus_session_proxy_process),
+            self.watch_dbus_proxy_task = create_task(
+                process_watcher(dbus_session_proxy_process),
                 name='dbus session proxy',
             )
 
-        if not debug_shell:
-            p = await create_subprocess_exec(
-                *bwrap_args, pass_fds=self.file_descriptors_to_pass,
-                stdout=asyncio_pipe, stderr=asyncio_stdout)
-            print("Bubblewrap started")
-            task_bwrap_main = create_task(
-                self.bwrap_watcher(p), name='bwrap main')
-            await task_bwrap_main
-            print("Bubblewrap terminated")
-        else:
-            print("Starting debug shell")
-            sub_run(  # nosec
-                args=bwrap_args,
-                pass_fds=self.file_descriptors_to_pass,
-            )
-            print("Debug shell ended")
+    async def __aexit__(
+        self,
+        exc_type: Type[BaseException],
+        exc: BaseException,
+        traceback: Any,  # ???: What type is traceback
+    ) -> None:
+        # Cleanup
+        if (
+            self.watch_dbus_proxy_task is not None
+            and
+            not self.watch_dbus_proxy_task.done()
+        ):
+            self.watch_dbus_proxy_task.cancel()
+            try:
+                await self.watch_dbus_proxy_task
+            except CancelledError:
+                ...
+
+        for t in self.temp_files:
+            t.close()
+
+        if self.helper_socket_path.exists():
+            self.helper_socket_path.unlink()
+
+        self.helper_runtime_dir.rmdir()
+
+        if self.dbus_session_socket_path.exists():
+            self.dbus_session_socket_path.unlink()
+
+        if self.dbus_session_socket is not None:
+            self.dbus_session_socket.close()
+
+        self.runtime_dir.rmdir()

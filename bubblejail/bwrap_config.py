@@ -17,6 +17,7 @@
 
 from dataclasses import dataclass, field
 from typing import FrozenSet, Optional, Tuple, Union
+from os import environ
 
 
 @dataclass
@@ -68,10 +69,14 @@ class FileTransfer:
 class EnvrimentalVar(BwrapConfigBase):
     arg_word = '--setenv'
     var_name: str
-    var_value: str
+    var_value: Optional[str] = None
 
     def to_args(self) -> Tuple[str, str, str]:
-        return self.arg_word, self.var_name, self.var_value
+        return (
+            self.arg_word,
+            self.var_name,
+            self.var_value if self.var_value is not None
+            else environ[self.var_name])
 
 
 @dataclass
@@ -92,7 +97,7 @@ class DevBind(Bind):
 
 
 @dataclass(frozen=False)
-class DbusSessionTalkTo(BwrapConfigBase):
+class DbusSessionTalkTo():
     arg_word = '--talk'
 
     bus_name: str

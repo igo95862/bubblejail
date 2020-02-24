@@ -20,6 +20,7 @@ from argparse import ArgumentParser, Namespace
 from asyncio import run as async_run
 from typing import Iterator
 from sys import exit
+from pathlib import Path
 
 from .bubblejail_instance import BubblejailInstance, get_data_directory
 from .profiles import PROFILES
@@ -40,9 +41,9 @@ def run_bjail(args: Namespace) -> None:
             instance_name
         ).async_run(
             args_to_run=args.args_to_instance,
-            debug_print_args=args.debug_print_args,
             debug_shell=args.debug_shell,
             dry_run=args.dry_run,
+            debug_helper_script=args.debug_helper_script,
         ))
 
 
@@ -65,15 +66,15 @@ def bjail_create(args: Namespace) -> None:
         new_instance.generate_dot_desktop(str(profile.dot_desktop_path))
 
 
-def main() -> None:
+def bubblejail_main() -> None:
     parser = ArgumentParser()
     subparcers = parser.add_subparsers()
     # run subcommand
     parser_run = subparcers.add_parser('run')
     if __debug__:
-        parser_run.add_argument('--debug-print-args', action='store_true')
         parser_run.add_argument('--debug-shell', action='store_true')
         parser_run.add_argument('--dry-run', action='store_true')
+        parser_run.add_argument('--debug-helper-script', type=Path)
 
     parser_run.add_argument('instance_name')
     parser_run.add_argument(
