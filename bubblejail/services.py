@@ -131,6 +131,7 @@ class BubblejailDefaults(BubblejailService):
         self,
         home_bind_path: Path,
     ) -> None:
+        super().__init__()
         self.home_bind_path = home_bind_path
 
     def __iter__(self) -> Generator[ServiceIterTypes, None, None]:
@@ -232,6 +233,7 @@ class PulseAudio(BubblejailService):
 
 class HomeShare(BubblejailService):
     def __init__(self, home_paths: List[str]):
+        super().__init__()
         self.home_paths = home_paths
 
     def __iter__(self) -> Generator[ServiceIterTypes, None, None]:
@@ -244,6 +246,7 @@ class HomeShare(BubblejailService):
 
 class DirectRendering(BubblejailService):
     def __init__(self, enable_aco: bool = False):
+        super().__init__()
         self.enable_aco = enable_aco
 
     def __iter__(self) -> Generator[ServiceIterTypes, None, None]:
@@ -312,6 +315,7 @@ class Joystick(BubblejailService):
 
 class RootShare(BubblejailService):
     def __init__(self, paths: List[str]):
+        super().__init__()
         self.paths = paths
 
     def __iter__(self) -> Generator[ServiceIterTypes, None, None]:
