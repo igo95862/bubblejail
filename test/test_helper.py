@@ -14,14 +14,15 @@
 # You should have received a copy of the GNU General Public License
 # along with bubblejail.  If not, see <https://www.gnu.org/licenses/>.
 
-from asyncio import (StreamReader, StreamWriter, get_event_loop,
-                     open_unix_connection, create_task)
+from asyncio import (StreamReader, StreamWriter, create_task, get_event_loop,
+                     open_unix_connection)
 from os import unlink
 from pathlib import Path
 from unittest import IsolatedAsyncioTestCase
 from unittest import main as unittest_main
 
-from bubblejail.bubblejail_helper import BubblejailHelper, RequestPing
+from bubblejail.bubblejail_helper import (BubblejailHelper, RequestPing,
+                                          get_helper_argument_parser)
 
 # Test socket needs to be cleaned up
 test_socket_path = Path('./test_socket')
@@ -35,11 +36,12 @@ class HelperTests(IsolatedAsyncioTestCase):
         self.event_loop.set_debug(True)
         # Create helper
         self.helper = BubblejailHelper(
+            startup_args=[],
             helper_socket_path=test_socket_path,
             no_child_timeout=None,
             use_fixups=False,
-            exec_argv=False,
         )
+        self.parser = get_helper_argument_parser()
 
     async def asyncSetUp(self) -> None:
         # Start helper
@@ -60,6 +62,38 @@ class HelperTests(IsolatedAsyncioTestCase):
 
         print('Response bytes:', response)
         self.assertIn(b'pong', response, 'No pong in response')
+
+    def test_argument_parser_no_shell(self) -> None:
+        no_shell_example_args = [
+            '/bin/true',
+            '--long-opt', '-e', '-test',
+            '/bin/false', '--shell'
+        ]
+        parsed_args = self.parser.parse_args(no_shell_example_args)
+
+        self.assertFalse(parsed_args.shell)
+        self.assertEqual(parsed_args.args_to_run, no_shell_example_args)
+
+    def test_argument_parser_with_shell(self) -> None:
+        with_shell_example_args = [
+            '--shell', '/bin/ls', '-l'
+        ]
+
+        parsed_args = self.parser.parse_args(with_shell_example_args)
+
+        self.assertTrue(parsed_args.shell)
+        self.assertEqual(
+            parsed_args.args_to_run, with_shell_example_args[1:])
+
+    def test_argument_parser_just_shell(self) -> None:
+        just_shell_example = [
+            '--shell'
+        ]
+
+        parsed_args = self.parser.parse_args(just_shell_example)
+
+        self.assertTrue(parsed_args.shell)
+        self.assertEqual(parsed_args.args_to_run, [])
 
     async def asyncTearDown(self) -> None:
         create_task(self.helper.stop_async())
