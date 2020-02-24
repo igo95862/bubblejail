@@ -301,6 +301,7 @@ class BubblejailInit:
         self.dbus_session_socket_path = parent.dbus_session_socket_path
         # Args to dbus proxy
         self.dbus_session_args: List[str] = []
+        self.dbus_session_proxy_process: Optional[Process] = None
         # Args to bwrap
         self.bwrap_args: List[str] = []
         # Debug mode
@@ -428,7 +429,7 @@ class BubblejailInit:
 
             # Pylint does not recognize *args for some reason
             # pylint: disable=E1120
-            dbus_session_proxy_process = await create_subprocess_exec(
+            self.dbus_session_proxy_process = await create_subprocess_exec(
                 *self.dbus_session_args,
                 stdout=(asyncio_pipe
                         if not self.is_shell_debug
@@ -438,7 +439,7 @@ class BubblejailInit:
             )
 
             self.watch_dbus_proxy_task = create_task(
-                process_watcher(dbus_session_proxy_process),
+                process_watcher(self.dbus_session_proxy_process),
                 name='dbus session proxy',
             )
 
@@ -459,6 +460,10 @@ class BubblejailInit:
                 await self.watch_dbus_proxy_task
             except CancelledError:
                 ...
+
+        if self.dbus_session_proxy_process is not None:
+            self.dbus_session_proxy_process.terminate()
+            await self.dbus_session_proxy_process.wait()
 
         for t in self.temp_files:
             t.close()
