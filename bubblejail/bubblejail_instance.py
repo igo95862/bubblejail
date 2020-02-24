@@ -410,15 +410,15 @@ class BubblejailInit:
             self.bwrap_args.append('bubblejail-helper')
 
     async def __aenter__(self) -> None:
+        # Generate args
+        self.genetate_args()
+
         # Create runtime dir
         # If the dir exists exception will be raised inidicating that
         # instance is already running or did not clean-up properly.
         self.runtime_dir.mkdir(mode=0o700, parents=True, exist_ok=False)
         # Create helper directory
         self.helper_runtime_dir.mkdir(mode=0o700)
-
-        # Generate args
-        self.genetate_args()
 
         # Dbus session proxy
         if self.dbus_session_args:
