@@ -37,7 +37,6 @@ FIREFOX_PROFILE = BubblejailProfile(
             'x11': {},
             'network': {},
             'pulse_audio': {},
-            'gnome_tool_kit': {'name': 'required'},
             'home_share': {'home_paths': ['/Downloads']},
         }
     ),
@@ -52,7 +51,6 @@ FIREFOX_WAYLAND_PROFILE = BubblejailProfile(
             'wayland': {},
             'network': {},
             'pulse_audio': {},
-            'gnome_tool_kit': {'name': 'required'},
             'home_share': {'home_paths': ['/Downloads']},
         }
     ),
