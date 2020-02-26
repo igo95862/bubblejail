@@ -15,8 +15,8 @@
 # along with bubblejail.  If not, see <https://www.gnu.org/licenses/>.
 
 from asyncio import (StreamReader, StreamWriter, create_task, get_event_loop,
-                     open_unix_connection)
-from os import unlink
+                     open_unix_connection, create_subprocess_exec)
+from os import unlink, getpid
 from pathlib import Path
 from unittest import IsolatedAsyncioTestCase, TestCase
 from unittest import main as unittest_main
@@ -108,6 +108,42 @@ class HelperParserTests(TestCase):
 
             self.assertTrue(parsed_args.shell)
             self.assertEqual(parsed_args.args_to_run, [])
+
+
+class PidTrackerTest(IsolatedAsyncioTestCase):
+
+    async def test_process_detection(self) -> None:
+        """Test process detection"""
+
+        with self.subTest('PID tracking: no child of this process'):
+            self.assertFalse(BubblejailHelper.process_has_child(str(getpid())))
+
+        child_process = await create_subprocess_exec(
+            'sleep', '1d',
+        )
+
+        with self.subTest('PID tracking: has child method'):
+            self.assertTrue(
+                BubblejailHelper.process_has_child(
+                    str(getpid())
+                )
+            )
+
+        with self.subTest('PID tracking by command: right command'):
+            # WARN: This will give false positive if you have
+            # sleep runing anywhere on the system
+            # Maybein the future we can setup quick pid namespace
+            self.assertTrue(
+                BubblejailHelper.proc_has_process_command('sleep'))
+
+        with self.subTest('PID tracking by command: wrong command'):
+            self.assertFalse(
+                BubblejailHelper.proc_has_process_command(
+                    'asdjhaikefrasendiklfnsmzkjledf'))
+
+        # Cleanup
+        child_process.terminate()
+        await child_process.wait()
 
 
 if __name__ == '__main__':
