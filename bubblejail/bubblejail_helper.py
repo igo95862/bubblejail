@@ -23,7 +23,6 @@ from asyncio import sleep, start_unix_server
 from asyncio.subprocess import DEVNULL, PIPE, STDOUT
 from json import dumps as json_dumps
 from json import loads as json_loads
-from os import P_NOWAIT, waitpid
 from pathlib import Path
 from typing import (Any, Awaitable, Dict, Generator, List, Literal, Optional,
                     Union)
@@ -144,11 +143,14 @@ class BubblejailHelper(Awaitable[bool]):
         # Event terminated
         self.terminated = Event()
 
-        # Child reaper variables
-        self.no_child_timeout = no_child_timeout
-        self.no_child_countdown = no_child_timeout
-        self.reaper_pool_timer = reaper_pool_timer
-        self.child_reaper_task: Optional[Task[None]] = None
+        # Terminator variables
+        self.terminator_look_for_command: Optional[str] = None
+        try:
+            self.terminator_look_for_command = startup_args[0]
+        except IndexError:
+            ...
+        self.terminator_pool_timer = reaper_pool_timer
+        self.termninator_watcher_task: Optional[Task[None]] = None
 
         # Fix-ups
         if not use_fixups:
@@ -158,37 +160,74 @@ class BubblejailHelper(Awaitable[bool]):
         # otherwise KDE applicaitons do not work
         Path(get_runtime_dir()).chmod(0o700)
 
-    async def child_reaper(self) -> None:
+    @classmethod
+    def iter_proc_process_directories(cls) -> Generator[Path, None, None]:
+        proc_path = Path('/proc')
+        # Iterate over items in /proc
+        for proc_item in proc_path.iterdir():
+            # If we found something without number as name
+            # skip it as its not a process
+            if proc_item.name.isnumeric():
+                yield proc_item
+
+    @classmethod
+    def proc_has_process_command(cls, process_command: str) -> bool:
+        for process_dir in cls.iter_proc_process_directories():
+            # read cmdline file containing cmd arguments
+            with open(process_dir / 'stat') as stat_file:
+                # Read file and split by white space
+                # The command argument is a second white space
+                # separated argument so we only need to split 2 times
+                stat_file_data_list = stat_file.read().split(maxsplit=2)
+                # compare command
+                # The command is enclosed in () round parenthesis
+                # [1:-1] will remove them
+                if process_command == stat_file_data_list[1][1:-1]:
+                    return True
+
+        return False
+
+    @classmethod
+    def process_has_child(cls, process_id: str = '1') -> bool:
+        for process_dir in cls.iter_proc_process_directories():
+            # PID 1 always has a parent
+            if process_dir.name == '1':
+                continue
+
+            # Open /proc/PID/stat
+            with open(process_dir / 'stat') as stat_file:
+                # Read file and split by white space
+                stat_file_data_list = stat_file.read().split()
+                # 4th item is the parent pid
+                if stat_file_data_list[3] == process_id:
+                    return True
+
+        return False
+
+    async def termninator_watcher(self) -> None:
+        if __debug__:
+            print(
+                'self.terminator_look_for_command: ',
+                repr(self.terminator_look_for_command))
 
         while True:
             try:
-                await sleep(self.reaper_pool_timer)  # wait timer
+                await sleep(self.terminator_pool_timer)  # wait timer
+
+                if self.terminator_look_for_command is None:
+                    is_time_to_termniate = not self.process_has_child()
+                else:
+                    is_time_to_termniate = not self.proc_has_process_command(
+                        self.terminator_look_for_command
+                    )
+
+                if is_time_to_termniate:
+                    if __debug__:
+                        print('No children found. Terminating.')
+                    create_task(self.stop_async())
+                    return
             except CancelledError:
                 return
-
-            try:
-                while True:
-                    # This loop tries to reap as many children as possible
-                    pid, _ = waitpid(0, P_NOWAIT)
-                    # If we managed to call waitpid reset termination timer
-                    self.no_child_countdown = self.no_child_timeout
-                    if pid == 0:
-                        break
-            except ChildProcessError:
-                # If no_child_countdown is set to None means we don't want
-                # the helper to shutdown because there are no children
-                if self.no_child_countdown is not None:
-                    # When there are no children start
-                    # the termnination countdown
-                    self.no_child_countdown -= 1
-                    print(
-                        'No child present. Countdown: ',
-                        self.no_child_countdown,
-                        flush=True,
-                    )
-                    if not self.no_child_countdown:
-                        create_task(self.stop_async())
-                        return
 
     async def run_command(
         self,
@@ -260,17 +299,17 @@ class BubblejailHelper(Awaitable[bool]):
             path=self.helper_socket_path,
         )
         print('Started unix server', flush=True)
-        self.child_reaper_task = create_task(self.child_reaper())
+        self.termninator_watcher_task = create_task(self.termninator_watcher())
         if self.startup_args:
             await self.run_command(self.startup_args)
 
     async def stop_async(self) -> None:
 
-        if (self.child_reaper_task is not None
+        if (self.termninator_watcher_task is not None
             and
-                not self.child_reaper_task.done()):
-            self.child_reaper_task.cancel()
-            await self.child_reaper_task
+                not self.termninator_watcher_task.done()):
+            self.termninator_watcher_task.cancel()
+            await self.termninator_watcher_task
 
         if self.server is not None:
             self.server.close()
