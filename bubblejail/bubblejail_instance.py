@@ -62,6 +62,9 @@ async def process_watcher(process: Process) -> None:
     """Reads stdout of process and prints"""
     process_stdout = process.stdout
 
+    if __debug__:
+        print(f"Watching {repr(process)}")
+
     if process_stdout is None:
         return
 
