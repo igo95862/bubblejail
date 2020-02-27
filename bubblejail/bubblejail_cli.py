@@ -18,9 +18,8 @@
 from argparse import REMAINDER as ARG_REMAINDER
 from argparse import ArgumentParser, Namespace
 from asyncio import run as async_run
-from typing import Iterator
-from sys import exit
 from pathlib import Path
+from typing import Iterator
 
 from .bubblejail_instance import BubblejailInstance, get_data_directory
 from .profiles import PROFILES
