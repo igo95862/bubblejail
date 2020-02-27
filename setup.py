@@ -23,7 +23,7 @@ setup(
     packages=find_packages(),
     entry_points={
         'console_scripts': [
-            'bubblejail = bubblejail.bubblejail:bubblejail_main',
+            'bubblejail = bubblejail.bubblejail_cli:bubblejail_main',
             ('bubblejail-helper = '
              'bubblejail.bubblejail_helper:bubblejail_helper_main'),
         ],
