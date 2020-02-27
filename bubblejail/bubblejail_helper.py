@@ -146,7 +146,14 @@ class BubblejailHelper(Awaitable[bool]):
         # Terminator variables
         self.terminator_look_for_command: Optional[str] = None
         try:
-            self.terminator_look_for_command = startup_args[0]
+            # Startup command can be either by path or just command
+            # IE: sh vs /bin/sh
+            # We want to extract the final word as in /proc/{PID}/stat
+            # the executable name is always reported as binary name
+            # What if there are two different binaries with same name but
+            # different paths????
+            startup_command_or_path = startup_args[0].split('/')[-1]
+            self.terminator_look_for_command = startup_command_or_path
         except IndexError:
             ...
         self.terminator_pool_timer = reaper_pool_timer
