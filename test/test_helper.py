@@ -53,6 +53,7 @@ class HelperTests(IsolatedAsyncioTestCase):
         self.writter: StreamWriter = writter
 
     async def test_ping(self) -> None:
+        """Test pinging helper over unix socket"""
         ping_request = RequestPing('test')
         self.writter.write(ping_request.to_json_byte_line())
         await self.writter.drain()
@@ -77,6 +78,7 @@ class HelperParserTests(TestCase):
         self.parser = get_helper_argument_parser()
 
     def test_parser(self) -> None:
+        """Test how helper argument parser works"""
         with self.subTest('No shell'):
             no_shell_example_args = [
                 '/bin/true',
