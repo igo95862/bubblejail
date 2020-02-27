@@ -332,9 +332,6 @@ class BubblejailInit:
 
         dbus_session_opts: Set[str] = set()
 
-        # As pid 1
-        self.bwrap_args.append('--as-pid-1')
-
         # Unshare all
         self.bwrap_args.append('--unshare-all')
         # Die with parent
