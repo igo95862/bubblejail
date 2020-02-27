@@ -36,15 +36,20 @@ def iter_instance_names() -> Iterator[str]:
 def run_bjail(args: Namespace) -> None:
     instance_name = args.instance_name
 
+    async_run_kwargs = {
+        'args_to_run': args.args_to_instance,
+    }
+
+    if __debug__:
+        async_run_kwargs['debug_shell'] = args.debug_shell
+        async_run_kwargs['dry_run'] = args.dry_run
+        async_run_kwargs['debug_helper_script'] = args.debug_helper_script
+
     async_run(
         BubblejailInstance(
             instance_name
-        ).async_run(
-            args_to_run=args.args_to_instance,
-            debug_shell=args.debug_shell,
-            dry_run=args.dry_run,
-            debug_helper_script=args.debug_helper_script,
-        ))
+        ).async_run(**async_run_kwargs)
+    )
 
 
 def bjail_list(args: Namespace) -> None:
