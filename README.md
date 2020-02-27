@@ -92,7 +92,7 @@ Profile name: code_oss
 
 ## TODO
 
-* No way to spawn new commands inside already launched sandbox. This will cause issues with such things as opening links in a browser from another application. We will need to write a PID1 helper for sandbox that does communication with the outside world.
+* ~No way to spawn new commands inside already launched sandbox. This will cause issues with such things as opening links in a browser from another application. We will need to write a PID1 helper for sandbox that does communication with the outside world.~ Added helper. Needs bug testing.
 * ~D-bus proxy. Probably use what flatpak uses and Arch Linux packages under xdg-dbus-proxy.~ Dbus proxy is now avalible but needs more research on what applications need what bus access.
 * Figure out what is needed from /etc/. I think that nssswitch.conf and hosts might be needed but should be modified before passing in to sandbox.
 * Change configuration format to .toml instead of .json. Should be easier to edit for humans. Also add "edit" command that opens the configuration file in the EDITOR. (possibly validate after editing) 
