@@ -100,8 +100,4 @@ def bubblejail_main() -> None:
 
     args = parser.parse_args()
 
-    try:
-        args.func(args)
-    except AttributeError:
-        parser.error("No command specified")
-        exit(1)
+    args.func(args)
