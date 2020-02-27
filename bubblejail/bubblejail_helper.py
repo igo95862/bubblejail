@@ -273,11 +273,15 @@ class BubblejailHelper(Awaitable[bool]):
             self,
             reader: StreamReader,
             writter: StreamWriter) -> None:
-        print('Client connected', flush=True)
+
+        if __debug__:
+            print('Client connected', flush=True)
+
         while True:
             line = await reader.readline()
             if not line:
-                print('Reached end of reader. Returnning', flush=True)
+                if __debug__:
+                    print('Reached end of reader. Returnning', flush=True)
                 writter.close()
                 await writter.wait_closed()
                 return
@@ -305,7 +309,8 @@ class BubblejailHelper(Awaitable[bool]):
             self.client_handler,
             path=self.helper_socket_path,
         )
-        print('Started unix server', flush=True)
+        if __debug__:
+            print('Started unix server', flush=True)
         self.termninator_watcher_task = create_task(self.termninator_watcher())
         if self.startup_args:
             await self.run_command(self.startup_args)
@@ -323,7 +328,8 @@ class BubblejailHelper(Awaitable[bool]):
             await self.server.wait_closed()
 
         self.terminated.set()
-        print('Terminated', flush=True)
+        if __debug__:
+            print('Terminated', flush=True)
 
     def __await__(self) -> Generator[Any, None, bool]:
         # Pylint does not recognize that we get a coroutine object

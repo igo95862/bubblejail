@@ -269,7 +269,8 @@ class BubblejailInstance:
                         else None),
                 stderr=asyncio_stdout,
             )
-            print("Bubblewrap started")
+            if __debug__:
+                print(f"Bubblewrap started. PID: {repr(process)}")
 
             if not debug_shell:
                 task_bwrap_main = create_task(
@@ -280,7 +281,8 @@ class BubblejailInstance:
                 await process.wait()
                 print("Debug shell ended")
 
-            print("Bubblewrap terminated")
+            if __debug__:
+                print("Bubblewrap terminated")
 
 
 class BubblejailInit:
@@ -371,7 +373,8 @@ class BubblejailInit:
 
         # If we found any dbus args
         if dbus_session_opts:
-            print('Dbus args found')
+            if __debug__:
+                print('Dbus args found')
             env_dbus_session_addr = 'DBUS_SESSION_BUS_ADDRESS'
 
             self.dbus_session_args.extend((
