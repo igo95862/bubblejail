@@ -20,7 +20,9 @@ from setuptools import setup, find_packages
 setup(
     name="bubblejail",
     version="0.2",
-    packages=find_packages(),
+    packages=find_packages(
+        exclude=['test']
+    ),
     entry_points={
         'console_scripts': [
             'bubblejail = bubblejail.bubblejail_cli:bubblejail_main',
