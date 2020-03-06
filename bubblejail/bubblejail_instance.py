@@ -211,6 +211,7 @@ class BubblejailInstance:
         debug_shell: bool = False,
         dry_run: bool = False,
         debug_helper_script: Optional[Path] = None,
+        debug_log_dbus: bool = False,
     ) -> None:
 
         instance_config = self._read_config()
@@ -239,6 +240,7 @@ class BubblejailInstance:
             instance_config=instance_config,
             is_shell_debug=debug_shell,
             is_helper_debug=debug_helper_script is not None,
+            is_log_dbus=debug_log_dbus,
         )
 
         async with init:
@@ -292,6 +294,7 @@ class BubblejailInit:
         instance_config: BubblejailInstanceConfig,
         is_shell_debug: bool = False,
         is_helper_debug: bool = False,
+        is_log_dbus: bool = False,
     ) -> None:
         self.home_bind_path = parent.home_bind_path
         self.runtime_dir = parent.runtime_dir
@@ -312,6 +315,7 @@ class BubblejailInit:
         # Debug mode
         self.is_helper_debug = is_helper_debug
         self.is_shell_debug = is_shell_debug
+        self.is_log_dbus = is_log_dbus
         # Instance config
         self.instance_config = instance_config
 
@@ -381,7 +385,7 @@ class BubblejailInit:
             ))
             self.dbus_session_args.extend(dbus_session_opts)
             self.dbus_session_args.append('--filter')
-            if __debug__:
+            if self.is_log_dbus:
                 self.dbus_session_args.append('--log')
 
             # Bind socket inside the sandbox

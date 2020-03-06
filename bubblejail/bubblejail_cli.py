@@ -43,6 +43,7 @@ def run_bjail(args: Namespace) -> None:
         async_run_kwargs['debug_shell'] = args.debug_shell
         async_run_kwargs['dry_run'] = args.dry_run
         async_run_kwargs['debug_helper_script'] = args.debug_helper_script
+        async_run_kwargs['debug_log_dbus'] = args.debug_log_dbus
 
     async_run(
         BubblejailInstance(
@@ -79,6 +80,7 @@ def bubblejail_main() -> None:
         parser_run.add_argument('--debug-shell', action='store_true')
         parser_run.add_argument('--dry-run', action='store_true')
         parser_run.add_argument('--debug-helper-script', type=Path)
+        parser_run.add_argument('--debug-log-dbus', action='store_true')
 
     parser_run.add_argument('instance_name')
     parser_run.add_argument(
