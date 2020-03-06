@@ -48,16 +48,6 @@ def copy_data_to_temp_file(data: bytes) -> IO[bytes]:
     return temp_file
 
 
-def get_data_directory() -> Path:
-    data_path = Path(xdg_data_home + "/bubblejail")
-
-    # Create directory if neccesary
-    if not data_path.is_dir():
-        data_path.mkdir(mode=0o700)
-
-    return data_path
-
-
 async def process_watcher(process: Process) -> None:
     """Reads stdout of process and prints"""
     process_stdout = process.stdout
@@ -78,10 +68,13 @@ async def process_watcher(process: Process) -> None:
 
 
 class BubblejailInstance:
+    DATA_DIR = Path(xdg_data_home + "/bubblejail")
+    DATA_INSTANCE_DIR = DATA_DIR / 'instances'
+
     def __init__(self, name: str):
         self.name = name
         # Instance directory located at $XDG_DATA_HOME/bubblejail/
-        self.instance_directory = get_data_directory() / self.name
+        self.instance_directory = self.DATA_INSTANCE_DIR / self.name
         self.home_bind_path = self.instance_directory / 'home'
         # If instance directory does not exists we can't do much
         # Probably someone used 'run' command before 'create'
@@ -163,10 +156,10 @@ class BubblejailInstance:
             new_name: str,
             profile_name: Optional[str] = None
     ) -> 'BubblejailInstance':
-        instance_directory = get_data_directory() / new_name
+        instance_directory = BubblejailInstance.DATA_INSTANCE_DIR / new_name
 
         # Exception will be raised if directory already exists
-        instance_directory.mkdir(mode=0o700)
+        instance_directory.mkdir(mode=0o700, parents=True)
         # Make home directory
         (instance_directory / 'home').mkdir(mode=0o700)
         # Make config.json

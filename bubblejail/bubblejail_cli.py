@@ -21,12 +21,12 @@ from asyncio import run as async_run
 from pathlib import Path
 from typing import Iterator
 
-from .bubblejail_instance import BubblejailInstance, get_data_directory
+from .bubblejail_instance import BubblejailInstance
 from .profiles import PROFILES
 
 
 def iter_instance_names() -> Iterator[str]:
-    data_dir = get_data_directory()
+    data_dir = BubblejailInstance.DATA_INSTANCE_DIR
     for x in data_dir.iterdir():
         if x.is_dir():
             yield str(x.stem)
