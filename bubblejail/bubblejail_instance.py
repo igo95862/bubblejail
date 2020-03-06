@@ -20,22 +20,22 @@ from asyncio.subprocess import DEVNULL as asyncio_devnull
 from asyncio.subprocess import PIPE as asyncio_pipe
 from asyncio.subprocess import STDOUT as asyncio_stdout
 from asyncio.subprocess import Process
-from json import dump as json_dump
-from json import load as json_load
 from os import environ
 from pathlib import Path
 from socket import AF_UNIX, SOCK_STREAM, SocketType, socket
 from tempfile import TemporaryFile
 from typing import IO, Any, Iterator, List, Optional, Set, Type
 
+from toml import dump as toml_dump
+from toml import load as toml_load
 from xdg import IniFile
 from xdg.BaseDirectory import get_runtime_dir, xdg_data_home
 from xdg.Exceptions import NoKeyError as XdgNoKeyError
 
 from .bubblejail_helper import RequestRun
 from .bubblejail_instance_config import BubblejailInstanceConfig
-from .bwrap_config import (Bind, BwrapConfigBase,
-                           DbusSessionTalkTo, EnvrimentalVar, FileTransfer)
+from .bwrap_config import (Bind, BwrapConfigBase, DbusSessionTalkTo,
+                           EnvrimentalVar, FileTransfer)
 from .exceptions import BubblejailException
 from .profiles import PROFILES
 from .services import SERVICES, BubblejailDefaults, BubblejailService
@@ -103,8 +103,8 @@ class BubblejailInstance:
             self.runtime_dir / 'dbus_session_proxy')
 
     def _read_config(self) -> BubblejailInstanceConfig:
-        with (self.instance_directory / "config.json").open() as f:
-            return BubblejailInstanceConfig(**json_load(f))
+        with (self.instance_directory / "config.toml").open() as f:
+            return BubblejailInstanceConfig(**toml_load(f))
 
     def generate_dot_desktop(self, dot_desktop_path: str) -> None:
         new_dot_desktop = IniFile.IniFile(
@@ -170,7 +170,7 @@ class BubblejailInstance:
         # Make home directory
         (instance_directory / 'home').mkdir(mode=0o700)
         # Make config.json
-        with (instance_directory / 'config.json').open(mode='x') as inst_cf:
+        with (instance_directory / 'config.toml').open(mode='x') as inst_cf:
             if profile_name is not None:
                 profile = PROFILES[profile_name]
                 default_config = profile.default_instance_config
@@ -186,7 +186,7 @@ class BubblejailInstance:
 
                 service_dict.update(key_updates)
 
-            json_dump(default_config.__dict__, inst_cf, indent=2)
+            toml_dump(default_config.__dict__, inst_cf)
 
         instance = BubblejailInstance(new_name)
         return instance
