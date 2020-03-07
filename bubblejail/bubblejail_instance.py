@@ -33,12 +33,11 @@ from xdg.BaseDirectory import get_runtime_dir, xdg_data_home
 from xdg.Exceptions import NoKeyError as XdgNoKeyError
 
 from .bubblejail_helper import RequestRun
-from .bubblejail_instance_config import BubblejailInstanceConfig
+from .bubblejail_utils import BubblejailInstanceConfig
 from .bwrap_config import (Bind, BwrapConfigBase, DbusSessionTalkTo,
                            EnvrimentalVar, FileTransfer)
 from .exceptions import BubblejailException
-from .profiles import PROFILES
-from .services import SERVICES, BubblejailDefaults, BubblejailService
+from .services import BubblejailDefaults, BubblejailService
 
 
 def copy_data_to_temp_file(data: bytes) -> IO[bytes]:
@@ -163,23 +162,14 @@ class BubblejailInstance:
         # Make home directory
         (instance_directory / 'home').mkdir(mode=0o700)
         # Make config.json
-        with (instance_directory / 'config.toml').open(mode='x') as inst_cf:
+        with (instance_directory / 'config.toml').open(
+                mode='x') as instance_conf_file:
             if profile_name is not None:
-                profile = PROFILES[profile_name]
-                default_config = profile.default_instance_config
+                raise NotImplementedError
             else:
                 default_config = BubblejailInstanceConfig()
 
-            # Update service keys
-            for service_dict in default_config.services.values():
-                key_updates = {}
-                for key in service_dict:
-                    if key == 'name':
-                        key_updates[key] = new_name
-
-                service_dict.update(key_updates)
-
-            toml_dump(default_config.__dict__, inst_cf)
+            toml_dump(default_config.__dict__, instance_conf_file)
 
         instance = BubblejailInstance(new_name)
         return instance
@@ -318,9 +308,7 @@ class BubblejailInit:
     def iter_bwrap_configs(self) -> Iterator[BubblejailService]:
         yield BubblejailDefaults(self.home_bind_path)
 
-        for service_name, service_conf in (
-                self.instance_config.services.items()):
-            yield SERVICES[service_name](**service_conf)
+        yield from self.instance_config.iter_services()
 
     def genetate_args(self) -> None:
         # TODO: Reorganize the order to allow for
@@ -392,10 +380,6 @@ class BubblejailInit:
                     str(self.dbus_session_socket_path),
                     '/run/user/1000/bus').to_args()
             )
-
-        # Share network if set
-        if 'network' in self.instance_config.services:
-            self.bwrap_args.append('--share-net')
 
         # Bind helper directory
         self.bwrap_args.extend(

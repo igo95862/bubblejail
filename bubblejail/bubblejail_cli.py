@@ -22,7 +22,7 @@ from pathlib import Path
 from typing import Iterator
 
 from .bubblejail_instance import BubblejailInstance
-from .profiles import PROFILES
+from .bubblejail_utils import BubblejailProfile
 
 
 def iter_instance_names() -> Iterator[str]:
@@ -57,12 +57,11 @@ def bjail_list(args: Namespace) -> None:
         for x in iter_instance_names():
             print(x)
     elif args.list_what == 'profiles':
-        for x in PROFILES:
-            print(x)
+        raise NotImplementedError
 
 
 def bjail_create(args: Namespace) -> None:
-    profile = PROFILES.get(args.profile)
+    profile = BubblejailProfile()
     new_instance = BubblejailInstance.create_new(
         new_name=args.new_instance_name,
         profile_name=args.profile,
@@ -93,7 +92,6 @@ def bubblejail_main() -> None:
     parser_create.set_defaults(func=bjail_create)
     parser_create.add_argument(
         '--profile',
-        choices=PROFILES.keys(),
     )
     parser_create.add_argument('new_instance_name')
     # list subcommand

@@ -26,7 +26,7 @@ from xdg import BaseDirectory
 
 from .bwrap_config import (Bind, BwrapConfigBase, DbusSessionTalkTo, DevBind,
                            DirCreate, EnvrimentalVar, FileTransfer,
-                           ReadOnlyBind, Symlink)
+                           ReadOnlyBind, ShareNetwork, Symlink)
 
 # region HelperFunctions
 
@@ -217,6 +217,7 @@ class Wayland(BubblejailService):
 
 class Network(BubblejailService):
     def __iter__(self) -> Generator[ServiceIterTypes, None, None]:
+        yield ShareNetwork()
         yield ReadOnlyBind('/etc/resolv.conf')
         yield ReadOnlyBind('/etc/ca-certificates')
         yield ReadOnlyBind('/etc/ssl')

@@ -16,8 +16,8 @@
 
 
 from dataclasses import dataclass, field
-from typing import FrozenSet, Optional, Tuple, Union
 from os import environ
+from typing import Optional, Tuple
 
 
 @dataclass
@@ -106,15 +106,5 @@ class DbusSessionTalkTo():
         return (f"{self.arg_word}={self.bus_name}", )
 
 
-@dataclass
-class BwrapConfig:
-    binds: Tuple[Union[Bind, DevBind], ...] = tuple()
-    read_only_binds: Tuple[ReadOnlyBind, ...] = tuple()
-    dir_create: Tuple[DirCreate, ...] = tuple()
-    symlinks: Tuple[Symlink, ...] = tuple()
-    files: Tuple[FileTransfer, ...] = tuple()
-    enviromental_variables: Tuple[EnvrimentalVar, ...] = tuple()
-    env_no_unset: FrozenSet[str] = frozenset()
-    extra_args: Tuple[str, ...] = tuple()
-    share_network: bool = False
-    dbus_session: Tuple[DbusSessionTalkTo, ...] = tuple()
+class ShareNetwork(BwrapConfigBase):
+    arg_word = "--share-net"
