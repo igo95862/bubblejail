@@ -30,4 +30,7 @@ setup(
              'bubblejail.bubblejail_helper:bubblejail_helper_main'),
         ],
     },
+    package_data={
+        'bubblejail': ['profiles/*toml'],
+    },
 )

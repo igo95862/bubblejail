@@ -1,0 +1,13 @@
+# Firefox on Wayland
+
+gtk_application = true
+
+[import_conf]
+copy = [".mozzila"]
+
+[config]
+executable_name = "/usr/bin/firefox"
+services = ["wayland", "network", "pulse_audio",]
+
+[config.service.home_share]
+home_paths = [ "Downloads",]

@@ -1,0 +1,9 @@
+
+
+[config]
+executable_name = "/usr/bin/steam"
+services = [
+    "x11", "pulse_audio",
+    "network", "direct_rendering",
+    "joystick",
+]

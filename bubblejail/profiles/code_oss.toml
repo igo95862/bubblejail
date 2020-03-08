@@ -1,0 +1,11 @@
+# Code OSS
+
+[import_conf]
+copy = [".vscode-oss"]
+
+[config]
+executable_name = "/usr/bin/code"
+services = ["x11", "network",]
+
+[config.service.home_share]
+home_paths = [ "Projects",]

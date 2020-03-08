@@ -20,6 +20,8 @@ from argparse import ArgumentParser, Namespace
 from asyncio import run as async_run
 from pathlib import Path
 from typing import Iterator
+from pkg_resources import resource_filename
+
 
 from .bubblejail_instance import BubblejailInstance
 from .bubblejail_utils import BubblejailProfile
@@ -57,7 +59,9 @@ def bjail_list(args: Namespace) -> None:
         for x in iter_instance_names():
             print(x)
     elif args.list_what == 'profiles':
-        raise NotImplementedError
+        profiles_dir = Path(resource_filename(__name__, 'profiles'))
+        for profile_file in profiles_dir.iterdir():
+            print(profile_file.stem)
 
 
 def bjail_create(args: Namespace) -> None:
