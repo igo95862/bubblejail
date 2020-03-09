@@ -83,6 +83,10 @@ def bjail_create(args: Namespace) -> None:
     )
 
 
+def bjail_edit(args: Namespace) -> None:
+    async_run(BubblejailInstance(args.instance_name).edit_config_in_editor())
+
+
 def bubblejail_main() -> None:
     parser = ArgumentParser()
     subparcers = parser.add_subparsers(
@@ -120,6 +124,11 @@ def bubblejail_main() -> None:
         choices=('instances', 'profiles'),
         default='instances',)
     parser_list.set_defaults(func=bjail_list)
+
+    # Edit subcommand
+    parser_edit = subparcers.add_parser('edit')
+    parser_edit.add_argument('instance_name')
+    parser_edit.set_defaults(func=bjail_edit)
 
     args = parser.parse_args()
 

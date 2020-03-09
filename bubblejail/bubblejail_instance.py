@@ -23,7 +23,7 @@ from asyncio.subprocess import Process
 from os import environ
 from pathlib import Path
 from socket import AF_UNIX, SOCK_STREAM, SocketType, socket
-from tempfile import TemporaryFile
+from tempfile import TemporaryDirectory, TemporaryFile
 from typing import IO, Any, Iterator, List, Optional, Set, Type
 
 from toml import dump as toml_dump
@@ -94,9 +94,22 @@ class BubblejailInstance:
         self.dbus_session_socket_path: Path = (
             self.runtime_dir / 'dbus_session_proxy')
 
-    def _read_config(self) -> BubblejailInstanceConfig:
-        with (self.instance_directory / "config.toml").open() as f:
-            return BubblejailInstanceConfig(**toml_load(f))
+    @property
+    def instance_config_file_path(self) -> Path:
+        return self.instance_directory / "config.toml"
+
+    def _read_config_file(self) -> str:
+        with (self.instance_config_file_path).open() as f:
+            return f.read()
+
+    def _read_config(
+            self,
+            config_contents: Optional[str] = None) -> BubblejailInstanceConfig:
+
+        if config_contents is None:
+            config_contents = self._read_config_file()
+
+        return BubblejailInstanceConfig(**toml_load(config_contents))
 
     def generate_dot_desktop(self, dot_desktop_path: Optional[Path]) -> None:
 
@@ -266,6 +279,29 @@ class BubblejailInstance:
 
             if __debug__:
                 print("Bubblewrap terminated")
+
+    async def edit_config_in_editor(self) -> None:
+        # Create temporary directory
+        with TemporaryDirectory() as tempdir:
+            # Create path to temporary file and write exists config
+            temp_file_path = Path(tempdir + 'temp.toml')
+            with open(temp_file_path, mode='w') as tempfile:
+                tempfile.write(self._read_config_file())
+            # Launch EDITOR on the temporary file
+            run_args = [environ['EDITOR'], str(temp_file_path)]
+            p = await create_subprocess_exec(*run_args)
+            await p.wait()
+            # Verify that the new config is valid and save to variable
+            with open(temp_file_path) as tempfile:
+                new_config_toml = tempfile.read()
+                tempfile.seek(0)  # need to reset position for toml to read
+                conf_to_verify = BubblejailInstanceConfig(
+                    **toml_load(tempfile)
+                )
+                conf_to_verify.verify()
+            # Write to instance config file
+            with open(self.instance_config_file_path, mode='w') as conf_file:
+                conf_file.write(new_config_toml)
 
 
 class BubblejailInit:
