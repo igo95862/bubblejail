@@ -17,8 +17,9 @@
 
 from dataclasses import dataclass, field
 from pathlib import Path
-from typing import Any, Dict, Generator, List, Optional, Union, Set
+from typing import Any, Dict, Generator, List, Optional, Set, Union
 
+from .bwrap_config import BwrapConfigBase, DbusSessionTalkTo
 from .services import SERVICES, BubblejailService
 
 TypeServicesConfig = Dict[str, Dict[str, Union[str, List[str]]]]
@@ -41,6 +42,16 @@ class BubblejailInstanceConfig:
         for service_name in self.services:
             if service_name not in initialized_services_names:
                 yield SERVICES[service_name]()
+
+    def verify(self) -> None:
+        for service in self.iter_services():
+            for arg in service:
+                if isinstance(arg, BwrapConfigBase):
+                    arg.to_args()
+                elif isinstance(arg, DbusSessionTalkTo):
+                    arg.to_args()
+                else:
+                    ...
 
 
 @dataclass

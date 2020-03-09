@@ -33,9 +33,7 @@ for profile_toml in Path('./bubblejail/profiles/').iterdir():
         p = BubblejailProfile(**profile)
         conf = p.get_config()
         try:
-            for s in conf.iter_services():
-                for _ in s:
-                    ...
+            conf.verify()
         except ServiceUnavalibleError:
             raise SkipTest(
                 f"Profile non-initializable on local machine: "
