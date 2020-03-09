@@ -15,28 +15,40 @@
 # along with bubblejail.  If not, see <https://www.gnu.org/licenses/>.
 
 
+from functools import partialmethod
 from pathlib import Path
-from unittest import TestCase
+from typing import Any, Dict
+from unittest import SkipTest, TestCase
 from unittest import main as unittest_main
-from toml import load
+
 from bubblejail.bubblejail_utils import BubblejailProfile
+from bubblejail.exceptions import ServiceUnavalibleError
+from toml import load
 
+for profile_toml in Path('./bubblejail/profiles/').iterdir():
+    with open(profile_toml) as f:
+        profile_dict = load(f)
 
-class TestProfiles(TestCase):
-    """Iterates over all provided profiles and tries to generate args"""
+    def test_profile(self: TestCase, profile: Dict[Any, Any]) -> None:
+        p = BubblejailProfile(**profile)
+        conf = p.get_config()
+        try:
+            for s in conf.iter_services():
+                for _ in s:
+                    ...
+        except ServiceUnavalibleError:
+            raise SkipTest(
+                f"Profile non-initializable on local machine: "
+                f"{self}"
+            )
 
-    def test_profiles(self) -> None:
-        for profile_toml in Path('./bubblejail/profiles/').iterdir():
-            with open(profile_toml) as f:
-                profile_dict = load(f)
-
-            with self.subTest(profile_toml):
-                p = BubblejailProfile(**profile_dict)
-                conf = p.get_config()
-
-                for s in conf.iter_services():
-                    for _ in s:
-                        ...
+    vars()[profile_toml.stem] = type(
+        profile_toml.stem,
+        (TestCase, ),
+        {
+            'test_profile': partialmethod(test_profile, profile=profile_dict),
+        }
+    )
 
 
 if __name__ == '__main__':

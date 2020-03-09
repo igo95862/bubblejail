@@ -23,5 +23,9 @@ class FailedInitializeServiceError(BubblejailException):
     ...
 
 
+class ServiceUnavalibleError(BubblejailException):
+    ...
+
+
 class MissingConfigurationError(BubblejailException):
     ...

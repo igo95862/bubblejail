@@ -27,6 +27,7 @@ from xdg import BaseDirectory
 from .bwrap_config import (Bind, BwrapConfigBase, DbusSessionTalkTo, DevBind,
                            DirCreate, EnvrimentalVar, FileTransfer,
                            ReadOnlyBind, ShareNetwork, Symlink)
+from .exceptions import ServiceUnavalibleError
 
 # region HelperFunctions
 
@@ -204,6 +205,9 @@ class X11(BubblejailService):
 
 class Wayland(BubblejailService):
     def __iter__(self) -> Generator[ServiceIterTypes, None, None]:
+        if 'WAYLAND_DISPLAY' not in environ:
+            raise ServiceUnavalibleError("No wayland display.")
+
         for x in XDG_DESKTOP_VARS:
             if x in environ:
                 yield EnvrimentalVar(x)
