@@ -104,16 +104,19 @@ class BubblejailInstance:
             new_dot_desktop = IniFile.IniFile(
                 filename=str(dot_desktop_path))
 
-            # Modify Exec
-            old_exec = new_dot_desktop.get(
-                key='Exec', group='Desktop Entry'
-            )
+            for group_name in new_dot_desktop.groups():
+                # Modify Exec
+                old_exec = new_dot_desktop.get(
+                    key='Exec', group=group_name
+                )
+                if not old_exec:
+                    continue
 
-            new_dot_desktop.set(
-                key='Exec',
-                value=(f"bubblejail run {self.name} "
-                       f"{' '.join(old_exec.split()[1:])}"),
-                group='Desktop Entry')
+                new_dot_desktop.set(
+                    key='Exec',
+                    value=(f"bubblejail run {self.name} "
+                           f"{' '.join(old_exec.split()[1:])}"),
+                    group=group_name)
 
         else:
             new_dot_desktop = IniFile.IniFile()
