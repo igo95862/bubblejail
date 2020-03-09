@@ -1,5 +1,5 @@
 # Code OSS
-
+dot_desktop_path = "/usr/share/applications/code-oss.desktop"
 [import_conf]
 copy = [".vscode-oss"]
 

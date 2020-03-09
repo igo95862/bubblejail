@@ -1,5 +1,5 @@
 
-
+dot_desktop_path = "/usr/share/applications/steam.desktop"
 [config]
 executable_name = "/usr/bin/steam"
 services = [

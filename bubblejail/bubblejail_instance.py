@@ -30,10 +30,9 @@ from toml import dump as toml_dump
 from toml import load as toml_load
 from xdg import IniFile
 from xdg.BaseDirectory import get_runtime_dir, xdg_data_home
-from xdg.Exceptions import NoKeyError as XdgNoKeyError
 
 from .bubblejail_helper import RequestRun
-from .bubblejail_utils import BubblejailInstanceConfig
+from .bubblejail_utils import BubblejailInstanceConfig, BubblejailProfile
 from .bwrap_config import (Bind, BwrapConfigBase, DbusSessionTalkTo,
                            EnvrimentalVar, FileTransfer)
 from .exceptions import BubblejailException
@@ -69,6 +68,7 @@ async def process_watcher(process: Process) -> None:
 class BubblejailInstance:
     DATA_DIR = Path(xdg_data_home + "/bubblejail")
     DATA_INSTANCE_DIR = DATA_DIR / 'instances'
+    DESKTOP_ENTRIES_DIR = Path(xdg_data_home + '/applications')
 
     def __init__(self, name: str):
         self.name = name
@@ -98,38 +98,31 @@ class BubblejailInstance:
         with (self.instance_directory / "config.toml").open() as f:
             return BubblejailInstanceConfig(**toml_load(f))
 
-    def generate_dot_desktop(self, dot_desktop_path: str) -> None:
-        new_dot_desktop = IniFile.IniFile(
-            filename=dot_desktop_path)
+    def generate_dot_desktop(self, dot_desktop_path: Optional[Path]) -> None:
 
-        # Strip non Desktop Entry groups
-        # TODO: Modify actions instead of removing
-        groups_to_remove = []
-        for g in new_dot_desktop.groups():
-            if g != "Desktop Entry":
-                groups_to_remove.append(g)
+        if dot_desktop_path is not None:
+            new_dot_desktop = IniFile.IniFile(
+                filename=str(dot_desktop_path))
 
-        for g in groups_to_remove:
-            new_dot_desktop.removeGroup(g)
+            # Modify Exec
+            old_exec = new_dot_desktop.get(
+                key='Exec', group='Desktop Entry'
+            )
 
-        # Remove Actions= from Desktop Entry
-        try:
-            new_dot_desktop.removeKey(
-                key='Actions',
+            new_dot_desktop.set(
+                key='Exec',
+                value=(f"bubblejail run {self.name} "
+                       f"{' '.join(old_exec.split()[1:])}"),
+                group='Desktop Entry')
+
+        else:
+            new_dot_desktop = IniFile.IniFile()
+            new_dot_desktop.addGroup('Desktop Entry')
+            new_dot_desktop.set(
+                key='Exec',
+                value=f"bubblejail run {self.name}",
                 group='Desktop Entry'
             )
-        except XdgNoKeyError:
-            ...
-        # Modify Exec
-        old_exec = new_dot_desktop.get(
-            key='Exec', group='Desktop Entry'
-        )
-
-        new_dot_desktop.set(
-            key='Exec',
-            value=(f"bubblejail run {self.name} "
-                   f"{' '.join(old_exec.split()[1:])}"),
-            group='Desktop Entry')
 
         # Modify name
         new_dot_desktop.set(
@@ -145,15 +138,16 @@ class BubblejailInstance:
             value=f"bubble_{self.name}",
         )
 
-        dot_desktop_path = (
-            f"{xdg_data_home}/applications/bubble_{self.name}.desktop")
+        new_dot_desktop_path_str = str(
+            self.DESKTOP_ENTRIES_DIR / f"bubble_{self.name}.desktop")
 
-        new_dot_desktop.write(filename=dot_desktop_path)
+        new_dot_desktop.write(filename=new_dot_desktop_path_str)
 
     @staticmethod
     def create_new(
             new_name: str,
-            profile_name: Optional[str] = None
+            profile: BubblejailProfile,
+            create_dot_desktop: bool,
     ) -> 'BubblejailInstance':
         instance_directory = BubblejailInstance.DATA_INSTANCE_DIR / new_name
 
@@ -164,14 +158,15 @@ class BubblejailInstance:
         # Make config.json
         with (instance_directory / 'config.toml').open(
                 mode='x') as instance_conf_file:
-            if profile_name is not None:
-                raise NotImplementedError
-            else:
-                default_config = BubblejailInstanceConfig()
 
-            toml_dump(default_config.__dict__, instance_conf_file)
+            toml_dump(profile.config, instance_conf_file)
 
         instance = BubblejailInstance(new_name)
+
+        if create_dot_desktop:
+
+            instance.generate_dot_desktop(profile.dot_desktop_path)
+
         return instance
 
     async def send_run_rpc(self, args_to_run: List[str]) -> None:

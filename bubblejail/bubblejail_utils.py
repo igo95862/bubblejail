@@ -50,8 +50,8 @@ class ImportConfig:
 
 @dataclass
 class BubblejailProfile:
-    config: Dict[str, Any] = field(default_factory=dict)
     dot_desktop_path: Optional[Path] = None
+    config: Dict[str, Any] = field(default_factory=dict)
     import_conf: Optional[ImportConfig] = None
     gtk_application: bool = False
 

@@ -20,8 +20,9 @@ from argparse import ArgumentParser, Namespace
 from asyncio import run as async_run
 from pathlib import Path
 from typing import Iterator
-from pkg_resources import resource_filename
 
+from pkg_resources import resource_filename
+from toml import load as toml_load
 
 from .bubblejail_instance import BubblejailInstance
 from .bubblejail_utils import BubblejailProfile
@@ -64,14 +65,22 @@ def bjail_list(args: Namespace) -> None:
             print(profile_file.stem)
 
 
+def load_profile(profile_name: str) -> BubblejailProfile:
+    profiles_dir = Path(resource_filename(__name__, 'profiles'))
+    with open(profiles_dir / f"{profile_name}.toml") as f:
+        return BubblejailProfile(**toml_load(f))
+
+
 def bjail_create(args: Namespace) -> None:
-    profile = BubblejailProfile()
-    new_instance = BubblejailInstance.create_new(
+    if args.profile is None:
+        profile = BubblejailProfile()
+    else:
+        profile = load_profile(args.profile)
+    BubblejailInstance.create_new(
         new_name=args.new_instance_name,
-        profile_name=args.profile,
+        profile=profile,
+        create_dot_desktop=args.no_desktop_entry,
     )
-    if profile is not None:
-        new_instance.generate_dot_desktop(str(profile.dot_desktop_path))
 
 
 def bubblejail_main() -> None:
@@ -96,6 +105,10 @@ def bubblejail_main() -> None:
     parser_create.set_defaults(func=bjail_create)
     parser_create.add_argument(
         '--profile',
+    )
+    parser_create.add_argument(
+        '--no-desktop-entry',
+        action='store_false',
     )
     parser_create.add_argument('new_instance_name')
     # list subcommand

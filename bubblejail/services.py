@@ -240,8 +240,8 @@ class HomeShare(BubblejailService):
     def __iter__(self) -> Generator[ServiceIterTypes, None, None]:
         for path_relative_to_home in self.home_paths:
             yield Bind(
-                environ['HOME'] + path_relative_to_home,
-                '/home/user' + path_relative_to_home,
+                str(Path.home() / path_relative_to_home),
+                str(Path('/home/user') / path_relative_to_home),
             )
 
 
