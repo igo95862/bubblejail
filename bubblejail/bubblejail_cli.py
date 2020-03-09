@@ -85,7 +85,9 @@ def bjail_create(args: Namespace) -> None:
 
 def bubblejail_main() -> None:
     parser = ArgumentParser()
-    subparcers = parser.add_subparsers()
+    subparcers = parser.add_subparsers(
+        required=True,
+    )
     # run subcommand
     parser_run = subparcers.add_parser('run')
     if __debug__:
