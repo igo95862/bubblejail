@@ -27,7 +27,7 @@ from tempfile import TemporaryDirectory, TemporaryFile
 from typing import IO, Any, Iterator, List, Optional, Set, Type
 
 from toml import dump as toml_dump
-from toml import load as toml_load
+from toml import loads as toml_loads
 from xdg import IniFile
 from xdg.BaseDirectory import get_runtime_dir, xdg_data_home
 
@@ -109,7 +109,7 @@ class BubblejailInstance:
         if config_contents is None:
             config_contents = self._read_config_file()
 
-        return BubblejailInstanceConfig(**toml_load(config_contents))
+        return BubblejailInstanceConfig(**toml_loads(config_contents))
 
     def generate_dot_desktop(self, dot_desktop_path: Optional[Path]) -> None:
 
@@ -294,9 +294,8 @@ class BubblejailInstance:
             # Verify that the new config is valid and save to variable
             with open(temp_file_path) as tempfile:
                 new_config_toml = tempfile.read()
-                tempfile.seek(0)  # need to reset position for toml to read
                 conf_to_verify = BubblejailInstanceConfig(
-                    **toml_load(tempfile)
+                    **toml_loads(new_config_toml)
                 )
                 conf_to_verify.verify()
             # Write to instance config file
