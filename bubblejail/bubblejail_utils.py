@@ -29,6 +29,7 @@ TypeServicesConfig = Dict[str, Dict[str, Union[str, List[str]]]]
 class BubblejailInstanceConfig:
     """Represents config.toml"""
     executable_name: Optional[Union[str, List[str]]] = None
+    share_local_time: bool = True
     services: List[str] = field(default_factory=list)
     service: TypeServicesConfig = field(default_factory=dict)
 

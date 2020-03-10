@@ -131,9 +131,11 @@ class BubblejailDefaults(BubblejailService):
     def __init__(
         self,
         home_bind_path: Path,
+        share_local_time: bool,
     ) -> None:
         super().__init__()
         self.home_bind_path = home_bind_path
+        self.share_local_time = share_local_time
 
     def __iter__(self) -> Generator[ServiceIterTypes, None, None]:
         # Distro packged libraries and binaries
@@ -188,6 +190,8 @@ class BubblejailDefaults(BubblejailService):
         yield generate_nssswitch()
         yield FileTransfer(b'multi on', '/etc/host.conf')
         yield from generate_hosts()
+        if self.share_local_time:
+            yield ReadOnlyBind('/etc/localtime')
 
 
 class X11(BubblejailService):

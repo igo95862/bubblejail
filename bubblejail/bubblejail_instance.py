@@ -339,7 +339,10 @@ class BubblejailInit:
         self.watch_dbus_proxy_task: Optional[Task[None]] = None
 
     def iter_bwrap_configs(self) -> Iterator[BubblejailService]:
-        yield BubblejailDefaults(self.home_bind_path)
+        yield BubblejailDefaults(
+            home_bind_path=self.home_bind_path,
+            share_local_time=self.instance_config.share_local_time,
+        )
 
         yield from self.instance_config.iter_services()
 
