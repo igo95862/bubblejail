@@ -335,6 +335,11 @@ class OpenJDK(BubblejailService):
         yield ReadOnlyBind('/etc/profile.d/jre.sh')
 
 
+class Notifications(BubblejailService):
+    def __iter__(self) -> Generator[ServiceIterTypes, None, None]:
+        yield DbusSessionTalkTo('org.freedesktop.Notifications')
+
+
 SERVICES: Dict[str, Type[BubblejailService]] = {
     'default': BubblejailDefaults,
     'x11': X11,
@@ -347,4 +352,5 @@ SERVICES: Dict[str, Type[BubblejailService]] = {
     'joystick': Joystick,
     'root_share': RootShare,
     'openjdk': OpenJDK,
+    'notify': Notifications,
 }
