@@ -7,7 +7,7 @@ copy = [".mozzila"]
 
 [config]
 executable_name = "/usr/bin/firefox"
-services = ["x11", "network", "pulse_audio",]
+services = ["x11", "network", "pulse_audio", "notify"]
 
 [config.service.home_share]
 home_paths = [ "Downloads",]
