@@ -3,7 +3,7 @@ dot_desktop_path = "/usr/share/applications/firefox.desktop"
 gtk_application = true
 
 [import_conf]
-copy = [".mozzila"]
+copy = [".mozilla"]
 
 [config]
 executable_name = "/usr/bin/firefox"
