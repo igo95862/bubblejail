@@ -6,30 +6,46 @@
 Bubblejail is a [bubblewrap](https://github.com/containers/bubblewrap) based alternative to firejail.
 
 
-It is in very early development phase so expect bugs and lack of features.
+## Description
+
+Bubblejail design is based on observations of Firejail faults.
+
+One of the biggest issues with Firejail is that you can accidentaly run unsandboxed application and not notice.
+
+Bubblejail instead of trying to transparently overlay existing home directory creates a separated home directory.
+
+Every **Instance** represents a separated home directory. Normally every sandboxed application has its own home directory.
+
+Instance has `conflig.toml` file that contains the configuration of the instance such as system resources that sandbox should have access to.
+
+**Service** represent some kind of system resource that the sandbox can be given access to. For example, Pulse Audio service gives access to Pulse Audio socket so that the application can use sound.
+
+**Profile** is a predefined set of services that a particular application uses. Using profiles is entirely optional.
 
 
-## How to use
+## Quick start
 
 1. Install bubblejail from [AUR](https://aur.archlinux.org/packages/bubblejail-git/)
 1. Install the application you want to sandbox. (for example, firefox)
-1. Create an instance using the application profile
-
-> bubblejail create --profile=firefox myfirefox
-
-1. The desktop entry should be created and can be found under name _myfirefox bubble_
+1. Run `auto-create` command that will look for possible applications to sandbox.
+1. The desktop entry should be created and can be found under name __{Name} bubble_
 
 ## Command line utility documentation
 
-Command line program `bubblejail` has 3 sub commands: `create`, `run`, `list`
+Command line program `bubblejail` has 5 sub commands: `create`, `run`, `list`, `edit`, `auto-create`
 
 ### bubblejail create
 
 Creates a new instance.
 
+Optional arguments:
+
+* __--profile__ Specify the profile that the instance will use. For avalible profiles look at **Avalible profiles** section. If omited then empty profile will be used and the user will have to fill configuration manually.
+* __--do-import__ Imports data from home directory. **DOES NOT WORK YET**
+* __--no-desktop-entry__ Do not create desktop entry.
+
 Required arguments: 
 
-* --profile Specify the profile that the instance will use. For avalible profiles look at **Avalible profiles** section
 * instance name that the new instance will use 
 
 Example:
@@ -49,6 +65,9 @@ Required arguments:
 Optional arguments: 
 
 * arguments to instance
+* __--debug-shell__ Opens a shell inside the sandbox instead of running.
+* __--dry-run__ Prints the bwrap arguments and does not run anything.
+* __--debug-log-dbus__ Enables dbus proxy log. 
 
 Example:
 
@@ -69,6 +88,61 @@ Example:
 bubblejail list instances
 ```
 
+### bubblejail edit
+
+Opens the configuration file in the EDITOR. After exiting editor the file is validated and only written if validation is successful.
+
+Example:
+```
+bubblejail edit myfirefox
+```
+
+### bubblejail auto-create
+
+Tries to create new instances based avalible profiles. 
+
+## Editing config.toml
+
+Instance configuration is based on [TOML](https://github.com/toml-lang/toml) format. 
+
+**config.toml** file is located at $XDG_DATA_HOME/bubblejail/instances/{name}/config.toml
+
+`edit` command can be used to open the config file in your EDITOR and validate after editing.
+
+Example config:
+```
+executable_name = ["/usr/bin/firefox", "--class=bubble_Firefox", "--name=bubble_Firefox"]
+services = [
+  "x11", "network", "pulse_audio",
+]
+
+[service.home_share]
+home_paths = [ "Downloads",]
+```
+
+### Config keys
+
+* executable_name: Either a single string or a list that contains that executable name and arguments. Required unless you use --debug-shell option to open shell.
+* share_local_time: boolean that controlls if the local time is shared with sandbox. On by default.
+* services: List of strings. Adds particular services without parametres.
+* service.{name}: Used to configure a particular service. The service does not need to be added to services list as it will be enabled if particular configuration section exists.
+
+### Avalible services
+
+* x11: X windowing system. Also includes Xwayland.
+* wayland: Pure wayland windowing system.
+* network: Access to network.
+* pulse_audio: Pulse Audio audio system.
+* home_share: Shared folder relative to home.
+    * home_paths: List of path strings to share with sandbox. Required.
+* direct_rendering: Access to GPU.
+    * enable_aco: Boolean to enable high performance Vulkan compiler for AMD GPUs.
+* systray: Access to desktop tray bar.
+* joystick: Access to joysticks and gamepads.
+* root_share: Share access relative to /.
+    * paths: List of path strings to share with sandbox. Required.
+* openjdk: Access to java libraries.
+* notify: Access to desktop notifications.
 
 ## Avalible profiles
 
@@ -90,11 +164,19 @@ Open source build of VScode.
 
 Profile name: code_oss
 
+### Steam
+
+Steam with runtime.
+
+Profile name: steam
+
+### Lutris
+
+Lutris open source gaming platform.
+
+Profile name: lutris
+
 ## TODO
 
-* ~No way to spawn new commands inside already launched sandbox. This will cause issues with such things as opening links in a browser from another application. We will need to write a PID1 helper for sandbox that does communication with the outside world.~ Added helper. Needs bug testing.
-* ~D-bus proxy. Probably use what flatpak uses and Arch Linux packages under xdg-dbus-proxy.~ Dbus proxy is now avalible but needs more research on what applications need what bus access.
-* Figure out what is needed from /etc/. I think that nssswitch.conf and hosts might be needed but should be modified before passing in to sandbox.
-* Change configuration format to .toml instead of .json. Should be easier to edit for humans. Also add "edit" command that opens the configuration file in the EDITOR. (possibly validate after editing) 
-* Add "auto-create" command that looks for binaries and profiles and creates instances. This allows for quick installation.
-* Implement imports.
+* Graphical toolkits settings are not passed.
+
