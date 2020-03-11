@@ -138,8 +138,12 @@ def bjail_auto_create(args: Namespace) -> None:
                 "as one of the services is unavalible")
             continue
 
-        if profile_executable not in instances_executables:
-            profiles_to_create[profile_name] = profile_entry
+        if profile_executable in instances_executables:
+            print(f"Skipping {profile_name}"
+                  " as instance with same executable already exists")
+            continue
+
+        profiles_to_create[profile_name] = profile_entry
 
     for profile_name, profile_entry in profiles_to_create.items():
         do_create_answer = input(
