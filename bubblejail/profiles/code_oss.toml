@@ -4,7 +4,7 @@ dot_desktop_path = "/usr/share/applications/code-oss.desktop"
 copy = [".vscode-oss"]
 
 [config]
-executable_name = "/usr/bin/code"
+executable_name = "/usr/bin/code-oss"
 services = ["x11", "network",]
 
 [config.service.home_share]
