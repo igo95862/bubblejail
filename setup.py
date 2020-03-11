@@ -19,6 +19,9 @@ from setuptools import setup, find_packages
 
 setup(
     name="bubblejail",
+    description=("Use AUR to install bubblejail. "
+                 "PyPI package is only to hold place."),
+    url='https://github.com/igo95862/bubblejail',
     version="0.2",
     packages=find_packages(
         exclude=['test']
