@@ -97,7 +97,11 @@ class BubblejailInstance:
 
     @classmethod
     def get_instances_dir(cls) -> Path:
-        return cls.DATA_DIR / 'instances'
+        instances_dir_path = cls.DATA_DIR / 'instances'
+        if not instances_dir_path.exists():
+            instances_dir_path.mkdir(mode=0o700, parents=True)
+
+        return instances_dir_path
 
     @property
     def instance_config_file_path(self) -> Path:
