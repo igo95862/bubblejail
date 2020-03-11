@@ -19,13 +19,13 @@ from argparse import REMAINDER as ARG_REMAINDER
 from argparse import ArgumentParser, Namespace
 from asyncio import run as async_run
 from pathlib import Path
-from typing import Iterator
+from typing import Dict, Iterator, List, Union
 
 from pkg_resources import resource_filename
 from toml import load as toml_load
 
 from .bubblejail_instance import BubblejailInstance
-from .bubblejail_utils import BubblejailProfile
+from .bubblejail_utils import BubblejailProfile, BubblejailInstanceConfig
 
 
 def iter_instance_names() -> Iterator[str]:
@@ -55,19 +55,21 @@ def run_bjail(args: Namespace) -> None:
     )
 
 
+def get_profiles_dir() -> Path:
+    return Path(resource_filename(__name__, 'profiles'))
+
+
 def bjail_list(args: Namespace) -> None:
     if args.list_what == 'instances':
         for x in iter_instance_names():
             print(x)
     elif args.list_what == 'profiles':
-        profiles_dir = Path(resource_filename(__name__, 'profiles'))
-        for profile_file in profiles_dir.iterdir():
+        for profile_file in get_profiles_dir().iterdir():
             print(profile_file.stem)
 
 
 def load_profile(profile_name: str) -> BubblejailProfile:
-    profiles_dir = Path(resource_filename(__name__, 'profiles'))
-    with open(profiles_dir / f"{profile_name}.toml") as f:
+    with open(get_profiles_dir() / f"{profile_name}.toml") as f:
         return BubblejailProfile(**toml_load(f))
 
 
@@ -93,6 +95,56 @@ def bjail_create(args: Namespace) -> None:
 
 def bjail_edit(args: Namespace) -> None:
     async_run(BubblejailInstance(args.instance_name).edit_config_in_editor())
+
+
+def bjail_auto_create(args: Namespace) -> None:
+    profiles_to_create: Dict[str, BubblejailProfile] = {}
+    instances_executables: Dict[Union[str, List[str], None], str] = {
+        None: '',
+    }
+    # Read instances executables
+    for instance_dir in BubblejailInstance.get_instances_dir().iterdir():
+        with open(instance_dir / 'config.toml') as f:
+            instance_conf = BubblejailInstanceConfig(**toml_load(f))
+
+        instance_name = instance_dir.name
+        instance_executable = instance_conf.executable_name
+        if isinstance(instance_executable, list):
+            instance_executable = instance_executable[0]
+
+        instances_executables[instance_executable] = instance_name
+
+    # Read profiles executable names
+    for profile_file in get_profiles_dir().iterdir():
+        profile_name = profile_file.stem
+        with open(profile_file) as f:
+            profile_entry = BubblejailProfile(**toml_load(f))
+
+        profile_executable = profile_entry.config['executable_name']
+        # If profile executable is a list take first item as executable
+        if isinstance(profile_executable, list):
+            profile_executable = profile_executable[0]
+
+        if not Path(profile_executable).exists():
+            print(f"Skipping {profile_name} as executable does not exist")
+            continue
+
+        if profile_executable not in instances_executables:
+            profiles_to_create[profile_name] = profile_entry
+
+    breakpoint()
+    for profile_name, profile_entry in profiles_to_create.items():
+        do_create_answer = input(
+            f"Create {profile_name} instance? y/N: ")
+
+        if do_create_answer.lower() != 'y':
+            continue
+
+        BubblejailInstance.create_new(
+            new_name=profile_name,
+            profile=profile_entry,
+            create_dot_desktop=True,
+        )
 
 
 def bubblejail_main() -> None:
@@ -144,6 +196,10 @@ def bubblejail_main() -> None:
     parser_edit = subparcers.add_parser('edit')
     parser_edit.add_argument('instance_name')
     parser_edit.set_defaults(func=bjail_edit)
+
+    # Auto-create subcommand
+    parser_auto_create = subparcers.add_parser('auto-create')
+    parser_auto_create.set_defaults(func=bjail_auto_create)
 
     args = parser.parse_args()
 
