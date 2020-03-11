@@ -29,6 +29,8 @@ from .bwrap_config import (Bind, BwrapConfigBase, DbusSessionTalkTo, DevBind,
                            ReadOnlyBind, ShareNetwork, Symlink)
 from .exceptions import ServiceUnavalibleError
 
+ServiceIterTypes = Union[BwrapConfigBase, FileTransfer, DbusSessionTalkTo]
+
 # region HelperFunctions
 
 XDG_DESKTOP_VARS: FrozenSet[str] = frozenset({
@@ -110,10 +112,16 @@ def generate_hosts() -> Tuple[FileTransfer, FileTransfer]:
     return (FileTransfer(hostname.encode(), '/etc/hostname'),
             FileTransfer(hosts.encode(), '/etc/hosts'))
 
+
+def generate_toolkits() -> Generator[ServiceIterTypes, None, None]:
+    config_home_path = Path(BaseDirectory.xdg_config_home)
+    kde_globals_conf = config_home_path / 'kdeglobals'
+    if kde_globals_conf.exists():
+        yield ReadOnlyBind(
+            str(kde_globals_conf),
+            '/home/user/.config/kdeglobals')
+
 # endregion HelperFunctions
-
-
-ServiceIterTypes = Union[BwrapConfigBase, FileTransfer, DbusSessionTalkTo]
 
 
 class BubblejailService:
@@ -205,6 +213,7 @@ class X11(BubblejailService):
         yield ReadOnlyBind(environ['XAUTHORITY'], '/tmp/.Xauthority')
         yield ReadOnlyBind('/etc/fonts')
         yield EnvrimentalVar('XAUTHORITY', '/tmp/.Xauthority')
+        yield from generate_toolkits()
 
 
 class Wayland(BubblejailService):
@@ -221,6 +230,7 @@ class Wayland(BubblejailService):
         yield Bind((
             f"{BaseDirectory.get_runtime_dir()}"
             f"/{environ.get('WAYLAND_DISPLAY')}"))
+        yield from generate_toolkits()
 
 
 class Network(BubblejailService):
