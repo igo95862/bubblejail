@@ -15,7 +15,7 @@
 # along with bubblejail.  If not, see <https://www.gnu.org/licenses/>.
 
 
-from dataclasses import dataclass, field
+from dataclasses import dataclass, field, InitVar
 from pathlib import Path
 from typing import Any, Dict, Generator, List, Optional, Set, Union
 
@@ -64,8 +64,20 @@ class ImportConfig:
 class BubblejailProfile:
     dot_desktop_path: Optional[Path] = None
     config: Dict[str, Any] = field(default_factory=dict)
-    import_conf: Optional[ImportConfig] = None
+    import_conf: InitVar[ImportConfig] = None
     gtk_application: bool = False
+
+    def __post_init__(self,
+                      import_conf: Union[ImportConfig, Dict[str, Any], None],
+                      ) -> None:
+        if isinstance(import_conf, ImportConfig):
+            self.import_conf = import_conf
+        elif isinstance(import_conf, dict):
+            self.import_conf = ImportConfig(**import_conf)
+        elif import_conf is None:
+            self.import_conf = ImportConfig()
+        else:
+            raise TypeError(f'Wrong import conf type: {import_conf}')
 
     def get_config(self) -> BubblejailInstanceConfig:
         return BubblejailInstanceConfig(**self.config)

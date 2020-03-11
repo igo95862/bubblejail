@@ -22,6 +22,7 @@ from asyncio.subprocess import STDOUT as asyncio_stdout
 from asyncio.subprocess import Process
 from os import environ
 from pathlib import Path
+from shutil import copytree
 from socket import AF_UNIX, SOCK_STREAM, SocketType, socket
 from tempfile import TemporaryDirectory, TemporaryFile
 from typing import IO, Any, Iterator, List, Optional, Set, Type
@@ -32,7 +33,8 @@ from xdg import IniFile
 from xdg.BaseDirectory import get_runtime_dir, xdg_data_home
 
 from .bubblejail_helper import RequestRun
-from .bubblejail_utils import BubblejailInstanceConfig, BubblejailProfile
+from .bubblejail_utils import (BubblejailInstanceConfig, BubblejailProfile,
+                               ImportConfig)
 from .bwrap_config import (Bind, BwrapConfigBase, DbusSessionTalkTo,
                            EnvrimentalVar, FileTransfer)
 from .exceptions import BubblejailException
@@ -67,13 +69,12 @@ async def process_watcher(process: Process) -> None:
 
 class BubblejailInstance:
     DATA_DIR = Path(xdg_data_home + "/bubblejail")
-    DATA_INSTANCE_DIR = DATA_DIR / 'instances'
     DESKTOP_ENTRIES_DIR = Path(xdg_data_home + '/applications')
 
     def __init__(self, name: str):
         self.name = name
         # Instance directory located at $XDG_DATA_HOME/bubblejail/
-        self.instance_directory = self.DATA_INSTANCE_DIR / self.name
+        self.instance_directory = self.get_instances_dir() / self.name
         self.home_bind_path = self.instance_directory / 'home'
         # If instance directory does not exists we can't do much
         # Probably someone used 'run' command before 'create'
@@ -93,6 +94,10 @@ class BubblejailInstance:
         # Dbus session proxy path
         self.dbus_session_socket_path: Path = (
             self.runtime_dir / 'dbus_session_proxy')
+
+    @classmethod
+    def get_instances_dir(cls) -> Path:
+        return cls.DATA_DIR / 'instances'
 
     @property
     def instance_config_file_path(self) -> Path:
@@ -159,13 +164,22 @@ class BubblejailInstance:
 
         new_dot_desktop.write(filename=new_dot_desktop_path_str)
 
-    @staticmethod
+    @classmethod
     def create_new(
+            cls,
             new_name: str,
             profile: BubblejailProfile,
-            create_dot_desktop: bool,
+            create_dot_desktop: bool = False,
+            do_import_data: bool = False,
+            import_from_instance: Optional[str] = None,
     ) -> 'BubblejailInstance':
-        instance_directory = BubblejailInstance.DATA_INSTANCE_DIR / new_name
+
+        home_directory: Optional[Path] = None
+        if import_from_instance is not None:
+            another_instance = BubblejailInstance(import_from_instance)
+            home_directory = another_instance.home_bind_path
+
+        instance_directory = cls.get_instances_dir() / new_name
 
         # Exception will be raised if directory already exists
         instance_directory.mkdir(mode=0o700, parents=True)
@@ -179,8 +193,13 @@ class BubblejailInstance:
 
         instance = BubblejailInstance(new_name)
 
-        if create_dot_desktop:
+        if do_import_data:
+            instance.import_data(
+                import_conf=profile.import_conf,
+                home_dir=home_directory,
+            )
 
+        if create_dot_desktop:
             instance.generate_dot_desktop(profile.dot_desktop_path)
 
         return instance
@@ -301,6 +320,17 @@ class BubblejailInstance:
             # Write to instance config file
             with open(self.instance_config_file_path, mode='w') as conf_file:
                 conf_file.write(new_config_toml)
+
+    def import_data(self, import_conf: ImportConfig,
+                    home_dir: Optional[Path]) -> None:
+        if home_dir is None:
+            home_dir = Path.home()
+
+        for from_home_copy_path in import_conf.copy:
+            copytree(
+                src=(home_dir / from_home_copy_path),
+                dst=(self.home_bind_path / from_home_copy_path),
+            )
 
 
 class BubblejailInit:

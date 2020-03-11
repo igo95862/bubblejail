@@ -29,7 +29,7 @@ from .bubblejail_utils import BubblejailProfile
 
 
 def iter_instance_names() -> Iterator[str]:
-    data_dir = BubblejailInstance.DATA_INSTANCE_DIR
+    data_dir = BubblejailInstance.get_instances_dir()
     for x in data_dir.iterdir():
         if x.is_dir():
             yield str(x.stem)
@@ -76,10 +76,18 @@ def bjail_create(args: Namespace) -> None:
         profile = BubblejailProfile()
     else:
         profile = load_profile(args.profile)
+
+    if args.import_from_instance is not None:
+        do_import_data = True
+    else:
+        do_import_data = args.do_import
+
     BubblejailInstance.create_new(
         new_name=args.new_instance_name,
         profile=profile,
         create_dot_desktop=args.no_desktop_entry,
+        do_import_data=do_import_data,
+        import_from_instance=args.import_from_instance,
     )
 
 
@@ -111,6 +119,13 @@ def bubblejail_main() -> None:
     parser_create.set_defaults(func=bjail_create)
     parser_create.add_argument(
         '--profile',
+    )
+    parser_create.add_argument(
+        '--do-import',
+        action='store_true',
+    )
+    parser_create.add_argument(
+        '--import-from-instance',
     )
     parser_create.add_argument(
         '--no-desktop-entry',
