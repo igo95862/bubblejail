@@ -388,6 +388,10 @@ class BubblejailInit:
         # Die with parent
         self.bwrap_args.append('--die-with-parent')
 
+        if not self.is_shell_debug:
+            # Set new session
+            self.bwrap_args.append('--new-session')
+
         # Set user and group id to pseudo user
         self.bwrap_args.extend(
             ('--uid', '1000', '--gid', '1000')
