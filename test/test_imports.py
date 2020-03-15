@@ -15,19 +15,18 @@
 # along with bubblejail.  If not, see <https://www.gnu.org/licenses/>.
 
 
-from pathlib import Path
-
-from unittest import TestCase
-from unittest import main as unittest_main
-from tempfile import TemporaryDirectory
 from os import environ
+from pathlib import Path
+from tempfile import TemporaryDirectory
+from unittest import IsolatedAsyncioTestCase
+from unittest import main as unittest_main
 
-from bubblejail.bubblejail_utils import ImportConfig, BubblejailProfile
 from bubblejail.bubblejail_instance import BubblejailInstance
+from bubblejail.bubblejail_utils import BubblejailProfile, ImportConfig
 
 
-class TestImports(TestCase):
-    def test_imports(self) -> None:
+class TestImports(IsolatedAsyncioTestCase):
+    async def test_imports(self) -> None:
         with TemporaryDirectory() as tempdir:
             real_home = Path(tempdir)
             # Create data dir which is equivalent of XDG_DATA_HOME
@@ -52,7 +51,7 @@ class TestImports(TestCase):
             )
 
             # Test imports from home
-            new_instance = BubblejailInstance.create_new(
+            new_instance = await BubblejailInstance.create_new(
                 new_name='test_imports',
                 profile=test_profile,
                 create_dot_desktop=False,
@@ -67,7 +66,7 @@ class TestImports(TestCase):
                 self.assertEqual('test', f.read())
 
             # Test imports cross instaces
-            new_instance_from_instance = BubblejailInstance.create_new(
+            new_instance_from_instance = await BubblejailInstance.create_new(
                 new_name='test_import_from_instance',
                 profile=test_profile,
                 do_import_data=True,

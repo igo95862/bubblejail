@@ -85,13 +85,14 @@ def bjail_create(args: Namespace) -> None:
     else:
         do_import_data = args.do_import
 
-    BubblejailInstance.create_new(
+    create_coroutine = BubblejailInstance.create_new(
         new_name=args.new_instance_name,
         profile=profile,
         create_dot_desktop=args.no_desktop_entry,
         do_import_data=do_import_data,
         import_from_instance=args.import_from_instance,
     )
+    async_run(create_coroutine)
 
 
 def bjail_edit(args: Namespace) -> None:
@@ -152,11 +153,12 @@ def bjail_auto_create(args: Namespace) -> None:
         if do_create_answer.lower() != 'y':
             continue
 
-        BubblejailInstance.create_new(
+        create_coroutine = BubblejailInstance.create_new(
             new_name=profile_name,
             profile=profile_entry,
             create_dot_desktop=True,
         )
+        async_run(create_coroutine)
 
 
 def bubblejail_main() -> None:

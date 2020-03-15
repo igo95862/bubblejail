@@ -16,17 +16,19 @@
 
 
 from pathlib import Path
-from unittest import TestCase, skipUnless
-from unittest import main as unittest_main
-from toml import load as toml_load
-from bubblejail.bubblejail_utils import BubblejailProfile
-from bubblejail.bubblejail_instance import BubblejailInstance
 from tempfile import TemporaryDirectory
+from unittest import IsolatedAsyncioTestCase
+from unittest import main as unittest_main
+from unittest import skipUnless
+
+from bubblejail.bubblejail_instance import BubblejailInstance
+from bubblejail.bubblejail_utils import BubblejailProfile
+from toml import load as toml_load
 
 # TODO: needs to be improved
 
 
-class TestInstanceGeneration(TestCase):
+class TestInstanceGeneration(IsolatedAsyncioTestCase):
     def setUp(self) -> None:
         """Set up temporary directory for tests"""
         self.dir = TemporaryDirectory()
@@ -34,21 +36,19 @@ class TestInstanceGeneration(TestCase):
         self.data_directory = self.dir_path / 'data'
         self.data_directory.mkdir()
         BubblejailInstance.DATA_DIR = self.data_directory
-        BubblejailInstance.DATA_INSTANCE_DIR = (
-            BubblejailInstance.DATA_DIR / 'instances')
         BubblejailInstance.DESKTOP_ENTRIES_DIR = self.dir_path
 
     @skipUnless(
         Path('/usr/share/applications/firefox.desktop').exists(),
         'Firefox not installed'
     )
-    def test_create_firefox(self) -> None:
+    async def test_create_firefox(self) -> None:
         instance_name = 'test_instance'
 
         with open('./bubblejail/profiles/firefox.toml') as f:
             profile = BubblejailProfile(**toml_load(f))
 
-        new_instance = BubblejailInstance.create_new(
+        new_instance = await BubblejailInstance.create_new(
             new_name=instance_name,
             profile=profile,
             create_dot_desktop=True,
@@ -60,11 +60,11 @@ class TestInstanceGeneration(TestCase):
         self.assertTrue((instance_dir / 'config.toml').exists())
         self.assertTrue((instance_dir / 'home').exists())
 
-    def test_empty_profile(self) -> None:
+    async def test_empty_profile(self) -> None:
         instance_name = 'test_instance_no_profile'
         profile = BubblejailProfile()
 
-        new_instance = BubblejailInstance.create_new(
+        new_instance = await BubblejailInstance.create_new(
             new_name=instance_name,
             profile=profile,
             create_dot_desktop=True,

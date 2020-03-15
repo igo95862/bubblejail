@@ -22,7 +22,6 @@ from asyncio.subprocess import STDOUT as asyncio_stdout
 from asyncio.subprocess import Process
 from os import environ
 from pathlib import Path
-from shutil import copytree
 from socket import AF_UNIX, SOCK_STREAM, SocketType, socket
 from tempfile import TemporaryDirectory, TemporaryFile
 from typing import IO, Any, Iterator, List, Optional, Set, Type
@@ -169,7 +168,7 @@ class BubblejailInstance:
         new_dot_desktop.write(filename=new_dot_desktop_path_str)
 
     @classmethod
-    def create_new(
+    async def create_new(
             cls,
             new_name: str,
             profile: BubblejailProfile,
@@ -198,7 +197,7 @@ class BubblejailInstance:
         instance = BubblejailInstance(new_name)
 
         if do_import_data:
-            instance.import_data(
+            await instance.import_data(
                 import_conf=profile.import_conf,
                 home_dir=home_directory,
             )
@@ -325,16 +324,20 @@ class BubblejailInstance:
             with open(self.instance_config_file_path, mode='w') as conf_file:
                 conf_file.write(new_config_toml)
 
-    def import_data(self, import_conf: ImportConfig,
-                    home_dir: Optional[Path]) -> None:
+    async def import_data(self, import_conf: ImportConfig,
+                          home_dir: Optional[Path]) -> None:
         if home_dir is None:
             home_dir = Path.home()
 
         for from_home_copy_path in import_conf.copy:
-            copytree(
-                src=(home_dir / from_home_copy_path),
-                dst=(self.home_bind_path / from_home_copy_path),
+            p = await create_subprocess_exec(
+                '/usr/bin/rsync',
+                '--archive', '--preallocate', '--info=progress2',
+                str(home_dir / from_home_copy_path),
+                str(self.home_bind_path),
             )
+
+            await p.wait()
 
 
 class BubblejailInit:
