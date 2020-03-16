@@ -150,13 +150,25 @@ def bjail_auto_create(args: Namespace) -> None:
         do_create_answer = input(
             f"Create {profile_name} instance? y/N: ")
 
-        if do_create_answer.lower() != 'y':
+        if do_create_answer.lower() == 'y':
             continue
+
+        do_import: bool = False
+        if profile_entry.import_conf.available(Path.home()):
+            print('Found possible import.')
+            print('Please close the application being imported.')
+
+            do_import_answer = input(
+                f"Import data? (please close the) y/N: ")
+
+            if do_import_answer.lower() == 'y':
+                do_import = True
 
         create_coroutine = BubblejailInstance.create_new(
             new_name=profile_name,
             profile=profile_entry,
             create_dot_desktop=True,
+            do_import_data=do_import,
         )
         async_run(create_coroutine)
 

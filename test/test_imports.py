@@ -32,20 +32,25 @@ class TestImports(IsolatedAsyncioTestCase):
             # Create data dir which is equivalent of XDG_DATA_HOME
             data_dir = real_home / "data"
             data_dir.mkdir()
-            # Create sample application folder and file
+            # Create test import profile
             dir_to_import = Path('.application')
+            test_import_conf = ImportConfig(
+                copy=[dir_to_import, ],
+            )
+            # Test that its not possible to import when there is no data
+            self.assertFalse(test_import_conf.available(real_home))
+            # Create sample application folder and file
             (real_home / dir_to_import).mkdir()
             test_file_path = dir_to_import / 'test.txt'
             with open(real_home / test_file_path, mode='w') as f:
                 f.write('test')
-
+            # Test that now its possible to import
+            self.assertTrue(test_import_conf.available(real_home))
             # Set new HOME
             environ['HOME'] = str(real_home)
 
             BubblejailInstance.DATA_DIR = data_dir
-            test_import_conf = ImportConfig(
-                copy=[dir_to_import, ],
-            )
+
             test_profile = BubblejailProfile(
                 import_conf=test_import_conf,
             )

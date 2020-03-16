@@ -59,6 +59,16 @@ class BubblejailInstanceConfig:
 class ImportConfig:
     copy: List[Path] = field(default_factory=list)
 
+    def available(self, home_path: Path) -> bool:
+        for relative_to_home_path in self.copy:
+            if not (home_path / relative_to_home_path).exists():
+                return False
+
+        return bool(self.copy)
+
+    def __bool__(self) -> bool:
+        return bool(self.copy)
+
 
 @dataclass
 class BubblejailProfile:
