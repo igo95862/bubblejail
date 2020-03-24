@@ -173,6 +173,12 @@ def bjail_auto_create(args: Namespace) -> None:
         async_run(create_coroutine)
 
 
+def bjail_create_desktop_entry(args: Namespace) -> None:
+    breakpoint()
+    BubblejailInstance(
+        args.instance_name).generate_dot_desktop(args.prototype_path)
+
+
 def bubblejail_main() -> None:
     parser = ArgumentParser()
     subparcers = parser.add_subparsers(
@@ -226,6 +232,14 @@ def bubblejail_main() -> None:
     # Auto-create subcommand
     parser_auto_create = subparcers.add_parser('auto-create')
     parser_auto_create.set_defaults(func=bjail_auto_create)
+
+    # Create desktop entry subcommand
+    parser_create_desktop_entry = subparcers.add_parser('create-desktop-entry')
+    parser_create_desktop_entry.add_argument(
+        '--prototype-path', type=Path,
+    )
+    parser_create_desktop_entry.add_argument('instance_name')
+    parser_create_desktop_entry.set_defaults(func=bjail_create_desktop_entry)
 
     args = parser.parse_args()
 
