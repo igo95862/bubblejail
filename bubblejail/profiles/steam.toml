@@ -7,3 +7,14 @@ services = [
     "network", "direct_rendering",
     "joystick",
 ]
+
+[config.service.root_share]
+# Add your external Steam Libraries paths here
+
+# paths = [ "/mnt/"]
+
+# If you are using custom Protons such as GE or Tkg
+# uncomment this line to fix a bug there proton will crash
+# without access to /sys/devices/system/cpu
+
+# read_only_paths = ["/sys/devices/system/cpu"]
