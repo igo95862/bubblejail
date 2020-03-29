@@ -19,8 +19,8 @@ from os import environ, readlink
 from pathlib import Path
 from random import choices
 from string import ascii_letters
-from typing import (Any, Dict, FrozenSet, Generator, List, Set, Tuple, Type,
-                    Union)
+from typing import (Any, Dict, FrozenSet, Generator, List, Optional, Set,
+                    Tuple, Type, Union)
 
 from xdg import BaseDirectory
 
@@ -333,13 +333,26 @@ class Joystick(BubblejailService):
 
 
 class RootShare(BubblejailService):
-    def __init__(self, paths: List[str]):
+    def __init__(self,
+                 paths: Optional[List[str]] = None,
+                 read_only_paths: Optional[List[str]] = None):
         super().__init__()
-        self.paths = paths
+        if paths is not None:
+            self.paths = paths
+        else:
+            self.paths = []
+
+        if read_only_paths is not None:
+            self.read_only_paths = read_only_paths
+        else:
+            self.read_only_paths = []
 
     def __iter__(self) -> Generator[ServiceIterTypes, None, None]:
         for x in self.paths:
             yield Bind(x)
+
+        for x in self.read_only_paths:
+            yield ReadOnlyBind(x)
 
 
 class OpenJDK(BubblejailService):
