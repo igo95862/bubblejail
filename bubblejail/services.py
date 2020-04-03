@@ -18,7 +18,7 @@
 from os import environ, readlink
 from pathlib import Path
 from random import choices
-from string import ascii_letters
+from string import ascii_letters, hexdigits
 from typing import (Any, Dict, FrozenSet, Generator, List, Optional, Set,
                     Tuple, Type, Union)
 
@@ -121,6 +121,15 @@ def generate_toolkits() -> Generator[ServiceIterTypes, None, None]:
             str(kde_globals_conf),
             '/home/user/.config/kdeglobals')
 
+
+def generate_machine_id_bytes() -> bytes:
+    random_hex_string = choices(
+        population=hexdigits.lower(),
+        k=32,
+    )
+
+    return b''.join((x.encode() for x in random_hex_string))
+
 # endregion HelperFunctions
 
 
@@ -200,6 +209,8 @@ class BubblejailDefaults(BubblejailService):
         yield from generate_hosts()
         if self.share_local_time:
             yield ReadOnlyBind('/etc/localtime')
+
+        yield FileTransfer(generate_machine_id_bytes(), '/etc/machine-id')
 
 
 class X11(BubblejailService):
