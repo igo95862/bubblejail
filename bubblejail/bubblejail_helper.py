@@ -181,16 +181,19 @@ class BubblejailHelper(Awaitable[bool]):
     def proc_has_process_command(cls, process_command: str) -> bool:
         for process_dir in cls.iter_proc_process_directories():
             # read cmdline file containing cmd arguments
-            with open(process_dir / 'stat') as stat_file:
-                # Read file and split by white space
-                # The command argument is a second white space
-                # separated argument so we only need to split 2 times
-                stat_file_data_list = stat_file.read().split(maxsplit=2)
-                # compare command
-                # The command is enclosed in () round parenthesis
-                # [1:-1] will remove them
-                if process_command == stat_file_data_list[1][1:-1]:
-                    return True
+            try:
+                with open(process_dir / 'stat') as stat_file:
+                    # Read file and split by white space
+                    # The command argument is a second white space
+                    # separated argument so we only need to split 2 times
+                    stat_file_data_list = stat_file.read().split(maxsplit=2)
+                    # compare command
+                    # The command is enclosed in () round parenthesis
+                    # [1:-1] will remove them
+                    if process_command == stat_file_data_list[1][1:-1]:
+                        return True
+            except FileNotFoundError:
+                continue
 
         return False
 
