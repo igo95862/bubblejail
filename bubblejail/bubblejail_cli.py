@@ -159,7 +159,7 @@ def bjail_auto_create(args: Namespace) -> None:
             print('Please close the application being imported.')
 
             do_import_answer = input(
-                f"Import data? (please close the) y/N: ")
+                "Import data? (please close the) y/N: ")
 
             if do_import_answer.lower() == 'y':
                 do_import = True
