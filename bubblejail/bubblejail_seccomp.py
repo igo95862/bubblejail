@@ -15,20 +15,31 @@
 # along with bubblejail.  If not, see <https://www.gnu.org/licenses/>.
 
 
-from ctypes import CDLL, c_int, c_uint, c_void_p
+from ctypes import CDLL, c_char_p, c_int, c_uint, c_uint32, c_void_p
 from ctypes.util import find_library
-from typing import Any, List
+from typing import Callable, Tuple, Type, TypeVar, cast
 
 libseccomp = CDLL(find_library('seccomp'))
 
+T = TypeVar('T')
+T2 = TypeVar('T2')
+
 
 def import_from_cdll(
-        func_name: str, arg_list: List[Any], return_type: Any) -> Any:
+    func_name: str,
+        arg_list: Tuple[Type[T2], ...],
+        return_type: Type[T]) -> Callable[[T2], T]:
     c_function = getattr(libseccomp, func_name)
     c_function.argtypes = arg_list
     c_function.restype = return_type
-    return c_function
+    return cast(Callable[[T2], T], c_function)
 
 
-seccomp_init = import_from_cdll('seccomp_init', [c_uint], c_void_p)
-seccomp_load = import_from_cdll('seccomp_load', [c_void_p], c_int)
+seccomp_init = import_from_cdll('seccomp_init', (c_uint, ), c_void_p)
+seccomp_load = import_from_cdll('seccomp_load', (c_void_p, ), c_int)
+seccomp_syscall_resolve_name = import_from_cdll(
+    'seccomp_syscall_resolve_name', (c_char_p, ), c_int)
+seccomp_rule_add = import_from_cdll(
+    'seccomp_rule_add', (c_void_p, c_uint32, c_int, c_uint), c_int)
+
+SCMP_ACT_ALLOW = c_uint(0x7fff0000)
