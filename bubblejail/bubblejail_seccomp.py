@@ -17,7 +17,8 @@
 
 from ctypes import CDLL, c_char_p, c_int, c_uint, c_uint32, c_void_p
 from ctypes.util import find_library
-from typing import Callable, Tuple, Type, TypeVar, cast
+from typing import Callable, Tuple, Type, TypeVar, cast, IO
+from tempfile import TemporaryFile
 
 libseccomp = CDLL(find_library('seccomp'))
 
@@ -43,6 +44,8 @@ seccomp_rule_add = import_from_cdll(
     'seccomp_rule_add', (c_void_p, c_uint32, c_int, c_uint), c_int)
 seccomp_export_pfc = import_from_cdll(
     'seccomp_export_pfc', (c_void_p, c_int), c_int)
+seccomp_export_bpf = import_from_cdll(
+    'seccomp_export_bpf', (c_void_p, c_int), c_int)
 
 SCMP_ACT_ALLOW = c_uint(0x7fff0000)
 
@@ -71,8 +74,11 @@ class SeccompState:
     def load(self) -> None:
         seccomp_load(self._seccomp_ruleset_ptr)
 
-    def export_to_file_descriptor(self) -> int:
-        ...
+    def export_to_temp_file(self) -> IO[bytes]:
+        t = TemporaryFile()
+        seccomp_export_bpf(self._seccomp_ruleset_ptr, t.fileno())
+        t.seek(0)
+        return t
 
     def print(self) -> None:
         seccomp_export_pfc(self._seccomp_ruleset_ptr, 0)
