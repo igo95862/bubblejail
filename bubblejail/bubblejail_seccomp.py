@@ -41,6 +41,8 @@ seccomp_syscall_resolve_name = import_from_cdll(
     'seccomp_syscall_resolve_name', (c_char_p, ), c_int)
 seccomp_rule_add = import_from_cdll(
     'seccomp_rule_add', (c_void_p, c_uint32, c_int, c_uint), c_int)
+seccomp_export_pfc = import_from_cdll(
+    'seccomp_export_pfc', (c_void_p, c_int), c_int)
 
 SCMP_ACT_ALLOW = c_uint(0x7fff0000)
 
@@ -68,3 +70,9 @@ class SeccompState:
 
     def load(self) -> None:
         seccomp_load(self._seccomp_ruleset_ptr)
+
+    def export_to_file_descriptor(self) -> int:
+        ...
+
+    def print(self) -> None:
+        seccomp_export_pfc(self._seccomp_ruleset_ptr, 0)
