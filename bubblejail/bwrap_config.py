@@ -108,3 +108,13 @@ class DbusSessionTalkTo():
 
 class ShareNetwork(BwrapConfigBase):
     arg_word = "--share-net"
+
+
+class SeccompDirective:
+    ...
+
+
+class SeccompSyscallErrno(SeccompDirective):
+    def __init__(self, syscall_name: str, errno: int):
+        self.syscall_name = syscall_name
+        self.errno = errno

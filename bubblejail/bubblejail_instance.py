@@ -32,10 +32,11 @@ from xdg import IniFile
 from xdg.BaseDirectory import get_runtime_dir, xdg_data_home
 
 from .bubblejail_helper import RequestRun
+from .bubblejail_seccomp import SeccompState
 from .bubblejail_utils import (BubblejailInstanceConfig, BubblejailProfile,
                                ImportConfig)
 from .bwrap_config import (Bind, BwrapConfigBase, DbusSessionTalkTo,
-                           EnvrimentalVar, FileTransfer)
+                           EnvrimentalVar, FileTransfer, SeccompDirective)
 from .exceptions import BubblejailException
 from .services import BubblejailDefaults, BubblejailService
 
@@ -379,6 +380,7 @@ class BubblejailInit:
         yield BubblejailDefaults(
             home_bind_path=self.home_bind_path,
             share_local_time=self.instance_config.share_local_time,
+            filter_disk_sync=self.instance_config.filter_disk_sync,
         )
 
         yield from self.instance_config.iter_services()
@@ -389,7 +391,7 @@ class BubblejailInit:
         self.bwrap_args.append('bwrap')
 
         dbus_session_opts: Set[str] = set()
-
+        seccomp_state: Optional[SeccompState] = None
         # Unshare all
         self.bwrap_args.append('--unshare-all')
         # Die with parent
@@ -429,6 +431,23 @@ class BubblejailInit:
                         ('--file', str(temp_file_descriptor), config.dest))
                 elif isinstance(config, DbusSessionTalkTo):
                     dbus_session_opts.update(config.to_args())
+                elif isinstance(config, SeccompDirective):
+                    if seccomp_state is None:
+                        seccomp_state = SeccompState()
+
+                    seccomp_state.add_directive(config)
+                else:
+                    raise TypeError('Unknown bwrap config.')
+
+        if seccomp_state is not None:
+            if __debug__:
+                seccomp_state.print()
+
+            seccomp_temp_file = seccomp_state.export_to_temp_file()
+            seccomp_fd = seccomp_temp_file.fileno()
+            self.file_descriptors_to_pass.append(seccomp_fd)
+            self.temp_files.append(seccomp_temp_file)
+            self.bwrap_args.extend(('--seccomp', str(seccomp_fd)))
 
         # If we found any dbus args
         if dbus_session_opts:

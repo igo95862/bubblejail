@@ -17,8 +17,10 @@
 
 from ctypes import CDLL, c_char_p, c_int, c_uint, c_uint32, c_void_p
 from ctypes.util import find_library
-from typing import Callable, Tuple, Type, TypeVar, cast, IO
 from tempfile import TemporaryFile
+from typing import IO, Callable, Tuple, Type, TypeVar, cast
+
+from .bwrap_config import SeccompDirective, SeccompSyscallErrno
 
 libseccomp = CDLL(find_library('seccomp'))
 
@@ -46,8 +48,12 @@ seccomp_export_pfc = import_from_cdll(
     'seccomp_export_pfc', (c_void_p, c_int), c_int)
 seccomp_export_bpf = import_from_cdll(
     'seccomp_export_bpf', (c_void_p, c_int), c_int)
+seccomp_arch_add = import_from_cdll(
+    'seccomp_arch_add', (c_void_p, c_uint32), c_int)
 
 SCMP_ACT_ALLOW = c_uint(0x7fff0000)
+
+ARCH_X86 = c_uint32(3 | 0x40000000)
 
 
 def get_scmp_act_errno(error_code: int) -> c_uint32:
@@ -58,6 +64,11 @@ class SeccompState:
 
     def __init__(self) -> None:
         self._seccomp_ruleset_ptr: c_void_p = seccomp_init(SCMP_ACT_ALLOW)
+        # HACK: Assuming 99.9 percent of people will use x86_64 we only
+        # need to add x86 for compatabilities with 32 bit applications
+        # I you plan on using bubblejail on ARM or any other arch
+        # please open issue on github
+        seccomp_arch_add(self._seccomp_ruleset_ptr, ARCH_X86)
 
     def filter_syscall(self, syscall_name: str, error_number: int) -> None:
         resolved_syscall_int = seccomp_syscall_resolve_name(
@@ -70,6 +81,12 @@ class SeccompState:
             resolved_syscall_int,
             c_uint(0),
         )
+
+    def add_directive(self, directive: SeccompDirective) -> None:
+        if isinstance(directive, SeccompSyscallErrno):
+            self.filter_syscall(directive.syscall_name, directive.errno)
+        else:
+            raise TypeError('Unknown seccomp directive.')
 
     def load(self) -> None:
         seccomp_load(self._seccomp_ruleset_ptr)

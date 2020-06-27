@@ -26,10 +26,12 @@ from xdg import BaseDirectory
 
 from .bwrap_config import (Bind, BwrapConfigBase, DbusSessionTalkTo, DevBind,
                            DirCreate, EnvrimentalVar, FileTransfer,
-                           ReadOnlyBind, ShareNetwork, Symlink)
+                           ReadOnlyBind, SeccompDirective, SeccompSyscallErrno,
+                           ShareNetwork, Symlink)
 from .exceptions import ServiceUnavalibleError
 
-ServiceIterTypes = Union[BwrapConfigBase, FileTransfer, DbusSessionTalkTo]
+ServiceIterTypes = Union[BwrapConfigBase, FileTransfer,
+                         DbusSessionTalkTo, SeccompDirective]
 
 # region HelperFunctions
 
@@ -149,10 +151,12 @@ class BubblejailDefaults(BubblejailService):
         self,
         home_bind_path: Path,
         share_local_time: bool,
+        filter_disk_sync: bool,
     ) -> None:
         super().__init__()
         self.home_bind_path = home_bind_path
         self.share_local_time = share_local_time
+        self.filter_disk_sync = filter_disk_sync
 
     def __iter__(self) -> Generator[ServiceIterTypes, None, None]:
         # Distro packged libraries and binaries
@@ -211,6 +215,10 @@ class BubblejailDefaults(BubblejailService):
             yield ReadOnlyBind('/etc/localtime')
 
         yield FileTransfer(generate_machine_id_bytes(), '/etc/machine-id')
+
+        if self.filter_disk_sync:
+            yield SeccompSyscallErrno('sync', 0)
+            yield SeccompSyscallErrno('fsync', 0)
 
 
 class X11(BubblejailService):

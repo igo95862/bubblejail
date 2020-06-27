@@ -15,7 +15,7 @@
 # along with bubblejail.  If not, see <https://www.gnu.org/licenses/>.
 
 
-from dataclasses import dataclass, field, InitVar
+from dataclasses import InitVar, dataclass, field
 from pathlib import Path
 from typing import Any, Dict, Generator, List, Optional, Set, Union
 
@@ -30,6 +30,7 @@ class BubblejailInstanceConfig:
     """Represents config.toml"""
     executable_name: Optional[Union[str, List[str]]] = None
     share_local_time: bool = True
+    filter_disk_sync: bool = False
     services: List[str] = field(default_factory=list)
     service: TypeServicesConfig = field(default_factory=dict)
 
