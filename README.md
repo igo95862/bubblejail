@@ -124,6 +124,7 @@ home_paths = [ "Downloads",]
 
 * executable_name: Either a single string or a list that contains that executable name and arguments. Required unless you use --debug-shell option to open shell.
 * share_local_time: boolean that controlls if the local time is shared with sandbox. On by default.
+* filter_disk_sync: boolean that makes application unable to force disk flush.
 * services: List of strings. Adds particular services without parametres.
 * service.{name}: Used to configure a particular service. The service does not need to be added to services list as it will be enabled if particular configuration section exists.
 
