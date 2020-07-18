@@ -22,7 +22,7 @@ from PyQt5.QtCore import QModelIndex
 from PyQt5.QtWidgets import (QApplication, QCheckBox, QFormLayout, QGroupBox,
                              QHBoxLayout, QLabel, QLineEdit, QListWidget,
                              QListWidgetItem, QMainWindow, QPushButton,
-                             QVBoxLayout, QWidget)
+                             QVBoxLayout, QWidget, QScrollArea)
 
 long_text = ('''aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
 bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb
@@ -35,21 +35,25 @@ class SelectInstanceWidget:
         self.parent = parent
         self.widget = QWidget()
 
-        layout_vertical = QVBoxLayout()
+        self.layout_vertical = QVBoxLayout()
 
         list_of_instances_widget = QListWidget()
+
+        self.scroll_area = QScrollArea()
+        self.scroll_area.setWidgetResizable(True)
+        self.scroll_area.setWidget(list_of_instances_widget)
 
         test_item = QListWidgetItem(parent=list_of_instances_widget)
         test_item.setText('Test')
         test_item2 = QListWidgetItem(parent=list_of_instances_widget)
         test_item2.setText('Test2')
 
-        layout_vertical.addWidget(list_of_instances_widget)
+        self.layout_vertical.addWidget(self.scroll_area)
 
         list_of_instances_widget.clicked.connect(
             self.parent.switch_to_instance_edit)
 
-        self.widget.setLayout(layout_vertical)
+        self.widget.setLayout(self.layout_vertical)
 
 
 class ListEditWidget:
@@ -108,6 +112,7 @@ class InstanceEditWidget:
         self.widget = QWidget()
 
         self.main_layout = QVBoxLayout()
+        self.widget.setLayout(self.main_layout)
 
         header = QHBoxLayout()
         # Back button
@@ -123,8 +128,17 @@ class InstanceEditWidget:
 
         self.main_layout.addLayout(header)
 
+        self.scroll_area = QScrollArea()
+        self.main_layout.addWidget(self.scroll_area)
+
+        self.scroll_area.setWidgetResizable(True)
+        self.scrolled_widget = QWidget()
+        self.scrolled_layout = QVBoxLayout()
+        self.scrolled_widget.setLayout(self.scrolled_layout)
+        self.scroll_area.setWidget(self.scrolled_widget)
+
         # Groups
-        self.main_layout.addWidget(QLabel('General Options'))
+        self.scrolled_layout.addWidget(QLabel('General Options'))
 
         general_group_layout = self.add_group_return_layout(
             title='Test Group',
@@ -147,15 +161,13 @@ class InstanceEditWidget:
         )
         test_list_edit.set_data(['test1', 'test2', ';124134'])
 
-        self.widget.setLayout(self.main_layout)
-
     def add_group_return_layout(
             self, title: str, is_checkable: bool) -> QVBoxLayout:
         new_group = QGroupBox(title)
         new_group.setCheckable(is_checkable)
         group_layout = QVBoxLayout()
         new_group.setLayout(group_layout)
-        self.main_layout.addWidget(new_group)
+        self.scrolled_layout.addWidget(new_group)
         return group_layout
 
     def add_widget_return_widget(
