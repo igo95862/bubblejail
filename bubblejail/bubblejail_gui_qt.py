@@ -93,7 +93,7 @@ class ListEditWidget:
         self.line_edit_widgets.append(new_line_edit)
 
         new_push_button = QPushButton('❌')
-        self.form_layout.addRow(new_line_edit, new_push_button)
+        self.form_layout.addRow(new_push_button, new_line_edit)
 
         new_push_button.clicked.connect(
             partial(
