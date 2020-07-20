@@ -15,12 +15,13 @@
 # along with bubblejail.  If not, see <https://www.gnu.org/licenses/>.
 
 
+from dataclasses import dataclass
 from os import environ, readlink
 from pathlib import Path
 from random import choices
 from string import ascii_letters, hexdigits
-from typing import (Any, Dict, FrozenSet, Generator, List, Optional, Set,
-                    Tuple, Type, Union)
+from typing import (Dict, FrozenSet, Generator, List, Optional, Set, Tuple,
+                    Type, Union)
 
 from xdg import BaseDirectory
 
@@ -32,6 +33,28 @@ from .exceptions import ServiceUnavalibleError
 
 ServiceIterTypes = Union[BwrapConfigBase, FileTransfer,
                          DbusSessionTalkTo, SeccompDirective]
+
+# region ServiceInfo
+
+ServiceOptionTypes = Union[Type[str], Type[bool], Type[List[str]]]
+
+
+@dataclass
+class ServiceOptionInfo:
+    name: str
+    description: str
+    typing: ServiceOptionTypes
+
+
+@dataclass
+class ServiceInfo:
+    name: str
+    description: str
+    options: Dict[str, ServiceOptionInfo]
+
+
+# endregion ServiceInfo
+
 
 # region HelperFunctions
 
@@ -135,14 +158,16 @@ def generate_machine_id_bytes() -> bytes:
 # endregion HelperFunctions
 
 
+# HACK: makes typing easier rather than None
+EMPTY_LIST: List[str] = []
+
+
 class BubblejailService:
-    def __init__(self, **kwargs: Any) -> None:
-        if kwargs:
-            raise TypeError(('Default BubblejailService inializer'
-                             'should not be given arguments'))
 
     def __iter__(self) -> Generator[ServiceIterTypes, None, None]:
         raise NotImplementedError('Default iterator was called')
+
+    info: Optional[ServiceInfo] = None
 
 
 class BubblejailDefaults(BubblejailService):
@@ -234,6 +259,13 @@ class X11(BubblejailService):
         yield EnvrimentalVar('XAUTHORITY', '/tmp/.Xauthority')
         yield from generate_toolkits()
 
+    info = ServiceInfo(
+        name='X11 windowing system',
+        description=('Gives access to X11 socket.\n'
+                     'This is generally the default Linux windowing system.'),
+        options={},
+    )
+
 
 class Wayland(BubblejailService):
     def __iter__(self) -> Generator[ServiceIterTypes, None, None]:
@@ -251,6 +283,15 @@ class Wayland(BubblejailService):
             f"/{environ.get('WAYLAND_DISPLAY')}"))
         yield from generate_toolkits()
 
+    info = ServiceInfo(
+        name='Wayland windowing system',
+        description=(
+            'Make sure you are running Wayland sessiion\n'
+            'and your application supports Wayland'
+        ),
+        options={},
+    )
+
 
 class Network(BubblejailService):
     def __iter__(self) -> Generator[ServiceIterTypes, None, None]:
@@ -258,6 +299,12 @@ class Network(BubblejailService):
         yield ReadOnlyBind('/etc/resolv.conf')
         yield ReadOnlyBind('/etc/ca-certificates')
         yield ReadOnlyBind('/etc/ssl')
+
+    info = ServiceInfo(
+        name='Network access',
+        description='Gives access to network.',
+        options={},
+    )
 
 
 class PulseAudio(BubblejailService):
@@ -268,18 +315,37 @@ class PulseAudio(BubblejailService):
         )
         yield Symlink('/usr/bin/true', '/usr/local/bin/pulseaudio')
 
+    info = ServiceInfo(
+        name='Pulse Audio',
+        description='Default audio system in most distros',
+        options={},
+    )
+
 
 class HomeShare(BubblejailService):
-    def __init__(self, home_paths: List[str]):
+    def __init__(self, home_paths: List[str] = EMPTY_LIST):
         super().__init__()
         self.home_paths = home_paths
 
     def __iter__(self) -> Generator[ServiceIterTypes, None, None]:
-        for path_relative_to_home in self.home_paths:
-            yield Bind(
-                str(Path.home() / path_relative_to_home),
-                str(Path('/home/user') / path_relative_to_home),
+        if self.home_paths is not None:
+            for path_relative_to_home in self.home_paths:
+                yield Bind(
+                    str(Path.home() / path_relative_to_home),
+                    str(Path('/home/user') / path_relative_to_home),
+                )
+
+    info = ServiceInfo(
+        name='Home Share',
+        description='Share directories relative to home',
+        options={
+            'home_paths': ServiceOptionInfo(
+                name='List of paths',
+                description='Add directory name and path to share',
+                typing=List[str],
             )
+        }
+    )
 
 
 class DirectRendering(BubblejailService):
@@ -319,10 +385,36 @@ class DirectRendering(BubblejailService):
         if self.enable_aco:
             yield EnvrimentalVar('RADV_PERFTEST', 'aco')
 
+    info = ServiceInfo(
+        name='Direct Rendering',
+        description='Provides ccess to GPU',
+        options={
+            'enable_aco': ServiceOptionInfo(
+                name='Enable ACO',
+                description=(
+                    'Enables high performance vulkan shader\n'
+                    'compiler for AMD GPUs. No effect on Nvidia\n'
+                    'or Intel.'
+                ),
+                typing=bool,
+            )
+        },
+    )
+
 
 class Systray(BubblejailService):
     def __iter__(self) -> Generator[ServiceIterTypes, None, None]:
         yield DbusSessionTalkTo('org.kde.StatusNotifierWatcher')
+
+    info = ServiceInfo(
+        name='System tray icons',
+        description=(
+            'Provides access to Dbus API for creating tray icons\n'
+            'This is not the only way to create tray icons but\n'
+            'the most common one.'
+        ),
+        options={},
+    )
 
 
 class Joystick(BubblejailService):
@@ -350,11 +442,21 @@ class Joystick(BubblejailService):
 
                 yield DevBind(str(resolved_path.parents[2]))
 
+    info = ServiceInfo(
+        name='Joysticks and gamepads',
+        description=(
+            'Windowing systems (x11 and wayland) do not support gamepads.\n'
+            'Every game has to read from device files directly.\n'
+            'This service provides access to required '
+        ),
+        options={},
+    )
+
 
 class RootShare(BubblejailService):
     def __init__(self,
-                 paths: Optional[List[str]] = None,
-                 read_only_paths: Optional[List[str]] = None):
+                 paths: List[str] = EMPTY_LIST,
+                 read_only_paths: List[str] = EMPTY_LIST):
         super().__init__()
         if paths is not None:
             self.paths = paths
@@ -373,6 +475,25 @@ class RootShare(BubblejailService):
         for x in self.read_only_paths:
             yield ReadOnlyBind(x)
 
+    info = ServiceInfo(
+        name='Root share',
+        description=(
+            'Share directory relative to root /'
+        ),
+        options={
+            'paths': ServiceOptionInfo(
+                name='Read/Write paths',
+                description='Add directory path to share',
+                typing=List[str],
+            ),
+            'read_only_paths': ServiceOptionInfo(
+                name='Read only paths',
+                description='Add directory path to share',
+                typing=List[str],
+            )
+        },
+    )
+
 
 class OpenJDK(BubblejailService):
     def __iter__(self) -> Generator[ServiceIterTypes, None, None]:
@@ -380,10 +501,25 @@ class OpenJDK(BubblejailService):
         yield ReadOnlyBind('/etc/profile.d/jre.csh')
         yield ReadOnlyBind('/etc/profile.d/jre.sh')
 
+    info = ServiceInfo(
+        name='Java',
+        description=(
+            'Enable for applications that require Java\n'
+            'Example: Minecraft'
+        ),
+        options={},
+    )
+
 
 class Notifications(BubblejailService):
     def __iter__(self) -> Generator[ServiceIterTypes, None, None]:
         yield DbusSessionTalkTo('org.freedesktop.Notifications')
+
+    info = ServiceInfo(
+        name='Notifications',
+        description='Ability to send notifications to desktop',
+        options={},
+    )
 
 
 SERVICES: Dict[str, Type[BubblejailService]] = {
