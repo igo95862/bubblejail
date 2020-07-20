@@ -16,13 +16,16 @@
 
 from functools import partial
 from sys import argv
-from typing import List, Optional, Type
+from typing import Any, Dict, List, Optional, Type, Union
 
 from PyQt5.QtCore import QModelIndex
 from PyQt5.QtWidgets import (QApplication, QCheckBox, QFormLayout, QGroupBox,
                              QHBoxLayout, QLabel, QLineEdit, QListWidget,
                              QListWidgetItem, QMainWindow, QPushButton,
-                             QVBoxLayout, QWidget, QScrollArea)
+                             QScrollArea, QVBoxLayout, QWidget)
+
+from .bubblejail_utils import TypeServicesConfig
+from .services import ServiceInfo, ServiceOptionInfo
 
 long_text = ('''aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
 bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb
@@ -56,19 +59,43 @@ class SelectInstanceWidget:
         self.widget.setLayout(self.layout_vertical)
 
 
-class ListEditWidget:
-    def __init__(self, parent: 'InstanceEditWidget'):
-        self.parent = parent
+class BubblejailGuiWidget:
+    def __init__(self) -> None:
         self.widget = QWidget()
 
+# region Config edit classes
+
+
+class ConfigEditBase(BubblejailGuiWidget):
+    def get_data(self) -> Union[str, bool, List[str]]:
+        raise NotImplementedError
+
+
+class ConfigStrList(ConfigEditBase):
+    def __init__(
+        self,
+        name: str,
+        description: str,
+    ):
+        super().__init__()
+        self.description = description
         self.vertical_layout = QVBoxLayout()
         self.widget.setLayout(self.vertical_layout)
 
-        self.form_layout = QFormLayout()
+        # Header
+        self.header = QLabel(name)
+        self.header.setToolTip(description)
+        self.vertical_layout.addWidget(self.header)
+
+        self.form_widget = QWidget()
+        self.form_layout: QFormLayout = QFormLayout()
+        self.form_widget.setLayout(self.form_layout)
+        self.vertical_layout.addWidget(self.form_widget)
+
         self.line_edit_widgets: List[QLineEdit] = []
-        self.vertical_layout.addLayout(self.form_layout)
 
         self.add_button = QPushButton('Add')
+        self.add_button.setToolTip(self.description)
         self.vertical_layout.addWidget(self.add_button)
         self.add_button.clicked.connect(
             self.add_line_edit
@@ -76,13 +103,21 @@ class ListEditWidget:
 
     def set_data(self, str_list: List[str]) -> None:
         for string in str_list:
-            self.add_line_edit(string)
+            self.add_line_edit(
+                existing_sting=string
+            )
 
     def remove_line_edit(self, line_edit_widget: QLineEdit) -> None:
         self.line_edit_widgets.remove(line_edit_widget)
         self.form_layout.removeRow(line_edit_widget)
+        # HACK: add_button stops functioning if all rows get deleted
+        # add empty row to prevent that.
+        if not self.line_edit_widgets:
+            self.add_line_edit()
 
-    def add_line_edit(self, existing_sting: Optional[str] = None,) -> None:
+    def add_line_edit(self, *args: List[Any],
+                      existing_sting: Optional[str] = None,) -> None:
+
         if isinstance(existing_sting, str):
             # HACK: PyQt5 calls this function with bool when callsed by signal
             # to avoid passing bool to init check for str as existing string
@@ -90,9 +125,12 @@ class ListEditWidget:
         else:
             new_line_edit = QLineEdit('')
 
+        new_line_edit.setToolTip(self.description)
+
         self.line_edit_widgets.append(new_line_edit)
 
         new_push_button = QPushButton('❌')
+
         self.form_layout.addRow(new_push_button, new_line_edit)
 
         new_push_button.clicked.connect(
@@ -104,6 +142,83 @@ class ListEditWidget:
     def get_data(self) -> List[str]:
         text_list = [x.text() for x in self.line_edit_widgets]
         return text_list
+
+
+class ConfigBool(ConfigEditBase):
+    def __init__(
+        self,
+        name: str,
+        description: str,
+    ):
+        super().__init__()
+        self.widget = QCheckBox(name)
+        self.widget.setToolTip(description)
+
+
+class ConfigStr(ConfigEditBase):
+    def __init__(
+        self,
+        name: str,
+        description: str,
+    ):
+        super().__init__()
+        self.horizontal_layout = QHBoxLayout()
+        self.widget.setLayout(self.horizontal_layout)
+
+        self.label = QLabel(name)
+        self.label.setToolTip(description)
+        self.horizontal_layout.addWidget(self.label)
+
+        self.line_edit = QLineEdit()
+        self.line_edit.setToolTip(description)
+        self.horizontal_layout.addWidget(self.line_edit)
+
+
+# endregion Config edit classes
+
+
+class SettingsGroup:
+    def __init__(self,
+                 parent: 'InstanceEditWidget',
+                 service_info: ServiceInfo,
+                 is_options: bool = True):
+        self.group_widget = QGroupBox(service_info.name)
+        self.group_widget.setToolTip(service_info.description)
+
+        self.group_widget.setCheckable(is_options)
+        self.group_widget.setFlat(not is_options)
+
+        self.group_layout = QVBoxLayout()
+        self.group_widget.setLayout(self.group_layout)
+
+        self.service_info = service_info
+        self.option_name_to_widget_dict: Dict[str, ConfigEditBase] = {}
+
+        # Parse options
+        for option_name, option_info in service_info.options.items():
+            if option_info.typing is bool:
+                new_widget: ConfigEditBase = ConfigBool(
+                    name=option_info.name,
+                    description=option_info.description,
+                )
+            elif option_info.typing is str:
+                new_widget = ConfigStr(
+                    name=option_info.name,
+                    description=option_info.description,
+                )
+            elif option_info.typing is List[str]:
+                new_widget = ConfigStrList(
+                    name=option_info.name,
+                    description=option_info.description,
+                )
+            else:
+                raise TypeError('Unknown service option type')
+
+            self.option_name_to_widget_dict[option_name] = new_widget
+            self.group_layout.addWidget(new_widget.widget)
+
+    def to_dict(self) -> TypeServicesConfig:
+        ...
 
 
 class InstanceEditWidget:
@@ -138,37 +253,44 @@ class InstanceEditWidget:
         self.scroll_area.setWidget(self.scrolled_widget)
 
         # Groups
-        self.scrolled_layout.addWidget(QLabel('General Options'))
-
-        general_group_layout = self.add_group_return_layout(
-            title='Test Group',
-            is_checkable=True
+        test_service = ServiceInfo(
+            name='test',
+            description=long_text,
+            options={
+                'test_checkbox': ServiceOptionInfo(
+                    name='Test checkbox',
+                    description='Test Option text',
+                    typing=bool,
+                ),
+                'test_linedit': ServiceOptionInfo(
+                    name='Test line edit',
+                    description='Test 2 Option text',
+                    typing=str,
+                ),
+                'test_lines_edit': ServiceOptionInfo(
+                    name='Test multi line edit',
+                    description='Test 3 Option text',
+                    typing=List[str],
+                ),
+            }
         )
-
-        self.add_checkbox(
-            'Test',
-            general_group_layout,
-            tooltip_text=long_text,
-        )
-        self.add_line_edit(
-            'Test',
-            general_group_layout,
-            tooltip_text=long_text,
-        )
-
-        test_list_edit = self.add_list_edit(
-            parent_layout=general_group_layout
-        )
-        test_list_edit.set_data(['test1', 'test2', ';124134'])
+        group = self.add_group_return_layout(True, test_service)
+        t = group.option_name_to_widget_dict['test_lines_edit']
+        if isinstance(t, ConfigStrList):
+            t.set_data(['test', 'testaetgas'])
 
     def add_group_return_layout(
-            self, title: str, is_checkable: bool) -> QVBoxLayout:
-        new_group = QGroupBox(title)
-        new_group.setCheckable(is_checkable)
-        group_layout = QVBoxLayout()
-        new_group.setLayout(group_layout)
-        self.scrolled_layout.addWidget(new_group)
-        return group_layout
+        self,
+        is_checkable: bool,
+        service_info: ServiceInfo,
+    ) -> SettingsGroup:
+        new_settings = SettingsGroup(
+            parent=self,
+            service_info=service_info,
+            is_options=is_checkable,
+        )
+        self.scrolled_layout.addWidget(new_settings.group_widget)
+        return new_settings
 
     def add_widget_return_widget(
         self,
@@ -212,11 +334,6 @@ class InstanceEditWidget:
             tooltip_text=tooltip_text,
         )
 
-    def add_list_edit(self, parent_layout: QVBoxLayout) -> ListEditWidget:
-        new_list_edit = ListEditWidget(self)
-        parent_layout.addWidget(new_list_edit.widget)
-        return new_list_edit
-
 
 class BubblejailConfigApp:
     def __init__(self) -> None:
@@ -231,6 +348,10 @@ class BubblejailConfigApp:
     def switch_to_instance_edit(self, instance_widget: QModelIndex) -> None:
         container = InstanceEditWidget(self)
         self.window.setCentralWidget(container.widget)
+
+    def save_instance(self, instance_to_save: InstanceEditWidget) -> None:
+        print()
+        self.switch_to_selector()
 
     def run(self) -> None:
         self.window.show()
