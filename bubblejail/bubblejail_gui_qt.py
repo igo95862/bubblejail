@@ -25,7 +25,7 @@ from PyQt5.QtWidgets import (QApplication, QCheckBox, QFormLayout, QGroupBox,
                              QScrollArea, QVBoxLayout, QWidget)
 
 from .bubblejail_utils import TypeServicesConfig
-from .services import ServiceInfo, ServiceOptionInfo
+from .services import ServiceInfo, SERVICES
 
 long_text = ('''aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
 bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb
@@ -100,6 +100,7 @@ class ConfigStrList(ConfigEditBase):
         self.add_button.clicked.connect(
             self.add_line_edit
         )
+        self.add_line_edit()
 
     def set_data(self, str_list: List[str]) -> None:
         for string in str_list:
@@ -174,9 +175,6 @@ class ConfigStr(ConfigEditBase):
         self.horizontal_layout.addWidget(self.line_edit)
 
 
-# endregion Config edit classes
-
-
 class SettingsGroup:
     def __init__(self,
                  parent: 'InstanceEditWidget',
@@ -190,6 +188,8 @@ class SettingsGroup:
 
         self.group_layout = QVBoxLayout()
         self.group_widget.setLayout(self.group_layout)
+
+        self.group_layout.addWidget(QLabel(service_info.description))
 
         self.service_info = service_info
         self.option_name_to_widget_dict: Dict[str, ConfigEditBase] = {}
@@ -220,6 +220,8 @@ class SettingsGroup:
     def to_dict(self) -> TypeServicesConfig:
         ...
 
+
+# endregion Config edit classes
 
 class InstanceEditWidget:
     def __init__(self, parent: 'BubblejailConfigApp'):
@@ -253,31 +255,22 @@ class InstanceEditWidget:
         self.scroll_area.setWidget(self.scrolled_widget)
 
         # Groups
-        test_service = ServiceInfo(
-            name='test',
-            description=long_text,
-            options={
-                'test_checkbox': ServiceOptionInfo(
-                    name='Test checkbox',
-                    description='Test Option text',
-                    typing=bool,
-                ),
-                'test_linedit': ServiceOptionInfo(
-                    name='Test line edit',
-                    description='Test 2 Option text',
-                    typing=str,
-                ),
-                'test_lines_edit': ServiceOptionInfo(
-                    name='Test multi line edit',
-                    description='Test 3 Option text',
-                    typing=List[str],
-                ),
-            }
+        self.service_widgets: Dict[str, SettingsGroup] = {}
+        default_name = 'default'
+
+        self.service_widgets[default_name] = self.add_group_return_layout(
+            is_checkable=False,
+            service_info=SERVICES[default_name].info,
         )
-        group = self.add_group_return_layout(True, test_service)
-        t = group.option_name_to_widget_dict['test_lines_edit']
-        if isinstance(t, ConfigStrList):
-            t.set_data(['test', 'testaetgas'])
+
+        for service_id, service in SERVICES.items():
+            if service_id == default_name:
+                continue
+
+            self.service_widgets[service_id] = self.add_group_return_layout(
+                is_checkable=True,
+                service_info=service.info,
+            )
 
     def add_group_return_layout(
         self,
