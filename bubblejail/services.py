@@ -245,6 +245,34 @@ class BubblejailDefaults(BubblejailService):
             yield SeccompSyscallErrno('sync', 0)
             yield SeccompSyscallErrno('fsync', 0)
 
+    info = ServiceInfo(
+        name='Default settings',
+        description=('Settings that must be present in any instance'),
+        options={
+            'executable_name': ServiceOptionInfo(
+                name='Executable arguments',
+                description='Space separated arguments',
+                typing=str,
+            ),
+            'share_local_time': ServiceOptionInfo(
+                name='Share local time',
+                description=(
+                    'Instance will know local time instead of UTC'
+                ),
+                typing=bool,
+            ),
+            'filter_disk_sync': ServiceOptionInfo(
+                name='Filter disk sync',
+                description=(
+                    'Do not allow flushing disk\n'
+                    'Useful for EA Origin client that tries to flush\n'
+                    'to disk too often.'
+                ),
+                typing=bool,
+            ),
+        },
+    )
+
 
 class X11(BubblejailService):
     def __iter__(self) -> Generator[ServiceIterTypes, None, None]:
