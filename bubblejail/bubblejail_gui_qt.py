@@ -332,6 +332,7 @@ class BubblejailConfigApp:
     def __init__(self) -> None:
         self.q_app = QApplication(argv)
         self.window = QMainWindow()
+        self.window.resize(400, 400)
         self.switch_to_selector()
 
     def switch_to_selector(self) -> None:
