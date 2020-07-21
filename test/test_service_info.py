@@ -16,10 +16,45 @@
 
 from functools import partialmethod
 from typing import Type, get_type_hints
-from unittest import TestCase
+from unittest import TestCase, expectedFailure
 from unittest import main as unittest_main
 
 from bubblejail.services import SERVICES, BubblejailService
+
+
+def test_service_info(
+        self: TestCase,
+        service: Type[BubblejailService]) -> None:
+
+    self.assertIsNotNone(service.info, f"Service {service} info is None")
+
+    service_init_types = get_type_hints(service.__init__)
+
+    # Compare keys
+    self.assertEqual(
+        set(service_init_types.keys()),
+        set(service.info.options.keys()),
+        f"Info and init options of service {service} do not match",
+    )
+
+    for option_name, option_info in service.info.options.items():
+        self.assertIs(
+            option_info.typing,
+            service_init_types[option_name],
+            (
+                "Type mismatch, "
+                f"expected {service_init_types[option_name]}, "
+                f"got {option_info.typing}"
+            )
+
+        )
+
+
+class TestDefaultServiceFailure(TestCase):
+    @expectedFailure
+    def test_default_failure(self) -> None:
+        test_service_info(self, SERVICES['default'])
+
 
 # Create classes to test services
 for service_name, service_class in SERVICES.items():
@@ -27,37 +62,6 @@ for service_name, service_class in SERVICES.items():
     # that are not supposed to be edited by user
     if service_name == 'default':
         continue
-
-    def test_service_info(
-            self: TestCase,
-            service: Type[BubblejailService]) -> None:
-
-        self.assertIsNotNone(service.info, f"Service {service} info is None")
-
-        service_init_types = get_type_hints(service.__init__)
-
-        # HACK: mypy does not recognize that we tested for None
-        if service.info is None:
-            raise AssertionError("This should not happen")
-
-        # Compare keys
-        self.assertEqual(
-            set(service_init_types.keys()),
-            set(service.info.options.keys()),
-            f"Info and init options of service {service} do not match",
-        )
-
-        for option_name, option_info in service.info.options.items():
-            self.assertIs(
-                option_info.typing,
-                service_init_types[option_name],
-                (
-                    "Type mismatch, "
-                    f"expected {service_init_types[option_name]}, "
-                    f"got {option_info.typing}"
-                )
-
-            )
 
     vars()[service_name] = type(
         f"Test_{service_name}",
