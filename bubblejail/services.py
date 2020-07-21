@@ -20,8 +20,8 @@ from os import environ, readlink
 from pathlib import Path
 from random import choices
 from string import ascii_letters, hexdigits
-from typing import (Dict, FrozenSet, Generator, List, Optional, Set, Tuple,
-                    Type, Union)
+from typing import (Dict, FrozenSet, Generator, List, Set, Tuple,
+                    Type, Union, Protocol)
 
 from xdg import BaseDirectory
 
@@ -162,12 +162,12 @@ def generate_machine_id_bytes() -> bytes:
 EMPTY_LIST: List[str] = []
 
 
-class BubblejailService:
+class BubblejailService(Protocol):
 
     def __iter__(self) -> Generator[ServiceIterTypes, None, None]:
         raise NotImplementedError('Default iterator was called')
 
-    info: Optional[ServiceInfo] = None
+    info: ServiceInfo
 
 
 class BubblejailDefaults(BubblejailService):
