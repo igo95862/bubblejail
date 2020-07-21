@@ -17,10 +17,12 @@
 
 from dataclasses import InitVar, dataclass, field
 from pathlib import Path
-from typing import Any, Dict, Generator, List, Optional, Set, Union
+from typing import (Any, Dict, Generator, List,
+                    Optional, Set, Union, TYPE_CHECKING)
 
 from .bwrap_config import BwrapConfigBase, DbusSessionTalkTo
 from .services import SERVICES, BubblejailService
+
 
 TypeServicesConfig = Dict[str, Dict[str, Union[str, List[str]]]]
 
@@ -39,6 +41,12 @@ class BubblejailInstanceConfig:
 
         for service_name, service_dict in self.service.items():
             initialized_services_names.add(service_name)
+
+            # HACK: make type checker not check service dict
+            # since we can't make sure it will be exact type
+            if TYPE_CHECKING:
+                return
+
             yield SERVICES[service_name](**service_dict)
 
         for service_name in self.services:
