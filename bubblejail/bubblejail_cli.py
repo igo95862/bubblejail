@@ -19,7 +19,7 @@ from argparse import REMAINDER as ARG_REMAINDER
 from argparse import ArgumentParser, Namespace
 from asyncio import run as async_run
 from pathlib import Path
-from typing import Dict, Iterator, List, Union
+from typing import Dict, List, Union
 
 from pkg_resources import resource_filename
 from toml import load as toml_load
@@ -27,13 +27,6 @@ from toml import load as toml_load
 from .bubblejail_instance import BubblejailInstance
 from .bubblejail_utils import BubblejailInstanceConfig, BubblejailProfile
 from .exceptions import ServiceUnavalibleError
-
-
-def iter_instance_names() -> Iterator[str]:
-    data_dir = BubblejailInstance.get_instances_dir()
-    for x in data_dir.iterdir():
-        if x.is_dir():
-            yield str(x.stem)
 
 
 def run_bjail(args: Namespace) -> None:
@@ -62,7 +55,7 @@ def get_profiles_dir() -> Path:
 
 def bjail_list(args: Namespace) -> None:
     if args.list_what == 'instances':
-        for x in iter_instance_names():
+        for x in BubblejailInstance.iter_instance_names():
             print(x)
     elif args.list_what == 'profiles':
         for profile_file in get_profiles_dir().iterdir():

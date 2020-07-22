@@ -340,6 +340,13 @@ class BubblejailInstance:
 
             await p.wait()
 
+    @classmethod
+    def iter_instance_names(cls) -> Iterator[str]:
+        data_dir = BubblejailInstance.get_instances_dir()
+        for x in data_dir.iterdir():
+            if x.is_dir():
+                yield str(x.stem)
+
 
 class BubblejailInit:
     def __init__(
