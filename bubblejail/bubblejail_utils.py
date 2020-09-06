@@ -15,10 +15,4 @@
 # along with bubblejail.  If not, see <https://www.gnu.org/licenses/>.
 
 
-from typing import (Dict, List,
-                    Union,)
-
-
-TypeServicesConfig = Dict[str, Dict[str, Union[str, bool, List[str]]]]
-
 FILE_NAME_SERVICES = 'services.toml'
