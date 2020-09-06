@@ -20,3 +20,5 @@ from typing import (Dict, List,
 
 
 TypeServicesConfig = Dict[str, Dict[str, Union[str, bool, List[str]]]]
+
+FILE_NAME_SERVICES = 'services.toml'
