@@ -17,7 +17,7 @@
 
 from dataclasses import dataclass, field
 from os import environ
-from typing import Optional, Tuple, List
+from typing import List, Optional, Tuple
 
 
 @dataclass

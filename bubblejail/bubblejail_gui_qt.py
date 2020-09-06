@@ -16,7 +16,7 @@
 
 from functools import partial
 from sys import argv
-from typing import Any, List, Optional, Type, Iterator, Tuple
+from typing import Any, Iterator, List, Optional, Tuple, Type
 
 from PyQt5.QtCore import QModelIndex
 from PyQt5.QtWidgets import (QApplication, QCheckBox, QFormLayout, QGroupBox,
@@ -24,12 +24,10 @@ from PyQt5.QtWidgets import (QApplication, QCheckBox, QFormLayout, QGroupBox,
                              QListWidgetItem, QMainWindow, QPushButton,
                              QScrollArea, QVBoxLayout, QWidget)
 
-
 from .bubblejail_directories import BubblejailDirectories
-from .services import (BubblejailService,
-                       OptionBool, OptionStr, OptionStrList,
-                       ServiceOptionTypes, OptionSpaceSeparatedStr,
-                       ServiceOption)
+from .services import (BubblejailService, OptionBool, OptionSpaceSeparatedStr,
+                       OptionStr, OptionStrList, ServiceOption,
+                       ServiceOptionTypes)
 
 
 class BubblejailGuiWidget:

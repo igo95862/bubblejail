@@ -19,17 +19,15 @@ from os import environ, readlink
 from pathlib import Path
 from random import choices
 from string import ascii_letters, hexdigits
-from typing import (Dict, FrozenSet, Generator, List, Set, Tuple,
-                    Type, Union, Optional,
-                    Iterator)
-
+from typing import (Dict, FrozenSet, Generator, Iterator, List, Optional, Set,
+                    Tuple, Type, Union)
 
 from xdg import BaseDirectory
 
 from .bwrap_config import (Bind, BwrapConfigBase, DbusSessionTalkTo, DevBind,
                            DirCreate, EnvrimentalVar, FileTransfer,
-                           ReadOnlyBind, SeccompDirective, SeccompSyscallErrno,
-                           ShareNetwork, Symlink, LaunchArguments)
+                           LaunchArguments, ReadOnlyBind, SeccompDirective,
+                           SeccompSyscallErrno, ShareNetwork, Symlink)
 from .exceptions import ServiceUnavalibleError
 
 # region Service Typing
