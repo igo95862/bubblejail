@@ -1,11 +1,13 @@
 # Code OSS
 dot_desktop_path = "/usr/share/applications/code-oss.desktop"
-[import_conf]
-copy = [".vscode-oss"]
+#[import_conf]
+#copy = [".vscode-oss"]
 
-[config]
+[services.common]
 executable_name = "/usr/bin/code-oss"
-services = ["x11", "network",]
 
-[config.service.home_share]
+[services.x11]
+[services.network]
+
+[services.home_share]
 home_paths = [ "Projects",]

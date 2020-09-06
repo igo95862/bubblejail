@@ -21,8 +21,8 @@ from tempfile import TemporaryDirectory
 from unittest import IsolatedAsyncioTestCase
 from unittest import main as unittest_main
 
-from bubblejail.bubblejail_instance import BubblejailInstance
-from bubblejail.bubblejail_utils import BubblejailProfile, ImportConfig
+from bubblejail.bubblejail_instance import (BubblejailInstance,
+                                            BubblejailProfile, ImportConfig)
 
 
 class TestImports(IsolatedAsyncioTestCase):

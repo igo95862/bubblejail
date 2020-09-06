@@ -1,10 +1,11 @@
 dot_desktop_path = "/usr/share/applications/net.lutris.Lutris.desktop"
 
-[config]
+[services.common]
 executable_name = "/usr/bin/lutris"
-services = ["x11", 
-    "network", "direct_rendering", 
-    "pulse_audio", "joystick",
-    "openjdk",
-]
 
+[services.x11]
+[services.network]
+[services.direct_rendering]
+[services.pulse_audio]
+[services.joystick]
+[services.openjdk]

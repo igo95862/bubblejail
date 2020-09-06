@@ -1,13 +1,17 @@
 # Firefox on X11
 dot_desktop_path = "/usr/share/applications/firefox.desktop"
-gtk_application = true
+is_gtk_application = true
 
-[import_conf]
-copy = [".mozilla"]
+#[import_conf]
+#copy = [".mozilla"]
 
-[config]
+[services]
+[services.common]
 executable_name = "/usr/bin/firefox"
-services = ["x11", "network", "pulse_audio", "notify"]
+[services.x11]
+[services.network]
+[services.pulse_audio]
+[services.notify]
 
-[config.service.home_share]
+[services.home_share]
 home_paths = [ "Downloads",]

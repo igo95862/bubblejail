@@ -19,14 +19,10 @@ from argparse import REMAINDER as ARG_REMAINDER
 from argparse import ArgumentParser, Namespace
 from asyncio import run as async_run
 from pathlib import Path
-from typing import Dict, List, Union
 
 from pkg_resources import resource_filename
-from toml import load as toml_load
 
-from .bubblejail_instance import BubblejailInstance
-from .bubblejail_utils import BubblejailInstanceConfig, BubblejailProfile
-from .exceptions import ServiceUnavalibleError
+from .bubblejail_directories import BubblejailDirectories
 
 
 def run_bjail(args: Namespace) -> None:
@@ -36,16 +32,15 @@ def run_bjail(args: Namespace) -> None:
         'args_to_run': args.args_to_instance,
     }
 
-    if __debug__:
-        async_run_kwargs['debug_shell'] = args.debug_shell
-        async_run_kwargs['dry_run'] = args.dry_run
-        async_run_kwargs['debug_helper_script'] = args.debug_helper_script
-        async_run_kwargs['debug_log_dbus'] = args.debug_log_dbus
+    async_run_kwargs['debug_shell'] = args.debug_shell
+    async_run_kwargs['dry_run'] = args.dry_run
+    async_run_kwargs['debug_helper_script'] = args.debug_helper_script
+    async_run_kwargs['debug_log_dbus'] = args.debug_log_dbus
+
+    instance = BubblejailDirectories.instance_get(instance_name)
 
     async_run(
-        BubblejailInstance(
-            instance_name
-        ).async_run(**async_run_kwargs)
+        instance.async_run(**async_run_kwargs)
     )
 
 
@@ -55,121 +50,24 @@ def get_profiles_dir() -> Path:
 
 def bjail_list(args: Namespace) -> None:
     if args.list_what == 'instances':
-        for x in BubblejailInstance.iter_instance_names():
-            print(x)
+        for x in BubblejailDirectories.iter_instances_path():
+            print(x.stem)
     elif args.list_what == 'profiles':
         for profile_file in get_profiles_dir().iterdir():
             print(profile_file.stem)
 
 
-def load_profile(profile_name: str) -> BubblejailProfile:
-    with open(get_profiles_dir() / f"{profile_name}.toml") as f:
-        return BubblejailProfile(**toml_load(f))
-
-
 def bjail_create(args: Namespace) -> None:
-    if args.profile is None:
-        profile = BubblejailProfile()
-    else:
-        profile = load_profile(args.profile)
-
-    if args.import_from_instance is not None:
-        do_import_data = True
-    else:
-        do_import_data = args.do_import
-
-    create_coroutine = BubblejailInstance.create_new(
+    BubblejailDirectories.create_new_instance(
         new_name=args.new_instance_name,
-        profile=profile,
+        profile=args.profile,
         create_dot_desktop=args.no_desktop_entry,
-        do_import_data=do_import_data,
-        import_from_instance=args.import_from_instance,
     )
-    async_run(create_coroutine)
 
 
 def bjail_edit(args: Namespace) -> None:
-    async_run(BubblejailInstance(args.instance_name).edit_config_in_editor())
-
-
-def bjail_auto_create(args: Namespace) -> None:
-    profiles_to_create: Dict[str, BubblejailProfile] = {}
-    instances_executables: Dict[Union[str, List[str], None], str] = {
-        None: '',
-    }
-    # Read instances executables
-    for instance_dir in BubblejailInstance.get_instances_dir().iterdir():
-        with open(instance_dir / 'config.toml') as f:
-            instance_conf = BubblejailInstanceConfig(**toml_load(f))
-
-        instance_name = instance_dir.name
-        instance_executable = instance_conf.executable_name
-        if isinstance(instance_executable, list):
-            instance_executable = instance_executable[0]
-
-        instances_executables[instance_executable] = instance_name
-
-    # Read profiles executable names
-    for profile_file in get_profiles_dir().iterdir():
-        profile_name = profile_file.stem
-        with open(profile_file) as f:
-            profile_entry = BubblejailProfile(**toml_load(f))
-
-        profile_executable = profile_entry.config['executable_name']
-        # If profile executable is a list take first item as executable
-        if isinstance(profile_executable, list):
-            profile_executable = profile_executable[0]
-
-        if not Path(profile_executable).exists():
-            print(f"Skipping {profile_name} as executable does not exist")
-            continue
-
-        try:
-            profile_entry.get_config().verify()
-        except ServiceUnavalibleError:
-            print(
-                f"Skipping {profile_name} "
-                "as one of the services is unavalible")
-            continue
-
-        if profile_executable in instances_executables:
-            print(f"Skipping {profile_name}"
-                  " as instance with same executable already exists")
-            continue
-
-        profiles_to_create[profile_name] = profile_entry
-
-    for profile_name, profile_entry in profiles_to_create.items():
-        do_create_answer = input(
-            f"Create {profile_name} instance? y/N: ")
-
-        if do_create_answer.lower() == 'y':
-            continue
-
-        do_import: bool = False
-        if profile_entry.import_conf.available(Path.home()):
-            print('Found possible import.')
-            print('Please close the application being imported.')
-
-            do_import_answer = input(
-                "Import data? (please close the) y/N: ")
-
-            if do_import_answer.lower() == 'y':
-                do_import = True
-
-        create_coroutine = BubblejailInstance.create_new(
-            new_name=profile_name,
-            profile=profile_entry,
-            create_dot_desktop=True,
-            do_import_data=do_import,
-        )
-        async_run(create_coroutine)
-
-
-def bjail_create_desktop_entry(args: Namespace) -> None:
-    breakpoint()
-    BubblejailInstance(
-        args.instance_name).generate_dot_desktop(args.prototype_path)
+    instance = BubblejailDirectories.instance_get(args.instance_name)
+    async_run(instance.edit_config_in_editor())
 
 
 def bubblejail_main() -> None:
@@ -179,11 +77,11 @@ def bubblejail_main() -> None:
     )
     # run subcommand
     parser_run = subparcers.add_parser('run')
-    if __debug__:
-        parser_run.add_argument('--debug-shell', action='store_true')
-        parser_run.add_argument('--dry-run', action='store_true')
-        parser_run.add_argument('--debug-helper-script', type=Path)
-        parser_run.add_argument('--debug-log-dbus', action='store_true')
+
+    parser_run.add_argument('--debug-shell', action='store_true')
+    parser_run.add_argument('--dry-run', action='store_true')
+    parser_run.add_argument('--debug-helper-script', type=Path)
+    parser_run.add_argument('--debug-log-dbus', action='store_true')
 
     parser_run.add_argument('instance_name')
     parser_run.add_argument(
@@ -221,18 +119,6 @@ def bubblejail_main() -> None:
     parser_edit = subparcers.add_parser('edit')
     parser_edit.add_argument('instance_name')
     parser_edit.set_defaults(func=bjail_edit)
-
-    # Auto-create subcommand
-    parser_auto_create = subparcers.add_parser('auto-create')
-    parser_auto_create.set_defaults(func=bjail_auto_create)
-
-    # Create desktop entry subcommand
-    parser_create_desktop_entry = subparcers.add_parser('create-desktop-entry')
-    parser_create_desktop_entry.add_argument(
-        '--prototype-path', type=Path,
-    )
-    parser_create_desktop_entry.add_argument('instance_name')
-    parser_create_desktop_entry.set_defaults(func=bjail_create_desktop_entry)
 
     args = parser.parse_args()
 

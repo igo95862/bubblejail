@@ -15,38 +15,20 @@
 # along with bubblejail.  If not, see <https://www.gnu.org/licenses/>.
 
 
-from functools import partialmethod
 from pathlib import Path
-from typing import Any, Dict
-from unittest import SkipTest, TestCase
+from unittest import TestCase
 from unittest import main as unittest_main
 
-from bubblejail.bubblejail_utils import BubblejailProfile
-from bubblejail.exceptions import ServiceUnavalibleError
+
+from bubblejail.bubblejail_instance import BubblejailProfile
 from toml import load
 
-for profile_toml in Path('./bubblejail/profiles/').iterdir():
-    with open(profile_toml) as f:
-        profile_dict = load(f)
 
-    def test_profile(self: TestCase, profile: Dict[Any, Any]) -> None:
-        p = BubblejailProfile(**profile)
-        conf = p.get_config()
-        try:
-            conf.verify()
-        except ServiceUnavalibleError:
-            raise SkipTest(
-                f"Profile non-initializable on local machine: "
-                f"{self}"
-            )
-
-    vars()[profile_toml.stem] = type(
-        profile_toml.stem,
-        (TestCase, ),
-        {
-            'test_profile': partialmethod(test_profile, profile=profile_dict),
-        }
-    )
+class TestProfiles(TestCase):
+    def test_profiles(self) -> None:
+        for profile_path in Path('./bubblejail/profiles/').iterdir():
+            with self.subTest(profile_path.stem):
+                BubblejailProfile(**load(profile_path))
 
 
 if __name__ == '__main__':

@@ -21,8 +21,8 @@ from unittest import IsolatedAsyncioTestCase
 from unittest import main as unittest_main
 from unittest import skipUnless
 
-from bubblejail.bubblejail_instance import BubblejailInstance
-from bubblejail.bubblejail_utils import BubblejailProfile
+from bubblejail.bubblejail_instance import (BubblejailInstance,
+                                            BubblejailProfile)
 from toml import load as toml_load
 
 # TODO: needs to be improved

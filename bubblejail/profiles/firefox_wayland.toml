@@ -1,13 +1,16 @@
 # Firefox on Wayland
 dot_desktop_path = "/usr/share/applications/firefox.desktop"
-gtk_application = true
+is_gtk_application = true
 
-[import_conf]
-copy = [".mozilla"]
+#[import_conf]
+#copy = [".mozilla"]
 
-[config]
+[services.common]
 executable_name = "/usr/bin/firefox"
-services = ["wayland", "network", "pulse_audio", "notify"]
+[services.wayland]
+[services.network]
+[services.pulse_audio]
+[services.notify]
 
-[config.service.home_share]
+[services.home_share]
 home_paths = [ "Downloads",]

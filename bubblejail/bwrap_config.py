@@ -17,7 +17,7 @@
 
 from dataclasses import dataclass, field
 from os import environ
-from typing import Optional, Tuple
+from typing import Optional, Tuple, List
 
 
 @dataclass
@@ -118,3 +118,12 @@ class SeccompSyscallErrno(SeccompDirective):
     def __init__(self, syscall_name: str, errno: int):
         self.syscall_name = syscall_name
         self.errno = errno
+
+
+class LaunchArguments:
+    def __init__(
+            self,
+            launch_args: List[str],
+            priority: int = 0,) -> None:
+        self.launch_args = launch_args
+        self.priority = priority

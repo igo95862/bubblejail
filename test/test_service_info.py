@@ -14,64 +14,61 @@
 # You should have received a copy of the GNU General Public License
 # along with bubblejail.  If not, see <https://www.gnu.org/licenses/>.
 
-from functools import partialmethod
-from typing import Type, get_type_hints
-from unittest import TestCase, expectedFailure
+
+from typing import Dict, List, get_type_hints
+from unittest import TestCase
 from unittest import main as unittest_main
 
-from bubblejail.services import SERVICES, BubblejailService
+from bubblejail.services import (SERVICES_CLASSES, BubblejailService,
+                                 ServiceOption)
+
+argless_dict = {'return': type(None)}
 
 
-def test_service_info(
-        self: TestCase,
-        service: Type[BubblejailService]) -> None:
+class TestServices(TestCase):
 
-    self.assertIsNotNone(service.info, f"Service {service} info is None")
+    def setUp(self) -> None:
+        self.services: List[BubblejailService] = [
+            x() for x in SERVICES_CLASSES
+        ]
 
-    service_init_types = get_type_hints(service.__init__)
+    def test_service_options(self) -> None:
+        for service in self.services:
+            with self.subTest(f"Service: {service.pretty_name}"):
+                service_init_types = get_type_hints(service.__class__.__init__)
 
-    # Compare keys
-    self.assertEqual(
-        set(service_init_types.keys()),
-        set(service.info.options.keys()),
-        f"Info and init options of service {service} do not match",
-    )
+                if service_init_types == argless_dict:
+                    service_init_types = {}
 
-    for option_name, option_info in service.info.options.items():
-        self.assertIs(
-            option_info.typing,
-            service_init_types[option_name],
-            (
-                "Type mismatch, "
-                f"expected {service_init_types[option_name]}, "
-                f"got {option_info.typing}"
-            )
+                service_options: Dict[str, ServiceOption] = {
+                    option.name: option for option in service.iter_options()
+                }
 
-        )
+                with self.subTest((f"Service {service.pretty_name}:"
+                                   "compare init args and option names")):
+                    service_option_names = set(service_options.keys())
+                    service_init_args_name = set(service_init_types.keys())
 
+                    self.assertEqual(
+                        first=service_option_names,
+                        second=service_init_args_name,
+                        msg=(f"Options: {service_option_names},"
+                             f" Init: {service_init_args_name}"),
+                    )
 
-class TestDefaultServiceFailure(TestCase):
-    @expectedFailure
-    def test_default_failure(self) -> None:
-        test_service_info(self, SERVICES['default'])
+                with self.subTest((f"Service {service.pretty_name}:"
+                                   "compare init args and option types")):
+                    # TODO: implement
+                    ...
 
+    def test_not_enabled_no_yields(self) -> None:
+        for service in self.services:
+            with self.subTest(f"Service: {service.pretty_name}"):
+                service.enabled = False
+                should_be_empty = list(service)
 
-# Create classes to test services
-for service_name, service_class in SERVICES.items():
-    # Defalt service has special options
-    # that are not supposed to be edited by user
-    if service_name == 'default':
-        continue
+                self.assertFalse(should_be_empty)
 
-    vars()[service_name] = type(
-        f"Test_{service_name}",
-        (TestCase, ),
-        {
-            'test_service_info': partialmethod(
-                test_service_info, service_class)
-        }
-
-    )
 
 if __name__ == '__main__':
     unittest_main()

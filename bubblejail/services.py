@@ -15,49 +15,165 @@
 # along with bubblejail.  If not, see <https://www.gnu.org/licenses/>.
 
 
-from dataclasses import dataclass
 from os import environ, readlink
 from pathlib import Path
 from random import choices
 from string import ascii_letters, hexdigits
 from typing import (Dict, FrozenSet, Generator, List, Set, Tuple,
-                    Type, Union, Protocol)
+                    Type, Union, Optional,
+                    Iterator)
+
 
 from xdg import BaseDirectory
 
 from .bwrap_config import (Bind, BwrapConfigBase, DbusSessionTalkTo, DevBind,
                            DirCreate, EnvrimentalVar, FileTransfer,
                            ReadOnlyBind, SeccompDirective, SeccompSyscallErrno,
-                           ShareNetwork, Symlink)
+                           ShareNetwork, Symlink, LaunchArguments)
 from .exceptions import ServiceUnavalibleError
 
+# region Service Typing
+
+
+class ServiceWantsSend:
+    ...
+
+
+class ServiceWantsHomeBind(ServiceWantsSend):
+    ...
+
+
 ServiceIterTypes = Union[BwrapConfigBase, FileTransfer,
-                         DbusSessionTalkTo, SeccompDirective]
+                         DbusSessionTalkTo, SeccompDirective,
+                         LaunchArguments, ServiceWantsSend]
 
-# region ServiceInfo
+ServiceSendType = Union[Path]
 
-ServiceOptionTypes = Union[Type[str], Type[bool], Type[List[str]]]
+ServiceGeneratorType = Generator[ServiceIterTypes, ServiceSendType, None]
 
+# endregion Service Typing
 
-@dataclass
-class ServiceOptionInfo:
-    name: str
-    description: str
-    typing: ServiceOptionTypes
+# region Service Options
 
-
-@dataclass
-class ServiceInfo:
-    name: str
-    description: str
-    options: Dict[str, ServiceOptionInfo]
+ServiceOptionTypes = Union[str, List[str], bool]
 
 
-# endregion ServiceInfo
+class ServiceOption:
+    def __init__(self, name: str, description: str, pretty_name: str):
+        self.name = name
+        self.description = description
+        self.pretty_name = pretty_name
+
+    def get_value(self) -> ServiceOptionTypes:
+        raise NotImplementedError('Default option value getter called')
+
+    def get_gui_value(self) -> ServiceOptionTypes:
+        return self.get_value()
+
+    def set_value(self, new_value: ServiceOptionTypes) -> None:
+        raise NotImplementedError('Default option value setter called')
+
+
+class OptionStrList(ServiceOption):
+    def __init__(self, str_list: List[str],
+                 description: str, name: str,
+                 pretty_name: str):
+        super().__init__(
+            description=description,
+            name=name,
+            pretty_name=pretty_name,
+        )
+        self.str_list = str_list
+
+    def get_value(self) -> List[str]:
+        return self.str_list
+
+    def set_value(self, new_value: ServiceOptionTypes) -> None:
+        if isinstance(new_value, list):
+            self.str_list = new_value
+        else:
+            raise TypeError(f"Option StrList got {type(new_value)}")
+
+
+class OptionSpaceSeparatedStr(OptionStrList):
+    def __init__(self, str_or_list_str: Union[str, List[str]],
+                 description: str, name: str,
+                 pretty_name: str):
+
+        if isinstance(str_or_list_str, str):
+            str_list = str_or_list_str.split()
+        elif isinstance(str_or_list_str, list):
+            str_list = str_or_list_str
+        else:
+            raise TypeError(("Init of space separated got "
+                             f"{repr(str_or_list_str)}"))
+
+        super().__init__(
+            description=description,
+            name=name,
+            pretty_name=pretty_name,
+            str_list=str_list,
+        )
+
+    def get_gui_value(self) -> str:
+        return '\t'.join(self.str_list)
+
+    def set_value(self, new_value: ServiceOptionTypes) -> None:
+        if isinstance(new_value, str):
+            str_list = new_value.split()
+        elif isinstance(new_value, list):
+            str_list = new_value
+        else:
+            raise TypeError(f"Option space separated got {type(new_value)}")
+
+        super().set_value(str_list)
+
+
+class OptionStr(ServiceOption):
+    def __init__(self, string: str,
+                 description: str, name: str,
+                 pretty_name: str):
+        super().__init__(
+            description=description,
+            name=name,
+            pretty_name=pretty_name,
+        )
+        self.string = string
+
+    def get_value(self) -> str:
+        return self.string
+
+    def set_value(self, new_value: ServiceOptionTypes) -> None:
+        if isinstance(new_value, str):
+            self.string = new_value
+        else:
+            raise TypeError(f"Option Str got {type(new_value)}")
+
+
+class OptionBool(ServiceOption):
+    def __init__(self, boolean: bool,
+                 description: str, name: str,
+                 pretty_name: str):
+        super().__init__(
+            description=description,
+            name=name,
+            pretty_name=pretty_name,
+        )
+        self.boolean = boolean
+
+    def get_value(self) -> bool:
+        return self.boolean
+
+    def set_value(self, new_value: ServiceOptionTypes) -> None:
+        if isinstance(new_value, bool):
+            self.boolean = new_value
+        else:
+            raise TypeError(f"Option Bool got {type(new_value)}")
+
+# endregion Service Options
 
 
 # region HelperFunctions
-
 XDG_DESKTOP_VARS: FrozenSet[str] = frozenset({
     'XDG_CURRENT_DESKTOP', 'DESKTOP_SESSION',
     'XDG_SESSION_TYPE', 'XDG_SESSION_DESKTOP'})
@@ -162,28 +278,55 @@ def generate_machine_id_bytes() -> bytes:
 EMPTY_LIST: List[str] = []
 
 
-class BubblejailService(Protocol):
+class BubblejailService:
 
-    def __iter__(self) -> Generator[ServiceIterTypes, None, None]:
-        raise NotImplementedError('Default iterator was called')
+    def __init__(self) -> None:
+        self.option_list: List[ServiceOption] = []
+        self.enabled: bool = False
 
-    info: ServiceInfo
+    def __iter__(self) -> ServiceGeneratorType:
+        if not self.enabled:
+            return
+
+        if False:
+            yield None
+
+    def add_option(self, option: ServiceOption) -> None:
+        self.option_list.append(option)
+
+    def iter_options(self) -> Iterator[ServiceOption]:
+        return iter(self.option_list)
+
+    def set_options(self, options_map: Dict[str, ServiceOptionTypes]) -> None:
+        for option in self.iter_options():
+            option_name = option.name
+            try:
+                option_new_value = options_map.pop(option_name)
+            except KeyError:
+                continue
+            option.set_value(option_new_value)
+
+        if options_map:
+            raise TypeError(f"Unknown options {options_map}")
+
+    def to_dict(self) -> Dict[str, ServiceOptionTypes]:
+        new_dict = {}
+
+        for option in self.iter_options():
+            new_dict[option.name] = option.get_value()
+
+        return new_dict
+
+    name: str
+    pretty_name: str
+    description: str
 
 
 class BubblejailDefaults(BubblejailService):
 
-    def __init__(
-        self,
-        home_bind_path: Path,
-        share_local_time: bool,
-        filter_disk_sync: bool,
-    ) -> None:
-        super().__init__()
-        self.home_bind_path = home_bind_path
-        self.share_local_time = share_local_time
-        self.filter_disk_sync = filter_disk_sync
+    def __iter__(self) -> ServiceGeneratorType:
+        # Defaults can't be disabled
 
-    def __iter__(self) -> Generator[ServiceIterTypes, None, None]:
         # Distro packged libraries and binaries
         yield ReadOnlyBind('/usr/include')
         yield ReadOnlyBind('/usr/bin')
@@ -220,7 +363,8 @@ class BubblejailDefaults(BubblejailService):
         yield DirCreate('/usr/local')  # Used for overwrites
 
         # Bind pseudo home
-        yield Bind(str(self.home_bind_path), '/home/user')
+        home_path = yield ServiceWantsHomeBind()
+        yield Bind(str(home_path), '/home/user')
 
         # Set enviromental variables
         yield EnvrimentalVar('USER', 'user')
@@ -236,46 +380,77 @@ class BubblejailDefaults(BubblejailService):
         yield generate_nssswitch()
         yield FileTransfer(b'multi on', '/etc/host.conf')
         yield from generate_hosts()
-        if self.share_local_time:
-            yield ReadOnlyBind('/etc/localtime')
 
         yield FileTransfer(generate_machine_id_bytes(), '/etc/machine-id')
 
-        if self.filter_disk_sync:
+    def __repr__(self) -> str:
+        return "Bubblejail defaults."
+
+    name = 'default'
+    pretty_name = 'Default settings'
+    description = ('Settings that must be present in any instance')
+
+
+class CommonSettings(BubblejailService):
+    def __init__(
+        self,
+        executable_name: Union[str, List[str]] = EMPTY_LIST,
+        share_local_time: bool = True,
+        filter_disk_sync: bool = False,
+    ):
+        super().__init__()
+        self.share_local_time = OptionBool(
+            boolean=share_local_time,
+            name='share_local_time',
+            pretty_name='Share local time',
+            description='Instance will know local time instead of UTC',
+        )
+
+        self.filter_disk_sync = OptionBool(
+            boolean=filter_disk_sync,
+            name='filter_disk_sync',
+            pretty_name='Filter disk sync',
+            description=(
+                'Do not allow flushing disk\n'
+                'Useful for EA Origin client that tries to flush\n'
+                'to disk too often.'),
+        )
+
+        self.executable_name = OptionSpaceSeparatedStr(
+            str_or_list_str=executable_name,
+            name='executable_name',
+            pretty_name='Executable arguments',
+            description='Space separated arguments',
+        )
+
+        self.add_option(self.executable_name)
+        self.add_option(self.filter_disk_sync)
+        self.add_option(self.share_local_time)
+
+    def __iter__(self) -> ServiceGeneratorType:
+        if not self.enabled:
+            return
+
+        # Executable main arguments
+        yield LaunchArguments(self.executable_name.get_value())
+
+        if self.filter_disk_sync.get_value():
             yield SeccompSyscallErrno('sync', 0)
             yield SeccompSyscallErrno('fsync', 0)
 
-    info = ServiceInfo(
-        name='Default settings',
-        description=('Settings that must be present in any instance'),
-        options={
-            'executable_name': ServiceOptionInfo(
-                name='Executable arguments',
-                description='Space separated arguments',
-                typing=str,
-            ),
-            'share_local_time': ServiceOptionInfo(
-                name='Share local time',
-                description=(
-                    'Instance will know local time instead of UTC'
-                ),
-                typing=bool,
-            ),
-            'filter_disk_sync': ServiceOptionInfo(
-                name='Filter disk sync',
-                description=(
-                    'Do not allow flushing disk\n'
-                    'Useful for EA Origin client that tries to flush\n'
-                    'to disk too often.'
-                ),
-                typing=bool,
-            ),
-        },
-    )
+        if self.share_local_time.get_value():
+            yield ReadOnlyBind('/etc/localtime')
+
+    name = 'common'
+    pretty_name = 'Common Settings'
+    description = "Settins that don't fit any particular category"
 
 
 class X11(BubblejailService):
-    def __iter__(self) -> Generator[ServiceIterTypes, None, None]:
+    def __iter__(self) -> ServiceGeneratorType:
+        if not self.enabled:
+            return
+
         for x in XDG_DESKTOP_VARS:
             if x in environ:
                 yield EnvrimentalVar(x)
@@ -287,16 +462,17 @@ class X11(BubblejailService):
         yield EnvrimentalVar('XAUTHORITY', '/tmp/.Xauthority')
         yield from generate_toolkits()
 
-    info = ServiceInfo(
-        name='X11 windowing system',
-        description=('Gives access to X11 socket.\n'
-                     'This is generally the default Linux windowing system.'),
-        options={},
-    )
+    name = 'x11'
+    pretty_name = 'X11 windowing system'
+    description = ('Gives access to X11 socket.\n'
+                   'This is generally the default Linux windowing system.')
 
 
 class Wayland(BubblejailService):
-    def __iter__(self) -> Generator[ServiceIterTypes, None, None]:
+    def __iter__(self) -> ServiceGeneratorType:
+        if not self.enabled:
+            return
+
         if 'WAYLAND_DISPLAY' not in environ:
             raise ServiceUnavalibleError("No wayland display.")
 
@@ -311,77 +487,91 @@ class Wayland(BubblejailService):
             f"/{environ.get('WAYLAND_DISPLAY')}"))
         yield from generate_toolkits()
 
-    info = ServiceInfo(
-        name='Wayland windowing system',
-        description=(
-            'Make sure you are running Wayland sessiion\n'
-            'and your application supports Wayland'
-        ),
-        options={},
+    name = 'wayland'
+    pretty_name = 'Wayland windowing system'
+    description = (
+        'Make sure you are running Wayland sessiion\n'
+        'and your application supports Wayland'
     )
 
 
 class Network(BubblejailService):
-    def __iter__(self) -> Generator[ServiceIterTypes, None, None]:
+    def __iter__(self) -> ServiceGeneratorType:
+        if not self.enabled:
+            return
+
         yield ShareNetwork()
         yield ReadOnlyBind('/etc/resolv.conf')
         yield ReadOnlyBind('/etc/ca-certificates')
         yield ReadOnlyBind('/etc/ssl')
 
-    info = ServiceInfo(
-        name='Network access',
-        description='Gives access to network.',
-        options={},
-    )
+    name = 'network'
+    pretty_name = 'Network access'
+    description = 'Gives access to network.'
 
 
 class PulseAudio(BubblejailService):
-    def __iter__(self) -> Generator[ServiceIterTypes, None, None]:
+    def __iter__(self) -> ServiceGeneratorType:
+        if not self.enabled:
+            return
+
         yield Bind(
             f"{BaseDirectory.get_runtime_dir()}/pulse/native",
             '/run/user/1000/pulse/native'
         )
         yield Symlink('/usr/bin/true', '/usr/local/bin/pulseaudio')
 
-    info = ServiceInfo(
-        name='Pulse Audio',
-        description='Default audio system in most distros',
-        options={},
-    )
+    name = 'pulse_audio'
+    pretty_name = 'Pulse Audio'
+    description = 'Default audio system in most distros'
 
 
 class HomeShare(BubblejailService):
     def __init__(self, home_paths: List[str] = EMPTY_LIST):
         super().__init__()
-        self.home_paths = home_paths
+        self.home_paths = OptionStrList(
+            str_list=home_paths,
+            name='home_paths',
+            pretty_name='List of paths',
+            description='Add directory name and path to share',
+        )
+        self.add_option(self.home_paths)
 
-    def __iter__(self) -> Generator[ServiceIterTypes, None, None]:
+    def __iter__(self) -> ServiceGeneratorType:
+        if not self.enabled:
+            return
+
         if self.home_paths is not None:
-            for path_relative_to_home in self.home_paths:
+            for path_relative_to_home in self.home_paths.get_value():
                 yield Bind(
                     str(Path.home() / path_relative_to_home),
                     str(Path('/home/user') / path_relative_to_home),
                 )
 
-    info = ServiceInfo(
-        name='Home Share',
-        description='Share directories relative to home',
-        options={
-            'home_paths': ServiceOptionInfo(
-                name='List of paths',
-                description='Add directory name and path to share',
-                typing=List[str],
-            )
-        }
-    )
+    name = 'home_share'
+    pretty_name = 'Home Share'
+    description = 'Share directories relative to home'
 
 
 class DirectRendering(BubblejailService):
     def __init__(self, enable_aco: bool = False):
         super().__init__()
-        self.enable_aco = enable_aco
+        self.enable_aco = OptionBool(
+            boolean=enable_aco,
+            name='enable_aco',
+            pretty_name='Enable ACO',
+            description=(
+                'Enables high performance vulkan shader\n'
+                'compiler for AMD GPUs. No effect on Nvidia\n'
+                'or Intel.'
+            ),
+        )
+        self.add_option(self.enable_aco)
 
-    def __iter__(self) -> Generator[ServiceIterTypes, None, None]:
+    def __iter__(self) -> ServiceGeneratorType:
+        if not self.enabled:
+            return
+
         # TODO: Allow to select which DRM devices to pass
 
         # Bind /dev/dri and /sys/dev/char and /sys/devices
@@ -410,43 +600,35 @@ class DirectRendering(BubblejailService):
 
         yield DevBind('/dev/dri')
 
-        if self.enable_aco:
+        if self.enable_aco.get_value():
             yield EnvrimentalVar('RADV_PERFTEST', 'aco')
 
-    info = ServiceInfo(
-        name='Direct Rendering',
-        description='Provides ccess to GPU',
-        options={
-            'enable_aco': ServiceOptionInfo(
-                name='Enable ACO',
-                description=(
-                    'Enables high performance vulkan shader\n'
-                    'compiler for AMD GPUs. No effect on Nvidia\n'
-                    'or Intel.'
-                ),
-                typing=bool,
-            )
-        },
-    )
+    name = 'direct_rendering'
+    pretty_name = 'Direct Rendering'
+    description = 'Provides access to GPU'
 
 
 class Systray(BubblejailService):
-    def __iter__(self) -> Generator[ServiceIterTypes, None, None]:
+    def __iter__(self) -> ServiceGeneratorType:
+        if not self.enabled:
+            return
+
         yield DbusSessionTalkTo('org.kde.StatusNotifierWatcher')
 
-    info = ServiceInfo(
-        name='System tray icons',
-        description=(
-            'Provides access to Dbus API for creating tray icons\n'
-            'This is not the only way to create tray icons but\n'
-            'the most common one.'
-        ),
-        options={},
+    name = 'systray'
+    pretty_name = 'System tray icons'
+    description = (
+        'Provides access to Dbus API for creating tray icons\n'
+        'This is not the only way to create tray icons but\n'
+        'the most common one.'
     )
 
 
 class Joystick(BubblejailService):
-    def __iter__(self) -> Generator[ServiceIterTypes, None, None]:
+    def __iter__(self) -> ServiceGeneratorType:
+        if not self.enabled:
+            return
+
         look_for_names: Set[str] = set()
         # Find the *-joystick in /dev/input/by-path/
         dev_input_path = Path('/dev/input')
@@ -470,14 +652,12 @@ class Joystick(BubblejailService):
 
                 yield DevBind(str(resolved_path.parents[2]))
 
-    info = ServiceInfo(
-        name='Joysticks and gamepads',
-        description=(
-            'Windowing systems (x11 and wayland) do not support gamepads.\n'
-            'Every game has to read from device files directly.\n'
-            'This service provides access to required '
-        ),
-        options={},
+    name = 'joystick'
+    pretty_name = 'Joysticks and gamepads'
+    description = (
+        'Windowing systems (x11 and wayland) do not support gamepads.\n'
+        'Every game has to read from device files directly.\n'
+        'This service provides access to required '
     )
 
 
@@ -486,81 +666,120 @@ class RootShare(BubblejailService):
                  paths: List[str] = EMPTY_LIST,
                  read_only_paths: List[str] = EMPTY_LIST):
         super().__init__()
-        if paths is not None:
-            self.paths = paths
-        else:
-            self.paths = []
 
-        if read_only_paths is not None:
-            self.read_only_paths = read_only_paths
-        else:
-            self.read_only_paths = []
+        self.paths = OptionStrList(
+            str_list=paths,
+            name='paths',
+            pretty_name='Read/Write paths',
+            description='Add directory path to share',
+        )
 
-    def __iter__(self) -> Generator[ServiceIterTypes, None, None]:
-        for x in self.paths:
+        self.read_only_paths = OptionStrList(
+            str_list=read_only_paths,
+            name='read_only_paths',
+            pretty_name='Read only paths',
+            description='Add directory path to share',
+        )
+
+        self.add_option(self.read_only_paths)
+        self.add_option(self.paths)
+
+    def __iter__(self) -> ServiceGeneratorType:
+        if not self.enabled:
+            return
+
+        for x in self.paths.get_value():
             yield Bind(x)
 
-        for x in self.read_only_paths:
+        for x in self.read_only_paths.get_value():
             yield ReadOnlyBind(x)
 
-    info = ServiceInfo(
-        name='Root share',
-        description=(
-            'Share directory relative to root /'
-        ),
-        options={
-            'paths': ServiceOptionInfo(
-                name='Read/Write paths',
-                description='Add directory path to share',
-                typing=List[str],
-            ),
-            'read_only_paths': ServiceOptionInfo(
-                name='Read only paths',
-                description='Add directory path to share',
-                typing=List[str],
-            )
-        },
+    name = 'root_share'
+    pretty_name = 'Root share'
+    description = (
+        'Share directory relative to root /'
     )
 
 
 class OpenJDK(BubblejailService):
-    def __iter__(self) -> Generator[ServiceIterTypes, None, None]:
+    def __iter__(self) -> ServiceGeneratorType:
+        if not self.enabled:
+            return
+
         yield ReadOnlyBind('/etc/java-openjdk')
         yield ReadOnlyBind('/etc/profile.d/jre.csh')
         yield ReadOnlyBind('/etc/profile.d/jre.sh')
 
-    info = ServiceInfo(
-        name='Java',
-        description=(
-            'Enable for applications that require Java\n'
-            'Example: Minecraft'
-        ),
-        options={},
+    name = 'openjdk'
+    pretty_name = 'Java'
+    description = (
+        'Enable for applications that require Java\n'
+        'Example: Minecraft'
     )
 
 
 class Notifications(BubblejailService):
-    def __iter__(self) -> Generator[ServiceIterTypes, None, None]:
+    def __iter__(self) -> ServiceGeneratorType:
+        if not self.enabled:
+            return
+
         yield DbusSessionTalkTo('org.freedesktop.Notifications')
 
-    info = ServiceInfo(
-        name='Notifications',
-        description='Ability to send notifications to desktop',
-        options={},
-    )
+    name = 'notify'
+    pretty_name = 'Notifications'
+    description = 'Ability to send notifications to desktop'
 
 
-SERVICES: Dict[str, Type[BubblejailService]] = {
-    'default': BubblejailDefaults,
-    'x11': X11,
-    'wayland': Wayland,
-    'network': Network,
-    'pulse_audio': PulseAudio,
-    'home_share': HomeShare,
-    'direct_rendering': DirectRendering,
-    'systray': Systray,
-    'joystick': Joystick,
-    'root_share': RootShare,
-    'openjdk': OpenJDK,
-    'notify': Notifications,
-}
+SERVICES_CLASSES: Tuple[Type[BubblejailService], ...] = (
+    CommonSettings, X11, Wayland,
+    Network, PulseAudio, HomeShare, DirectRendering,
+    Systray, Joystick, RootShare, OpenJDK, Notifications,
+)
+
+ServicesConfDictType = Dict[str, Dict[str, ServiceOptionTypes]]
+
+
+class ServiceContainer:
+    def __init__(self, conf_dict: Optional[ServicesConfDictType] = None):
+        self.services = list(
+            (service_class() for service_class in SERVICES_CLASSES)
+        )
+        self.default_service = BubblejailDefaults()
+
+        if conf_dict is not None:
+            self.set_services(conf_dict)
+
+    def set_services(
+            self,
+            new_services_datas: ServicesConfDictType) -> None:
+
+        for service in self.services:
+            try:
+                new_service_data = new_services_datas.pop(service.name)
+            except KeyError as e:
+                if e.args != (service.name, ):
+                    raise
+                else:
+                    service.enabled = False
+                    continue
+
+            service.set_options(new_service_data)
+            service.enabled = True
+
+        if new_services_datas:
+            raise TypeError('Unknown conf dict keys', new_services_datas)
+
+    def get_service_conf_dict(self) -> ServicesConfDictType:
+        return {service.name: service.to_dict() for service
+                in self.services
+                if service.enabled}
+
+    def iter_services(self,
+                      iter_disabled: bool = False,
+                      iter_default: bool = True,
+                      ) -> Generator[BubblejailService, None, None]:
+        if iter_default:
+            yield self.default_service
+        for service in self.services:
+            if service.enabled or iter_disabled:
+                yield service

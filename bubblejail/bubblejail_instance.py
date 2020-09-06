@@ -24,21 +24,20 @@ from os import environ
 from pathlib import Path
 from socket import AF_UNIX, SOCK_STREAM, SocketType, socket
 from tempfile import TemporaryDirectory, TemporaryFile
-from typing import IO, Any, Iterator, List, Optional, Set, Type
+from typing import IO, Any, List, Optional, Set, Type, TypedDict, cast
 
 from toml import dump as toml_dump
 from toml import loads as toml_loads
-from xdg import IniFile
-from xdg.BaseDirectory import get_runtime_dir, xdg_data_home
+from xdg.BaseDirectory import get_runtime_dir
 
 from .bubblejail_helper import RequestRun
 from .bubblejail_seccomp import SeccompState
-from .bubblejail_utils import (BubblejailInstanceConfig, BubblejailProfile,
-                               ImportConfig)
 from .bwrap_config import (Bind, BwrapConfigBase, DbusSessionTalkTo,
-                           EnvrimentalVar, FileTransfer, SeccompDirective)
+                           EnvrimentalVar, FileTransfer, LaunchArguments,
+                           SeccompDirective)
 from .exceptions import BubblejailException
-from .services import BubblejailDefaults, BubblejailService
+from .services import ServiceContainer as BubblejailInstanceConfig
+from .services import ServicesConfDictType, ServiceWantsHomeBind
 
 
 def copy_data_to_temp_file(data: bytes) -> IO[bytes]:
@@ -67,15 +66,20 @@ async def process_watcher(process: Process) -> None:
             return
 
 
-class BubblejailInstance:
-    DATA_DIR = Path(xdg_data_home + "/bubblejail")
-    DESKTOP_ENTRIES_DIR = Path(xdg_data_home + '/applications')
+class ConfDict(TypedDict, total=False):
+    service: ServicesConfDictType
+    services: List[str]
+    executable_name: List[str]
+    share_local_time: bool
+    filter_disk_sync: bool
 
-    def __init__(self, name: str):
-        self.name = name
+
+class BubblejailInstance:
+
+    def __init__(self, instance_home: Path):
+        self.name = instance_home.stem
         # Instance directory located at $XDG_DATA_HOME/bubblejail/
-        self.instance_directory = self.get_instances_dir() / self.name
-        self.home_bind_path = self.instance_directory / 'home'
+        self.instance_directory = instance_home
         # If instance directory does not exists we can't do much
         # Probably someone used 'run' command before 'create'
         if not self.instance_directory.exists():
@@ -85,30 +89,33 @@ class BubblejailInstance:
         self.runtime_dir: Path = Path(
             get_runtime_dir() + f'/bubblejail/{self.name}')
 
-        # Helper run-time directory
-        self.helper_runtime_dir: Path = self.runtime_dir / 'helper'
+    # region Paths
 
-        # Unix Socket used to communicate with helper
-        self.helper_socket_path: Path = (
-            self.helper_runtime_dir / 'helper.socket')
-        # Dbus session proxy path
-        self.dbus_session_socket_path: Path = (
-            self.runtime_dir / 'dbus_session_proxy')
-
-    @classmethod
-    def get_instances_dir(cls) -> Path:
-        instances_dir_path = cls.DATA_DIR / 'instances'
-        if not instances_dir_path.exists():
-            instances_dir_path.mkdir(mode=0o700, parents=True)
-
-        return instances_dir_path
+    @ property
+    def path_config_file(self) -> Path:
+        return self.instance_directory / "services.toml"
 
     @property
-    def instance_config_file_path(self) -> Path:
-        return self.instance_directory / "config.toml"
+    def path_home_directory(self) -> Path:
+        return self.instance_directory / 'home'
+
+    @property
+    def path_runtime_helper_dir(self) -> Path:
+        """Helper run-time directory"""
+        return self.runtime_dir / 'helper'
+
+    @property
+    def path_runtime_helper_socket(self) -> Path:
+        return self.path_runtime_helper_dir / 'helper.socket'
+
+    @property
+    def path_runtime_dbus_session_socket(self) -> Path:
+        return self.runtime_dir / 'dbus_session_proxy'
+
+    # endregion Paths
 
     def _read_config_file(self) -> str:
-        with (self.instance_config_file_path).open() as f:
+        with (self.path_config_file).open() as f:
             return f.read()
 
     def _read_config(
@@ -118,99 +125,17 @@ class BubblejailInstance:
         if config_contents is None:
             config_contents = self._read_config_file()
 
-        return BubblejailInstanceConfig(**toml_loads(config_contents))
+        conf_dict = cast(ServicesConfDictType, toml_loads(config_contents))
 
-    def generate_dot_desktop(self, dot_desktop_path: Optional[Path]) -> None:
+        return BubblejailInstanceConfig(conf_dict)
 
-        if dot_desktop_path is not None:
-            new_dot_desktop = IniFile.IniFile(
-                filename=str(dot_desktop_path))
-
-            for group_name in new_dot_desktop.groups():
-                # Modify Exec
-                old_exec = new_dot_desktop.get(
-                    key='Exec', group=group_name
-                )
-                if not old_exec:
-                    continue
-
-                new_dot_desktop.set(
-                    key='Exec',
-                    value=(f"bubblejail run {self.name} "
-                           f"{' '.join(old_exec.split()[1:])}"),
-                    group=group_name)
-
-        else:
-            new_dot_desktop = IniFile.IniFile()
-            new_dot_desktop.addGroup('Desktop Entry')
-            new_dot_desktop.set(
-                key='Exec',
-                value=f"bubblejail run {self.name}",
-                group='Desktop Entry'
-            )
-
-        # Modify name
-        new_dot_desktop.set(
-            key="Name",
-            group='Desktop Entry',
-            value=f"{self.name} bubble",
-        )
-
-        # Modify StartupWMClass
-        new_dot_desktop.set(
-            key="StartupWMClass",
-            group='Desktop Entry',
-            value=f"bubble_{self.name}",
-        )
-
-        new_dot_desktop_path_str = str(
-            self.DESKTOP_ENTRIES_DIR / f"bubble_{self.name}.desktop")
-
-        new_dot_desktop.write(filename=new_dot_desktop_path_str)
-
-    @classmethod
-    async def create_new(
-            cls,
-            new_name: str,
-            profile: BubblejailProfile,
-            create_dot_desktop: bool = False,
-            do_import_data: bool = False,
-            import_from_instance: Optional[str] = None,
-    ) -> 'BubblejailInstance':
-
-        home_directory: Optional[Path] = None
-        if import_from_instance is not None:
-            another_instance = BubblejailInstance(import_from_instance)
-            home_directory = another_instance.home_bind_path
-
-        instance_directory = cls.get_instances_dir() / new_name
-
-        # Exception will be raised if directory already exists
-        instance_directory.mkdir(mode=0o700, parents=True)
-        # Make home directory
-        (instance_directory / 'home').mkdir(mode=0o700)
-        # Make config.json
-        with (instance_directory / 'config.toml').open(
-                mode='x') as instance_conf_file:
-
-            toml_dump(profile.config, instance_conf_file)
-
-        instance = BubblejailInstance(new_name)
-
-        if do_import_data:
-            await instance.import_data(
-                import_conf=profile.import_conf,
-                home_dir=home_directory,
-            )
-
-        if create_dot_desktop:
-            instance.generate_dot_desktop(profile.dot_desktop_path)
-
-        return instance
+    def save_config(self, config: BubblejailInstanceConfig) -> None:
+        with open(self.path_config_file, mode='w') as conf_file:
+            toml_dump(config.get_service_conf_dict(), conf_file)
 
     async def send_run_rpc(self, args_to_run: List[str]) -> None:
         (_, writter) = await open_unix_connection(
-            path=self.helper_socket_path,
+            path=self.path_runtime_helper_socket,
         )
 
         request = RequestRun(
@@ -233,16 +158,8 @@ class BubblejailInstance:
 
         instance_config = self._read_config()
 
-        # Insert the executable name
-        if isinstance(instance_config.executable_name, str):
-            args_to_run.insert(0, instance_config.executable_name)
-        elif isinstance(instance_config.executable_name, list):
-            new_arg_list = instance_config.executable_name
-            new_arg_list.extend(args_to_run)
-            args_to_run = new_arg_list
-
         # Use IPC to run new command inside the namespace
-        if self.helper_socket_path.exists():
+        if self.path_runtime_helper_socket.exists():
             if not dry_run:
                 await self.send_run_rpc(args_to_run)
             else:
@@ -261,6 +178,8 @@ class BubblejailInstance:
         )
 
         async with init:
+            args_to_run = init.executable_args
+
             if dry_run:
                 print('Bwrap args: ')
                 print(' '.join(init.bwrap_args))
@@ -317,35 +236,12 @@ class BubblejailInstance:
             # Verify that the new config is valid and save to variable
             with open(temp_file_path) as tempfile:
                 new_config_toml = tempfile.read()
-                conf_to_verify = BubblejailInstanceConfig(
-                    **toml_loads(new_config_toml)
+                BubblejailInstanceConfig(
+                    cast(ServicesConfDictType, toml_loads(new_config_toml))
                 )
-                conf_to_verify.verify()
             # Write to instance config file
-            with open(self.instance_config_file_path, mode='w') as conf_file:
+            with open(self.path_config_file, mode='w') as conf_file:
                 conf_file.write(new_config_toml)
-
-    async def import_data(self, import_conf: ImportConfig,
-                          home_dir: Optional[Path]) -> None:
-        if home_dir is None:
-            home_dir = Path.home()
-
-        for from_home_copy_path in import_conf.copy:
-            p = await create_subprocess_exec(
-                '/usr/bin/rsync',
-                '--archive', '--preallocate', '--info=progress2',
-                str(home_dir / from_home_copy_path),
-                str(self.home_bind_path),
-            )
-
-            await p.wait()
-
-    @classmethod
-    def iter_instance_names(cls) -> Iterator[str]:
-        data_dir = BubblejailInstance.get_instances_dir()
-        for x in data_dir.iterdir():
-            if x.is_dir():
-                yield str(x.stem)
 
 
 class BubblejailInit:
@@ -357,17 +253,17 @@ class BubblejailInit:
         is_helper_debug: bool = False,
         is_log_dbus: bool = False,
     ) -> None:
-        self.home_bind_path = parent.home_bind_path
+        self.home_bind_path = parent.path_home_directory
         self.runtime_dir = parent.runtime_dir
         # Prevent our temporary file from being garbage collected
         self.temp_files: List[IO[bytes]] = []
         self.file_descriptors_to_pass: List[int] = []
         # Helper
-        self.helper_runtime_dir = parent.helper_runtime_dir
-        self.helper_socket_path = parent.helper_socket_path
+        self.helper_runtime_dir = parent.path_runtime_helper_dir
+        self.helper_socket_path = parent.path_runtime_helper_socket
         # Dbus socket needs to be cleaned up
         self.dbus_session_socket: Optional[SocketType] = None
-        self.dbus_session_socket_path = parent.dbus_session_socket_path
+        self.dbus_session_socket_path = parent.path_runtime_dbus_session_socket
         # Args to dbus proxy
         self.dbus_session_args: List[str] = []
         self.dbus_session_proxy_process: Optional[Process] = None
@@ -383,14 +279,8 @@ class BubblejailInit:
         # Tasks
         self.watch_dbus_proxy_task: Optional[Task[None]] = None
 
-    def iter_bwrap_configs(self) -> Iterator[BubblejailService]:
-        yield BubblejailDefaults(
-            home_bind_path=self.home_bind_path,
-            share_local_time=self.instance_config.share_local_time,
-            filter_disk_sync=self.instance_config.filter_disk_sync,
-        )
-
-        yield from self.instance_config.iter_services()
+        # Executable args
+        self.executable_args: List[str] = []
 
     def genetate_args(self) -> None:
         # TODO: Reorganize the order to allow for
@@ -422,9 +312,19 @@ class BubblejailInit:
         for e in environ:
             self.bwrap_args.extend(('--unsetenv', e))
 
-        for bwrap_config in self.iter_bwrap_configs():
+        for service in self.instance_config.iter_services():
+            config_iterator = service.__iter__()
 
-            for config in bwrap_config:
+            while True:
+                try:
+                    config = next(config_iterator)
+                except StopIteration:
+                    break
+
+                # When we need to send something to generator
+                if isinstance(config, ServiceWantsHomeBind):
+                    config = config_iterator.send(self.home_bind_path)
+
                 if isinstance(config, BwrapConfigBase):
                     self.bwrap_args.extend(config.to_args())
                 elif isinstance(config, FileTransfer):
@@ -443,6 +343,9 @@ class BubblejailInit:
                         seccomp_state = SeccompState()
 
                     seccomp_state.add_directive(config)
+                elif isinstance(config, LaunchArguments):
+                    # TODO: implement priority
+                    self.executable_args.extend(config.launch_args)
                 else:
                     raise TypeError('Unknown bwrap config.')
 
@@ -567,3 +470,16 @@ class BubblejailInit:
             self.dbus_session_socket.close()
 
         self.runtime_dir.rmdir()
+
+
+class BubblejailProfile:
+    def __init__(
+        self,
+        dot_desktop_path: Optional[str] = None,
+        is_gtk_application: bool = False,
+        services:  Optional[ServicesConfDictType] = None,
+    ) -> None:
+        self.dot_desktop_path = (Path(dot_desktop_path)
+                                 if dot_desktop_path is not None else None)
+        self.is_gtk_application = is_gtk_application
+        self.config = BubblejailInstanceConfig(services)
