@@ -14,6 +14,7 @@
 # You should have received a copy of the GNU General Public License
 # along with bubblejail.  If not, see <https://www.gnu.org/licenses/>.
 
+from os import environ
 from pathlib import Path
 from typing import Generator, Optional
 
@@ -78,7 +79,13 @@ class BubblejailDirectories:
     @classmethod
     def iter_bubblejail_data_directories(cls) -> PathGeneratorType:
         # TODO: Add ability to create custom data directories
-        yield Path(xdg_data_home + '/bubblejail')
+        try:
+            data_directories = environ['BUBBLEJAIL_DATADIRS']
+        except KeyError:
+            yield Path(xdg_data_home + '/bubblejail')
+            return
+
+        yield from (Path(x) for x in data_directories.split(':'))
 
     @classmethod
     def iter_instances_directories(cls) -> PathGeneratorType:
