@@ -15,17 +15,19 @@
 # along with bubblejail.  If not, see <https://www.gnu.org/licenses/>.
 
 
+from os import environ
 from pathlib import Path
 from tempfile import TemporaryDirectory
-from unittest import IsolatedAsyncioTestCase
+from unittest import IsolatedAsyncioTestCase, SkipTest
 from unittest import main as unittest_main
 from unittest import skipUnless
 
+from bubblejail.bubblejail_directories import BubblejailDirectories
 from bubblejail.bubblejail_instance import (BubblejailInstance,
                                             BubblejailProfile)
+from bubblejail.bubblejail_utils import FILE_NAME_SERVICES
+from bubblejail.exceptions import ServiceUnavalibleError
 from toml import load as toml_load
-
-# TODO: needs to be improved
 
 
 class TestInstanceGeneration(IsolatedAsyncioTestCase):
@@ -35,8 +37,7 @@ class TestInstanceGeneration(IsolatedAsyncioTestCase):
         self.dir_path = Path(self.dir.name)
         self.data_directory = self.dir_path / 'data'
         self.data_directory.mkdir()
-        BubblejailInstance.DATA_DIR = self.data_directory
-        BubblejailInstance.DESKTOP_ENTRIES_DIR = self.dir_path
+        environ['BUBBLEJAIL_DATADIRS'] = str(self.data_directory)
 
     @skipUnless(
         Path('/usr/share/applications/firefox.desktop').exists(),
@@ -48,35 +49,41 @@ class TestInstanceGeneration(IsolatedAsyncioTestCase):
         with open('./bubblejail/profiles/firefox.toml') as f:
             profile = BubblejailProfile(**toml_load(f))
 
-        new_instance = await BubblejailInstance.create_new(
+        new_instance = BubblejailDirectories.create_new_instance(
             new_name=instance_name,
             profile=profile,
-            create_dot_desktop=True,
+            create_dot_desktop=False,
         )
 
-        instance_dir = new_instance.instance_directory
-        self.assertTrue(instance_dir.exists())
-        self.assertTrue(instance_dir.is_dir())
-        self.assertTrue((instance_dir / 'config.toml').exists())
-        self.assertTrue((instance_dir / 'home').exists())
+        try:
+            await self._instance_common_test(new_instance)
+        except ServiceUnavalibleError:
+            raise SkipTest('Service unsupported')
 
     async def test_empty_profile(self) -> None:
         instance_name = 'test_instance_no_profile'
         profile = BubblejailProfile()
 
-        new_instance = await BubblejailInstance.create_new(
+        new_instance = BubblejailDirectories.create_new_instance(
             new_name=instance_name,
             profile=profile,
-            create_dot_desktop=True,
+            create_dot_desktop=False,
         )
-        instance_dir = new_instance.instance_directory
-        self.assertTrue(instance_dir.exists())
-        self.assertTrue(instance_dir.is_dir())
-        self.assertTrue((instance_dir / 'config.toml').exists())
-        self.assertTrue((instance_dir / 'home').exists())
+
+        await self._instance_common_test(new_instance)
 
     def tearDown(self) -> None:
         self.dir.cleanup()
+
+    async def _instance_common_test(self, instance: BubblejailInstance
+                                    ) -> None:
+        instance_dir = instance.instance_directory
+        self.assertTrue(instance_dir.exists())
+        self.assertTrue(instance_dir.is_dir())
+        self.assertTrue((instance_dir / FILE_NAME_SERVICES).exists())
+        self.assertTrue((instance_dir / 'home').exists())
+
+        await instance.async_run([], dry_run=True)
 
 
 if __name__ == '__main__':
