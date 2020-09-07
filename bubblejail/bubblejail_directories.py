@@ -23,6 +23,7 @@ from xdg import IniFile
 from xdg.BaseDirectory import xdg_data_home
 
 from .bubblejail_instance import BubblejailInstance, BubblejailProfile
+from .bubblejail_utils import FILE_NAME_SERVICES
 from .exceptions import BubblejailException
 
 PathGeneratorType = Generator[Path, None, None]
@@ -55,7 +56,7 @@ class BubblejailDirectories:
         # Make home directory
         (instance_directory / 'home').mkdir(mode=0o700)
         # Make config.json
-        with (instance_directory / 'services.toml').open(
+        with (instance_directory / FILE_NAME_SERVICES).open(
                 mode='x') as instance_conf_file:
 
             if profile is not None:

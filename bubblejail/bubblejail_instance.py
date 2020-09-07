@@ -32,6 +32,7 @@ from xdg.BaseDirectory import get_runtime_dir
 
 from .bubblejail_helper import RequestRun
 from .bubblejail_seccomp import SeccompState
+from .bubblejail_utils import FILE_NAME_SERVICES
 from .bwrap_config import (Bind, BwrapConfigBase, DbusSessionTalkTo,
                            EnvrimentalVar, FileTransfer, LaunchArguments,
                            SeccompDirective)
@@ -93,7 +94,7 @@ class BubblejailInstance:
 
     @ property
     def path_config_file(self) -> Path:
-        return self.instance_directory / "services.toml"
+        return self.instance_directory / FILE_NAME_SERVICES
 
     @property
     def path_home_directory(self) -> Path:
