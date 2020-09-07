@@ -16,9 +16,10 @@
 
 from os import environ
 from pathlib import Path
-from typing import Generator, Optional
+from typing import Generator, Optional, Union
 
 from toml import dump as toml_dump
+from toml import load as toml_load
 from xdg import IniFile
 from xdg.BaseDirectory import xdg_data_home
 
@@ -27,6 +28,8 @@ from .bubblejail_utils import FILE_NAME_SERVICES
 from .exceptions import BubblejailException
 
 PathGeneratorType = Generator[Path, None, None]
+
+SystemConfigsPath = Path('/usr/share/bubblejail')
 
 
 class BubblejailDirectories:
@@ -42,10 +45,25 @@ class BubblejailDirectories:
         raise BubblejailException(f"Instance not found {instance_name}")
 
     @classmethod
+    def profile_get(cls, profile_name: str) -> BubblejailProfile:
+        for profiles_directory in cls.iter_profile_directories():
+            possible_profile_path = profiles_directory / profile_name
+
+            if possible_profile_path.is_file():
+                with open(possible_profile_path) as profile_file:
+                    return BubblejailProfile(**toml_load(profile_file))
+
+        raise BubblejailException(f"Profile {profile_name} not found")
+
+    @classmethod
+    def iter_profile_directories(cls) -> PathGeneratorType:
+        yield SystemConfigsPath / 'profiles'
+
+    @classmethod
     def create_new_instance(
             cls,
             new_name: str,
-            profile: Optional[BubblejailProfile] = None,
+            profile: Optional[Union[BubblejailProfile, str]] = None,
             create_dot_desktop: bool = False,
     ) -> BubblejailInstance:
 
@@ -59,12 +77,13 @@ class BubblejailDirectories:
         with (instance_directory / FILE_NAME_SERVICES).open(
                 mode='x') as instance_conf_file:
 
-            if profile is not None:
-                service_conf_dict = profile.config.get_service_conf_dict()
-            else:
-                service_conf_dict = {}
+            if isinstance(profile, str):
+                profile = cls.profile_get(profile)
+            elif profile is None:
+                profile = BubblejailProfile()
 
-            toml_dump(service_conf_dict, instance_conf_file)
+            toml_dump(profile.config.get_service_conf_dict(),
+                      instance_conf_file)
 
         instance = BubblejailInstance(instance_directory)
 
