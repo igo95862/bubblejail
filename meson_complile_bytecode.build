@@ -10,6 +10,7 @@ compile_dir(
     dir=install_dir,
     optimize=0,
     workers=0,
+    ddir='/usr',
 )
 
 
@@ -17,4 +18,5 @@ compile_dir(
     dir=install_dir,
     optimize=2,
     workers=0,
+    ddir='/usr',
 )
