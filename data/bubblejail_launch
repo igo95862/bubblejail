@@ -1,6 +1,6 @@
-#!/usr/bin/python3 -I -OO
+#!/usr/bin/python3 -I
 
-from bubblejail.bubblejail_helper import bubblejail_helper_main
+from bubblejail.bubblejail_cli import bubblejail_main
 
 
-bubblejail_helper_main()
+bubblejail_main()
