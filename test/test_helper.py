@@ -14,9 +14,9 @@
 # You should have received a copy of the GNU General Public License
 # along with bubblejail.  If not, see <https://www.gnu.org/licenses/>.
 
-from asyncio import (StreamReader, StreamWriter, create_task, get_event_loop,
-                     open_unix_connection, create_subprocess_exec)
-from os import unlink, getpid
+from asyncio import (StreamReader, StreamWriter, create_subprocess_exec,
+                     create_task, get_event_loop, open_unix_connection)
+from os import unlink
 from pathlib import Path
 from unittest import IsolatedAsyncioTestCase, TestCase
 from unittest import main as unittest_main
@@ -118,7 +118,7 @@ class PidTrackerTest(IsolatedAsyncioTestCase):
         """Test process detection"""
 
         with self.subTest('PID tracking: no child of this process'):
-            self.assertFalse(BubblejailHelper.process_has_child(str(getpid())))
+            self.assertFalse(BubblejailHelper.process_has_child())
 
         child_process = await create_subprocess_exec(
             'sleep', '1d',
@@ -126,10 +126,7 @@ class PidTrackerTest(IsolatedAsyncioTestCase):
 
         with self.subTest('PID tracking: has child method'):
             self.assertTrue(
-                BubblejailHelper.process_has_child(
-                    str(getpid())
-                )
-            )
+                BubblejailHelper.process_has_child())
 
         with self.subTest('PID tracking by command: right command'):
             # WARN: This will give false positive if you have

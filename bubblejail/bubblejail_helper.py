@@ -145,17 +145,7 @@ class BubblejailHelper(Awaitable[bool]):
 
         # Terminator variables
         self.terminator_look_for_command: Optional[str] = None
-        try:
-            # Startup command can be either by path or just command
-            # IE: sh vs /bin/sh
-            # We want to extract the final word as in /proc/{PID}/stat
-            # the executable name is always reported as binary name
-            # What if there are two different binaries with same name but
-            # different paths????
-            startup_command_or_path = startup_args[0].split('/')[-1]
-            self.terminator_look_for_command = startup_command_or_path
-        except IndexError:
-            ...
+
         self.terminator_pool_timer = reaper_pool_timer
         self.termninator_watcher_task: Optional[Task[None]] = None
 
@@ -198,18 +188,14 @@ class BubblejailHelper(Awaitable[bool]):
         return False
 
     @classmethod
-    def process_has_child(cls, process_id: str = '1') -> bool:
-        for process_dir in cls.iter_proc_process_directories():
-            # PID 1 always has a parent
-            if process_dir.name == '1':
-                continue
+    def process_has_child(cls) -> bool:
+        for task_dir in Path('/proc/self/task/').iterdir():
 
-            # Open /proc/PID/stat
-            with open(process_dir / 'stat') as stat_file:
-                # Read file and split by white space
-                stat_file_data_list = stat_file.read().split()
-                # 4th item is the parent pid
-                if stat_file_data_list[3] == process_id:
+            # Open task
+            with open(task_dir / 'children') as children_file:
+                children_file_contents = children_file.read()
+                if children_file_contents:
+                    # Children file will be empty if there are not children
                     return True
 
         return False
@@ -331,8 +317,8 @@ class BubblejailHelper(Awaitable[bool]):
             await self.server.wait_closed()
 
         self.terminated.set()
-        if __debug__:
-            print('Terminated', flush=True)
+
+        print('Terminated', flush=True)
 
     def __await__(self) -> Generator[Any, None, bool]:
         # Pylint does not recognize that we get a coroutine object
