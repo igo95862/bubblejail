@@ -1,4 +1,4 @@
-#!/usr/bin/python3 -I
+#!/usr/bin/python3 -IOO
 
 from bubblejail.bubblejail_helper import bubblejail_helper_main
 
