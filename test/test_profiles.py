@@ -26,7 +26,7 @@ from toml import load
 
 class TestProfiles(TestCase):
     def test_profiles(self) -> None:
-        for profile_path in Path('./bubblejail/profiles/').iterdir():
+        for profile_path in Path('./data/bubblejail/profiles/').iterdir():
             with self.subTest(profile_path.stem):
                 BubblejailProfile(**load(profile_path))
 
