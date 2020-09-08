@@ -18,16 +18,13 @@
 from os import environ
 from pathlib import Path
 from tempfile import TemporaryDirectory
-from unittest import IsolatedAsyncioTestCase, SkipTest
+from unittest import IsolatedAsyncioTestCase
 from unittest import main as unittest_main
-from unittest import skipUnless
 
 from bubblejail.bubblejail_directories import BubblejailDirectories
 from bubblejail.bubblejail_instance import (BubblejailInstance,
                                             BubblejailProfile)
 from bubblejail.bubblejail_utils import FILE_NAME_SERVICES
-from bubblejail.exceptions import ServiceUnavalibleError
-from toml import load as toml_load
 
 
 class TestInstanceGeneration(IsolatedAsyncioTestCase):
@@ -38,27 +35,6 @@ class TestInstanceGeneration(IsolatedAsyncioTestCase):
         self.data_directory = self.dir_path / 'data'
         self.data_directory.mkdir()
         environ['BUBBLEJAIL_DATADIRS'] = str(self.data_directory)
-
-    @skipUnless(
-        Path('/usr/share/applications/firefox.desktop').exists(),
-        'Firefox not installed'
-    )
-    async def test_create_firefox(self) -> None:
-        instance_name = 'test_instance'
-
-        with open('./bubblejail/profiles/firefox.toml') as f:
-            profile = BubblejailProfile(**toml_load(f))
-
-        new_instance = BubblejailDirectories.create_new_instance(
-            new_name=instance_name,
-            profile=profile,
-            create_dot_desktop=False,
-        )
-
-        try:
-            await self._instance_common_test(new_instance)
-        except ServiceUnavalibleError:
-            raise SkipTest('Service unsupported')
 
     async def test_empty_profile(self) -> None:
         instance_name = 'test_instance_no_profile'
