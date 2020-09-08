@@ -16,7 +16,7 @@
 
 from os import environ
 from pathlib import Path
-from typing import Generator, Optional, Union
+from typing import Any, Dict, Generator, Optional, Union
 
 from toml import dump as toml_dump
 from toml import load as toml_load
@@ -32,10 +32,47 @@ PathGeneratorType = Generator[Path, None, None]
 SystemConfigsPath = Path('/usr/share/bubblejail')
 
 
+def convert_old_conf_to_new() -> None:
+    for instance_directory in BubblejailDirectories.\
+            iter_instances_path():
+        if (instance_directory / FILE_NAME_SERVICES).is_file():
+            continue
+
+        print(f"Converting {instance_directory.stem}")
+
+        old_conf_path = instance_directory / 'config.toml'
+        with open(old_conf_path) as old_conf_file:
+            old_conf_dict = toml_load(old_conf_file)
+
+        new_conf: Dict[str, Any] = {}
+
+        try:
+            services_list = old_conf_dict.pop('services')
+        except KeyError:
+            services_list = []
+
+        for service_name in services_list:
+            new_conf[service_name] = {}
+
+        try:
+            old_service_dict = old_conf_dict.pop('service')
+        except KeyError:
+            old_service_dict = {}
+
+        for service_name, service_dict in old_service_dict.items():
+            new_conf[service_name] = service_dict
+
+        new_conf['common'] = old_conf_dict
+
+        with open(instance_directory / FILE_NAME_SERVICES, mode='x') as f:
+            toml_dump(new_conf, f)
+
+
 class BubblejailDirectories:
 
     @classmethod
     def instance_get(cls, instance_name: str) -> BubblejailInstance:
+        convert_old_conf_to_new()
         for instances_dir in cls.iter_instances_directories():
             possible_instance_path = instances_dir / instance_name
 

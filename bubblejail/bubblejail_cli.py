@@ -23,10 +23,6 @@ from pathlib import Path
 from .bubblejail_directories import BubblejailDirectories
 
 
-def convert_old_conf_to_new() -> None:
-    ...
-
-
 def run_bjail(args: Namespace) -> None:
     instance_name = args.instance_name
 
