@@ -20,9 +20,11 @@ from argparse import ArgumentParser, Namespace
 from asyncio import run as async_run
 from pathlib import Path
 
-from pkg_resources import resource_filename
-
 from .bubblejail_directories import BubblejailDirectories
+
+
+def convert_old_conf_to_new() -> None:
+    ...
 
 
 def run_bjail(args: Namespace) -> None:
@@ -44,17 +46,16 @@ def run_bjail(args: Namespace) -> None:
     )
 
 
-def get_profiles_dir() -> Path:
-    return Path(resource_filename(__name__, 'profiles'))
-
-
 def bjail_list(args: Namespace) -> None:
     if args.list_what == 'instances':
         for x in BubblejailDirectories.iter_instances_path():
             print(x.stem)
     elif args.list_what == 'profiles':
-        for profile_file in get_profiles_dir().iterdir():
-            print(profile_file.stem)
+        for profiles_directory in BubblejailDirectories.\
+                iter_profile_directories():
+
+            for profile_file in profiles_directory.iterdir():
+                print(profile_file.stem)
 
 
 def bjail_create(args: Namespace) -> None:

@@ -1,0 +1,6 @@
+#!/usr/bin/python3 -I -OO
+
+from bubblejail.bubblejail_cli import bubblejail_main
+
+
+bubblejail_main()
