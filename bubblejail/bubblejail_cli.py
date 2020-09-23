@@ -21,6 +21,7 @@ from asyncio import run as async_run
 from pathlib import Path
 
 from .bubblejail_directories import BubblejailDirectories
+from .services import SERVICES_CLASSES
 
 
 def run_bjail(args: Namespace) -> None:
@@ -52,6 +53,9 @@ def bjail_list(args: Namespace) -> None:
 
             for profile_file in profiles_directory.iterdir():
                 print(profile_file.stem)
+    elif args.list_what == 'services':
+        for service in SERVICES_CLASSES:
+            print(service.name)
 
 
 def bjail_create(args: Namespace) -> None:
@@ -108,7 +112,7 @@ def bubblejail_main() -> None:
     parser_list = subparcers.add_parser('list')
     parser_list.add_argument(
         'list_what',
-        choices=('instances', 'profiles'),
+        choices=('instances', 'profiles', 'services'),
         default='instances',)
     parser_list.set_defaults(func=bjail_list)
 
