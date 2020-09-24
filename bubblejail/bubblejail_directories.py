@@ -95,7 +95,19 @@ class BubblejailDirectories:
 
     @classmethod
     def iter_profile_directories(cls) -> PathGeneratorType:
-        yield SystemConfigsPath / 'profiles'
+        for conf_dir in cls.iterm_config_dirs():
+            yield conf_dir / 'profiles'
+
+    @classmethod
+    def iterm_config_dirs(cls) -> PathGeneratorType:
+        try:
+            conf_directories = environ['BUBBLEJAIL_CONFDIRS']
+        except KeyError:
+            # TODO: add user directory
+            yield SystemConfigsPath
+            return
+
+        yield from (Path(x) for x in conf_directories.split(':'))
 
     @classmethod
     def create_new_instance(
