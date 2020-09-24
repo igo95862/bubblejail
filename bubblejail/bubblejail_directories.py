@@ -83,8 +83,9 @@ class BubblejailDirectories:
 
     @classmethod
     def profile_get(cls, profile_name: str) -> BubblejailProfile:
+        profile_file_name = profile_name + '.toml'
         for profiles_directory in cls.iter_profile_directories():
-            possible_profile_path = profiles_directory / profile_name
+            possible_profile_path = profiles_directory / profile_file_name
 
             if possible_profile_path.is_file():
                 with open(possible_profile_path) as profile_file:
