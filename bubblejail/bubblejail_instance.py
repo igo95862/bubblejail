@@ -479,8 +479,10 @@ class BubblejailProfile:
         dot_desktop_path: Optional[str] = None,
         is_gtk_application: bool = False,
         services:  Optional[ServicesConfDictType] = None,
+        description: str = 'No description',
     ) -> None:
         self.dot_desktop_path = (Path(dot_desktop_path)
                                  if dot_desktop_path is not None else None)
         self.is_gtk_application = is_gtk_application
         self.config = BubblejailInstanceConfig(services)
+        self.description = description

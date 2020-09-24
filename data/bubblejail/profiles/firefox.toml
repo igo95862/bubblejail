@@ -1,6 +1,9 @@
 # Firefox on X11
 dot_desktop_path = "/usr/share/applications/firefox.desktop"
 is_gtk_application = true
+description='''
+Firefox web browser.
+'''
 
 #[import_conf]
 #copy = [".mozilla"]

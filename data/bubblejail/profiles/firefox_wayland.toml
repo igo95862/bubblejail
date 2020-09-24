@@ -1,6 +1,9 @@
 # Firefox on Wayland
 dot_desktop_path = "/usr/share/applications/firefox.desktop"
 is_gtk_application = true
+description='''
+Firefox using wayland display protocol.
+'''
 
 #[import_conf]
 #copy = [".mozilla"]

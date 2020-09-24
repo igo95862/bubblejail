@@ -1,5 +1,7 @@
 dot_desktop_path = "/usr/share/applications/net.lutris.Lutris.desktop"
-
+description = '''
+Lutris game launcher
+'''
 [services.common]
 executable_name = "/usr/bin/lutris"
 

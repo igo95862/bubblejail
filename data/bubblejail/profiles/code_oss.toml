@@ -1,5 +1,11 @@
 # Code OSS
 dot_desktop_path = "/usr/share/applications/code-oss.desktop"
+description = '''
+Visual Studio Code - Microsofts source editor
+
+Given access to $HOME/Projects by default.
+'''
+
 #[import_conf]
 #copy = [".vscode-oss"]
 

@@ -1,6 +1,13 @@
 
 dot_desktop_path = "/usr/share/applications/steam.desktop"
+description = '''
+Steam game launcher.
 
+WARNING: Currently the custom Proton builds such as
+from GloriousEggroll and Tk-Glitch glitch do not work.
+Please open issue on github if you are interested in
+testing them.
+'''
 [services.common]
 executable_name = "/usr/bin/steam"
 
