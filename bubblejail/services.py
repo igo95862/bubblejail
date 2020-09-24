@@ -24,10 +24,11 @@ from typing import (Dict, FrozenSet, Generator, Iterator, List, Optional, Set,
 
 from xdg import BaseDirectory
 
-from .bwrap_config import (Bind, BwrapConfigBase, DbusSessionTalkTo, DevBind,
-                           DirCreate, EnvrimentalVar, FileTransfer,
-                           LaunchArguments, ReadOnlyBind, SeccompDirective,
-                           SeccompSyscallErrno, ShareNetwork, Symlink)
+from .bwrap_config import (Bind, BwrapConfigBase, DbusCommon,
+                           DbusSessionTalkTo, DevBind, DirCreate,
+                           EnvrimentalVar, FileTransfer, LaunchArguments,
+                           ReadOnlyBind, SeccompDirective, SeccompSyscallErrno,
+                           ShareNetwork, Symlink)
 from .exceptions import ServiceUnavalibleError
 
 # region Service Typing
@@ -43,7 +44,7 @@ class ServiceWantsHomeBind(ServiceWantsSend):
 
 ServiceIterTypes = Union[BwrapConfigBase, FileTransfer,
                          DbusSessionTalkTo, SeccompDirective,
-                         LaunchArguments, ServiceWantsSend]
+                         LaunchArguments, ServiceWantsSend, DbusCommon]
 
 ServiceSendType = Union[Path]
 

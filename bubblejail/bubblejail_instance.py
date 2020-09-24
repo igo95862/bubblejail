@@ -33,9 +33,9 @@ from xdg.BaseDirectory import get_runtime_dir
 from .bubblejail_helper import RequestRun
 from .bubblejail_seccomp import SeccompState
 from .bubblejail_utils import FILE_NAME_SERVICES
-from .bwrap_config import (Bind, BwrapConfigBase, DbusSessionTalkTo,
-                           EnvrimentalVar, FileTransfer, LaunchArguments,
-                           SeccompDirective)
+from .bwrap_config import (Bind, BwrapConfigBase, DbusSessionArgs,
+                           DbusSystemArgs, EnvrimentalVar, FileTransfer,
+                           LaunchArguments, SeccompDirective)
 from .exceptions import BubblejailException
 from .services import ServiceContainer as BubblejailInstanceConfig
 from .services import ServicesConfDictType, ServiceWantsHomeBind
@@ -113,6 +113,10 @@ class BubblejailInstance:
     def path_runtime_dbus_session_socket(self) -> Path:
         return self.runtime_dir / 'dbus_session_proxy'
 
+    @property
+    def path_runtime_dbus_system_socket(self) -> Path:
+        return self.runtime_dir / 'dbus_system_proxy'
+
     # endregion Paths
 
     def _read_config_file(self) -> str:
@@ -185,9 +189,8 @@ class BubblejailInstance:
                 print('Bwrap args: ')
                 print(' '.join(init.bwrap_args))
 
-                if init.dbus_session_args:
-                    print('Dbus session args')
-                    print(' '.join(init.dbus_session_args))
+                print('Dbus session args')
+                print(' '.join(init.dbus_proxy_args))
 
                 return
 
@@ -262,12 +265,19 @@ class BubblejailInit:
         # Helper
         self.helper_runtime_dir = parent.path_runtime_helper_dir
         self.helper_socket_path = parent.path_runtime_helper_socket
-        # Dbus socket needs to be cleaned up
+
+        # Args to dbus proxy
+        self.dbus_proxy_args: List[str] = []
+        self.dbus_proxy_process: Optional[Process] = None
+
+        # Dbus session socket
         self.dbus_session_socket: Optional[SocketType] = None
         self.dbus_session_socket_path = parent.path_runtime_dbus_session_socket
-        # Args to dbus proxy
-        self.dbus_session_args: List[str] = []
-        self.dbus_session_proxy_process: Optional[Process] = None
+
+        # Dbus system socket
+        self.dbus_system_socket: Optional[SocketType] = None
+        self.dbus_system_socket_path = parent.path_runtime_dbus_system_socket
+
         # Args to bwrap
         self.bwrap_args: List[str] = []
         # Debug mode
@@ -289,6 +299,7 @@ class BubblejailInit:
         self.bwrap_args.append('bwrap')
 
         dbus_session_opts: Set[str] = set()
+        dbus_system_opts: Set[str] = set()
         seccomp_state: Optional[SeccompState] = None
         # Unshare all
         self.bwrap_args.append('--unshare-all')
@@ -337,8 +348,10 @@ class BubblejailInit:
                         temp_file_descriptor)
                     self.bwrap_args.extend(
                         ('--file', str(temp_file_descriptor), config.dest))
-                elif isinstance(config, DbusSessionTalkTo):
-                    dbus_session_opts.update(config.to_args())
+                elif isinstance(config, DbusSessionArgs):
+                    dbus_session_opts.add(config.to_args())
+                elif isinstance(config, DbusSystemArgs):
+                    dbus_system_opts.add(config.to_args())
                 elif isinstance(config, SeccompDirective):
                     if seccomp_state is None:
                         seccomp_state = SeccompState()
@@ -360,33 +373,55 @@ class BubblejailInit:
             self.temp_files.append(seccomp_temp_file)
             self.bwrap_args.extend(('--seccomp', str(seccomp_fd)))
 
-        # If we found any dbus args
-        if dbus_session_opts:
-            if __debug__:
-                print('Dbus args found')
-            env_dbus_session_addr = 'DBUS_SESSION_BUS_ADDRESS'
+        env_dbus_session_addr = 'DBUS_SESSION_BUS_ADDRESS'
 
-            self.dbus_session_args.extend((
-                'xdg-dbus-proxy',
-                environ[env_dbus_session_addr],
+        # region dbus
+        self.dbus_proxy_args.extend((
+            'xdg-dbus-proxy',
+            environ[env_dbus_session_addr],
+            str(self.dbus_session_socket_path),
+        ))
+
+        self.dbus_proxy_args.extend(dbus_session_opts)
+        self.dbus_proxy_args.append('--filter')
+        if self.is_log_dbus:
+            self.dbus_proxy_args.append('--log')
+
+        # Bind session socket inside the sandbox
+        self.bwrap_args.extend(
+            EnvrimentalVar(
+                env_dbus_session_addr,
+                'unix:path=/run/user/1000/bus').to_args()
+        )
+        self.bwrap_args.extend(
+            Bind(
                 str(self.dbus_session_socket_path),
-            ))
-            self.dbus_session_args.extend(dbus_session_opts)
-            self.dbus_session_args.append('--filter')
-            if self.is_log_dbus:
-                self.dbus_session_args.append('--log')
+                '/run/user/1000/bus').to_args()
+        )
 
-            # Bind socket inside the sandbox
-            self.bwrap_args.extend(
-                EnvrimentalVar(
-                    env_dbus_session_addr,
-                    'unix:path=/run/user/1000/bus').to_args()
-            )
-            self.bwrap_args.extend(
-                Bind(
-                    str(self.dbus_session_socket_path),
-                    '/run/user/1000/bus').to_args()
-            )
+        # System dbus
+        self.dbus_proxy_args.extend((
+            'unix:path=/run/dbus/system_bus_socket',
+            str(self.dbus_system_socket_path),
+        ))
+
+        self.dbus_proxy_args.append('--filter')
+        if self.is_log_dbus:
+            self.dbus_proxy_args.append('--log')
+
+        # Bind twice, in /var and /run
+        self.bwrap_args.extend(
+            Bind(
+                str(self.dbus_system_socket_path),
+                '/var/run/dbus/system_bus_socket').to_args()
+        )
+
+        self.bwrap_args.extend(
+            Bind(
+                str(self.dbus_system_socket_path),
+                '/run/dbus/system_bus_socket').to_args()
+        )
+        # endregion dbus
 
         # Bind helper directory
         self.bwrap_args.extend(
@@ -413,26 +448,30 @@ class BubblejailInit:
         self.helper_runtime_dir.mkdir(mode=0o700)
 
         # Dbus session proxy
-        if self.dbus_session_args:
-            self.dbus_session_socket = socket(AF_UNIX, SOCK_STREAM)
-            self.dbus_session_socket.bind(
-                str(self.dbus_session_socket_path))
 
-            # Pylint does not recognize *args for some reason
-            # pylint: disable=E1120
-            self.dbus_session_proxy_process = await create_subprocess_exec(
-                *self.dbus_session_args,
-                stdout=(asyncio_pipe
-                        if not self.is_shell_debug
-                        else asyncio_devnull),
-                stderr=asyncio_stdout,
-                stdin=asyncio_devnull,
-            )
+        self.dbus_session_socket = socket(AF_UNIX, SOCK_STREAM)
+        self.dbus_session_socket.bind(
+            str(self.dbus_session_socket_path))
 
-            self.watch_dbus_proxy_task = create_task(
-                process_watcher(self.dbus_session_proxy_process),
-                name='dbus session proxy',
-            )
+        self.dbus_system_socket = socket(AF_UNIX, SOCK_STREAM)
+        self.dbus_system_socket.bind(
+            str(self.dbus_system_socket_path))
+
+        # Pylint does not recognize *args for some reason
+        # pylint: disable=E1120
+        self.dbus_proxy_process = await create_subprocess_exec(
+            *self.dbus_proxy_args,
+            stdout=(asyncio_pipe
+                    if not self.is_shell_debug
+                    else asyncio_devnull),
+            stderr=asyncio_stdout,
+            stdin=asyncio_devnull,
+        )
+
+        self.watch_dbus_proxy_task = create_task(
+            process_watcher(self.dbus_proxy_process),
+            name='dbus proxy',
+        )
 
     async def __aexit__(
         self,
@@ -452,9 +491,9 @@ class BubblejailInit:
             except CancelledError:
                 ...
 
-        if self.dbus_session_proxy_process is not None:
-            self.dbus_session_proxy_process.terminate()
-            await self.dbus_session_proxy_process.wait()
+        if self.dbus_proxy_process is not None:
+            self.dbus_proxy_process.terminate()
+            await self.dbus_proxy_process.wait()
 
         for t in self.temp_files:
             t.close()
@@ -469,6 +508,12 @@ class BubblejailInit:
 
         if self.dbus_session_socket is not None:
             self.dbus_session_socket.close()
+
+        if self.dbus_system_socket_path.exists():
+            self.dbus_system_socket_path.unlink()
+
+        if self.dbus_system_socket is not None:
+            self.dbus_system_socket.close()
 
         self.runtime_dir.rmdir()
 

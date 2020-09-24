@@ -96,14 +96,27 @@ class DevBind(Bind):
     arg_word = '--dev-bind'
 
 
+class DbusCommon:
+    def to_args(self) -> str:
+        ...
+
+
+class DbusSessionArgs(DbusCommon):
+    ...
+
+
+class DbusSystemArgs(DbusCommon):
+    ...
+
+
 @dataclass(frozen=False)
-class DbusSessionTalkTo():
+class DbusSessionTalkTo(DbusSessionArgs):
     arg_word = '--talk'
 
     bus_name: str
 
-    def to_args(self) -> Tuple[str]:
-        return (f"{self.arg_word}={self.bus_name}", )
+    def to_args(self) -> str:
+        return f"{self.arg_word}={self.bus_name}"
 
 
 class ShareNetwork(BwrapConfigBase):
