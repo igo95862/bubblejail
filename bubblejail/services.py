@@ -24,7 +24,7 @@ from typing import (Dict, FrozenSet, Generator, Iterator, List, Optional, Set,
 
 from xdg import BaseDirectory
 
-from .bwrap_config import (Bind, BwrapConfigBase, DbusCommon,
+from .bwrap_config import (Bind, BwrapConfigBase, DbusCommon, DbusSessionOwn,
                            DbusSessionTalkTo, DevBind, DirCreate,
                            EnvrimentalVar, FileTransfer, LaunchArguments,
                            ReadOnlyBind, SeccompDirective, SeccompSyscallErrno,
@@ -43,7 +43,7 @@ class ServiceWantsHomeBind(ServiceWantsSend):
 
 
 ServiceIterTypes = Union[BwrapConfigBase, FileTransfer,
-                         DbusSessionTalkTo, SeccompDirective,
+                         SeccompDirective,
                          LaunchArguments, ServiceWantsSend, DbusCommon]
 
 ServiceSendType = Union[Path]
@@ -396,6 +396,7 @@ class CommonSettings(BubblejailService):
         executable_name: Union[str, List[str]] = EMPTY_LIST,
         share_local_time: bool = True,
         filter_disk_sync: bool = False,
+        dbus_name: str = '',
     ):
         super().__init__()
         self.share_local_time = OptionBool(
@@ -422,6 +423,14 @@ class CommonSettings(BubblejailService):
             description='Space separated arguments',
         )
 
+        self.dbus_name = OptionStr(
+            string=dbus_name,
+            name='dbus_name',
+            description='Name used for dbus ownership',
+            pretty_name='Dbus name',
+        )
+
+        self.add_option(self.dbus_name)
         self.add_option(self.executable_name)
         self.add_option(self.filter_disk_sync)
         self.add_option(self.share_local_time)
@@ -439,6 +448,10 @@ class CommonSettings(BubblejailService):
 
         if self.share_local_time.get_value():
             yield ReadOnlyBind('/etc/localtime')
+
+        dbus_name = self.dbus_name.get_value()
+        if dbus_name:
+            yield DbusSessionOwn(dbus_name)
 
     name = 'common'
     pretty_name = 'Common Settings'
