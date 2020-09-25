@@ -97,8 +97,13 @@ class DevBind(Bind):
 
 
 class DbusCommon:
+    arg_word: str = 'ERROR'
+
+    def __init__(self, bus_name: str):
+        self.bus_name = bus_name
+
     def to_args(self) -> str:
-        ...
+        return f"{self.arg_word}={self.bus_name}"
 
 
 class DbusSessionArgs(DbusCommon):
@@ -109,14 +114,12 @@ class DbusSystemArgs(DbusCommon):
     ...
 
 
-@dataclass(frozen=False)
 class DbusSessionTalkTo(DbusSessionArgs):
     arg_word = '--talk'
 
-    bus_name: str
 
-    def to_args(self) -> str:
-        return f"{self.arg_word}={self.bus_name}"
+class DbusSessionOwn(DbusSessionArgs):
+    arg_word = '--own'
 
 
 class ShareNetwork(BwrapConfigBase):
