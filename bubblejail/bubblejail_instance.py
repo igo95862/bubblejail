@@ -15,7 +15,7 @@
 # along with bubblejail.  If not, see <https://www.gnu.org/licenses/>.
 
 from asyncio import (CancelledError, Task, create_subprocess_exec, create_task,
-                     open_unix_connection)
+                     open_unix_connection, wait_for)
 from asyncio.subprocess import DEVNULL as asyncio_devnull
 from asyncio.subprocess import PIPE as asyncio_pipe
 from asyncio.subprocess import STDOUT as asyncio_stdout
@@ -154,14 +154,20 @@ class BubblejailInstance:
         writter.write(request.to_json_byte_line())
         await writter.drain()
 
-        if wait_for_responce:
-            data: Optional[str] \
-                = request.decode_responce(await reader.readline())
-        else:
-            data = None
-
-        writter.close()
-        await writter.wait_closed()
+        try:
+            if wait_for_responce:
+                data: Optional[str] \
+                    = request.decode_responce(
+                        await wait_for(
+                            fut=reader.readline(),
+                            timeout=3,
+                        )
+                )
+            else:
+                data = None
+        finally:
+            writter.close()
+            await writter.wait_closed()
 
         return data
 
