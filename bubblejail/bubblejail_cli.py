@@ -83,6 +83,13 @@ def bjail_edit(args: Namespace) -> None:
     async_run(instance.edit_config_in_editor())
 
 
+def bjail_create_desktop_entry(args: Namespace) -> None:
+    BubblejailDirectories.overwrite_desktop_entry_for_profile(
+        instance_name=args.instance_name,
+        profile_name=args.profile,
+    )
+
+
 def bubblejail_main() -> None:
     parser = ArgumentParser()
     subparcers = parser.add_subparsers(
@@ -133,6 +140,15 @@ def bubblejail_main() -> None:
     parser_edit = subparcers.add_parser('edit')
     parser_edit.add_argument('instance_name')
     parser_edit.set_defaults(func=bjail_edit)
+
+    # Generate desktop entry subcommand
+    parser_desktop_entry = subparcers.add_parser('generate-desktop-entry')
+    parser_desktop_entry.add_argument(
+        '--profile',
+        required=True,
+    )
+    parser_desktop_entry.add_argument('instance_name')
+    parser_desktop_entry.set_defaults(func=bjail_create_desktop_entry)
 
     args = parser.parse_args()
 

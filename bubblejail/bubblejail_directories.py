@@ -172,6 +172,47 @@ class BubblejailDirectories:
         return Path(xdg_data_home + '/applications')
 
     @classmethod
+    def overwrite_desktop_entry_for_profile(
+        cls, instance_name: str,
+        profile_name: str,
+        new_name: Optional[str] = None,
+    ) -> None:
+        profile = cls.profile_get(profile_name)
+
+        dot_desktop_path = profile.dot_desktop_path
+
+        if dot_desktop_path is None:
+            raise TypeError('Desktop entry path can\'t be None')
+
+        new_dot_desktop = IniFile.IniFile(
+            filename=str(dot_desktop_path))
+
+        for group_name in new_dot_desktop.groups():
+            # Modify Exec
+            old_exec = new_dot_desktop.get(
+                key='Exec', group=group_name
+            )
+            if not old_exec:
+                continue
+
+            new_dot_desktop.set(
+                key='Exec',
+                value=(f"bubblejail run {instance_name} "
+                       f"{' '.join(old_exec.split())}"),
+                group=group_name)
+
+        # Modify name
+        new_dot_desktop.set(
+            key="Name",
+            group='Desktop Entry',
+            value=f"{instance_name} bubble",
+        )
+
+        new_dot_desktop.write(
+            filename=(cls.desktop_entries_dir_get() / dot_desktop_path.name)
+        )
+
+    @classmethod
     def generate_dot_desktop(
             cls,
             instance_name: str,
