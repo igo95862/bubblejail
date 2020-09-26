@@ -189,11 +189,12 @@ class BubblejailInstance:
         )
 
         async with init:
-            args_to_run = init.executable_args
+            if not args_to_run:
+                args_to_run = init.executable_args
 
             if dry_run:
                 print('Bwrap args: ')
-                print(' '.join(init.bwrap_args))
+                print(' '.join(init.bwrap_args), ' '.join(args_to_run))
 
                 print('Dbus session args')
                 print(' '.join(init.dbus_proxy_args))
