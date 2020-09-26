@@ -31,7 +31,7 @@ from xdg.BaseDirectory import get_runtime_dir
 
 # region Rpc
 RpcMethods = Literal['ping', 'run']
-RpcData = Union[Dict[str, Union[str, List[str]]], List[str]]
+RpcData = Union[Dict[str, Union[bool, str, List[str]]], List[str]]
 RpcType = Dict[str, Optional[Union[str, RpcData, RpcMethods]]]
 
 
@@ -90,17 +90,30 @@ class RequestRun(JsonRpcRequest):
     def __init__(
         self,
         args_to_run: List[str],
+        wait_responce: bool = False,
         request_id: Optional[str] = None
     ) -> None:
         super().__init__(
             method='run',
             request_id=request_id,
-            params=args_to_run,
+            params={
+                'args_to_run': args_to_run,
+                'wait_responce': wait_responce,
+            },
         )
         self.args_to_run = args_to_run
+        self.wait_responce = wait_responce
 
     def response_run(self, text: str) -> bytes:
         return self._get_reponse_bytes({'return': text})
+
+    def decode_responce(self, text: bytes) -> str:
+        possible_str = json_loads(text)['result']['return']
+
+        if isinstance(possible_str, str):
+            return possible_str
+        else:
+            raise TypeError('Expected str in responce.')
 
 
 RpcRequests = Union[RequestPing, RequestRun]
@@ -118,7 +131,7 @@ def request_selector(data: bytes) -> RpcRequests:
     elif method == 'run':
         return RequestRun(
             request_id=request_id,
-            args_to_run=params,
+            **params
         )
     else:
         raise TypeError('Unknown rpc method.')
@@ -254,7 +267,7 @@ class BubblejailHelper(Awaitable[bool]):
             await p.wait()
         elif std_in_out_mode == PIPE:
             (stdout_data, _) = await p.communicate()
-            return str(stdout_data)
+            return stdout_data.decode()
 
         return None
 
@@ -282,6 +295,7 @@ class BubblejailHelper(Awaitable[bool]):
             elif isinstance(request, RequestRun):
                 run_stdout = await self.run_command(
                     args_to_run=request.args_to_run,
+                    std_in_out_mode=PIPE if request.wait_responce else None,
                 )
                 if run_stdout is None:
                     continue
