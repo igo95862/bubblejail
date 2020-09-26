@@ -27,20 +27,32 @@ from .services import SERVICES_CLASSES
 def run_bjail(args: Namespace) -> None:
     instance_name = args.instance_name
 
-    async_run_kwargs = {
-        'args_to_run': args.args_to_instance,
-    }
-
-    async_run_kwargs['debug_shell'] = args.debug_shell
-    async_run_kwargs['dry_run'] = args.dry_run
-    async_run_kwargs['debug_helper_script'] = args.debug_helper_script
-    async_run_kwargs['debug_log_dbus'] = args.debug_log_dbus
-
     instance = BubblejailDirectories.instance_get(instance_name)
 
-    async_run(
-        instance.async_run(**async_run_kwargs)
-    )
+    if instance.is_running():
+        if args.dry_run:
+            print('Found helper socket.')
+            print('Args to be send: ', args.args_to_instance)
+            return
+
+        command_return_text = async_run(
+            instance.send_run_rpc(
+                args_to_run=args.args_to_instance,
+                wait_for_responce=args.wait,
+            )
+        )
+        if args.wait:
+            print(command_return_text)
+    else:
+        async_run(
+            instance.async_run_init(
+                args_to_run=args.args_to_instance,
+                debug_shell=args.debug_shell,
+                debug_helper_script=args.debug_helper_script,
+                debug_log_dbus=args.debug_log_dbus,
+                dry_run=args.dry_run,
+            )
+        )
 
 
 def bjail_list(args: Namespace) -> None:
@@ -83,6 +95,7 @@ def bubblejail_main() -> None:
     parser_run.add_argument('--dry-run', action='store_true')
     parser_run.add_argument('--debug-helper-script', type=Path)
     parser_run.add_argument('--debug-log-dbus', action='store_true')
+    parser_run.add_argument('--wait', action='store_true')
 
     parser_run.add_argument('instance_name')
     parser_run.add_argument(

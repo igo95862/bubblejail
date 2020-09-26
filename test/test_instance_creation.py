@@ -59,7 +59,7 @@ class TestInstanceGeneration(IsolatedAsyncioTestCase):
         self.assertTrue((instance_dir / FILE_NAME_SERVICES).exists())
         self.assertTrue((instance_dir / 'home').exists())
 
-        await instance.async_run([], dry_run=True)
+        await instance.async_run_init([], dry_run=True)
 
 
 if __name__ == '__main__':

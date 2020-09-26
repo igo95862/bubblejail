@@ -138,21 +138,37 @@ class BubblejailInstance:
         with open(self.path_config_file, mode='w') as conf_file:
             toml_dump(config.get_service_conf_dict(), conf_file)
 
-    async def send_run_rpc(self, args_to_run: List[str]) -> None:
-        (_, writter) = await open_unix_connection(
+    async def send_run_rpc(
+        self,
+        args_to_run: List[str],
+        wait_for_responce: bool = False,
+    ) -> Optional[str]:
+        (reader, writter) = await open_unix_connection(
             path=self.path_runtime_helper_socket,
         )
 
         request = RequestRun(
             args_to_run=args_to_run,
+            wait_responce=wait_for_responce,
         )
         writter.write(request.to_json_byte_line())
         await writter.drain()
 
+        if wait_for_responce:
+            data: Optional[str] \
+                = request.decode_responce(await reader.readline())
+        else:
+            data = None
+
         writter.close()
         await writter.wait_closed()
 
-    async def async_run(
+        return data
+
+    def is_running(self) -> bool:
+        return self.path_runtime_helper_socket.is_socket()
+
+    async def async_run_init(
         self,
         args_to_run: List[str],
         debug_shell: bool = False,
@@ -162,16 +178,6 @@ class BubblejailInstance:
     ) -> None:
 
         instance_config = self._read_config()
-
-        # Use IPC to run new command inside the namespace
-        if self.path_runtime_helper_socket.exists():
-            if not dry_run:
-                await self.send_run_rpc(args_to_run)
-            else:
-                print('Found helper socket.')
-                print('Args to be send: ', args_to_run)
-
-            return
 
         # Create init
         init = BubblejailInit(
