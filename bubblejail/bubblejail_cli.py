@@ -87,6 +87,7 @@ def bjail_create_desktop_entry(args: Namespace) -> None:
     BubblejailDirectories.overwrite_desktop_entry_for_profile(
         instance_name=args.instance_name,
         profile_name=args.profile,
+        desktop_entry_name=args.desktop_entry,
     )
 
 
@@ -145,7 +146,9 @@ def bubblejail_main() -> None:
     parser_desktop_entry = subparcers.add_parser('generate-desktop-entry')
     parser_desktop_entry.add_argument(
         '--profile',
-        required=True,
+    )
+    parser_desktop_entry.add_argument(
+        '--desktop-entry'
     )
     parser_desktop_entry.add_argument('instance_name')
     parser_desktop_entry.set_defaults(func=bjail_create_desktop_entry)

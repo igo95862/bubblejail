@@ -29,7 +29,9 @@ from .exceptions import BubblejailException
 
 PathGeneratorType = Generator[Path, None, None]
 
-SystemConfigsPath = Path('/usr/share/bubblejail')
+UsrSharePath = Path('/usr/share/')
+UsrShareApplicationsPath = UsrSharePath / 'applications'
+SystemConfigsPath = UsrSharePath / 'bubblejail'
 
 
 def convert_old_conf_to_new() -> None:
@@ -172,17 +174,45 @@ class BubblejailDirectories:
         return Path(xdg_data_home + '/applications')
 
     @classmethod
+    def desktop_entry_name_to_path(cls,
+                                   desktop_entry_name: str) -> Optional[Path]:
+        if '/' not in desktop_entry_name:
+            # Desktop entry was passed without absolute or relative path
+            if not desktop_entry_name.endswith('.desktop'):
+                possible_name = desktop_entry_name + '.desktop'
+            else:
+                possible_name = desktop_entry_name
+            possible_path = UsrShareApplicationsPath / possible_name
+        else:
+            possible_path = Path(desktop_entry_name)
+
+        if possible_path.is_file():
+            return possible_path
+
+        return None
+
+    @classmethod
     def overwrite_desktop_entry_for_profile(
         cls, instance_name: str,
-        profile_name: str,
+        profile_name: Optional[str] = None,
+        desktop_entry_name: Optional[str] = None,
         new_name: Optional[str] = None,
     ) -> None:
-        profile = cls.profile_get(profile_name)
 
-        dot_desktop_path = profile.dot_desktop_path
+        if profile_name is not None:
+            profile = cls.profile_get(profile_name)
+            dot_desktop_path = profile.dot_desktop_path
+        elif desktop_entry_name is not None:
+            dot_desktop_path = cls.desktop_entry_name_to_path(
+                desktop_entry_name)
+        else:
+            raise RuntimeError('No profile or desktop entry specified')
 
         if dot_desktop_path is None:
-            raise TypeError('Desktop entry path can\'t be None')
+            raise TypeError('Desktop entry path can\'t be None.',
+                            dot_desktop_path)
+
+        cls.instance_get(instance_name)
 
         new_dot_desktop = IniFile.IniFile(
             filename=str(dot_desktop_path))
