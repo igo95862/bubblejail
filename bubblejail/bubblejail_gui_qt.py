@@ -474,7 +474,7 @@ class SelectInstanceWidget:
 
         # Create instance widgets
         for instance_path in BubblejailDirectories.iter_instances_path():
-            new_list_item_widgets = QListWidgetItem(instance_path.stem)
+            new_list_item_widgets = QListWidgetItem(instance_path.name)
             self.list_of_instances_widget.addItem(new_list_item_widgets)
 
         # Create button

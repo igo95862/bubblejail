@@ -58,7 +58,7 @@ def run_bjail(args: Namespace) -> None:
 def bjail_list(args: Namespace) -> None:
     if args.list_what == 'instances':
         for x in BubblejailDirectories.iter_instances_path():
-            print(x.stem)
+            print(x.name)
     elif args.list_what == 'profiles':
         for profiles_directory in BubblejailDirectories.\
                 iter_profile_directories():
