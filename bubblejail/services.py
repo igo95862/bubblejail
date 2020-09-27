@@ -29,7 +29,7 @@ from .bwrap_config import (Bind, BwrapConfigBase, DbusCommon, DbusSessionOwn,
                            EnvrimentalVar, FileTransfer, LaunchArguments,
                            ReadOnlyBind, SeccompDirective, SeccompSyscallErrno,
                            ShareNetwork, Symlink)
-from .exceptions import ServiceUnavalibleError
+from .exceptions import ServiceUnavailableError
 
 # region Service Typing
 
@@ -486,7 +486,7 @@ class Wayland(BubblejailService):
             return
 
         if 'WAYLAND_DISPLAY' not in environ:
-            raise ServiceUnavalibleError("No wayland display.")
+            raise ServiceUnavailableError("No wayland display.")
 
         for x in XDG_DESKTOP_VARS:
             if x in environ:

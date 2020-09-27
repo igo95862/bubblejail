@@ -32,13 +32,13 @@ def run_bjail(args: Namespace) -> None:
     if instance.is_running():
         if args.dry_run:
             print('Found helper socket.')
-            print('Args to be send: ', args.args_to_instance)
+            print('Args to be sent: ', args.args_to_instance)
             return
 
         command_return_text = async_run(
             instance.send_run_rpc(
                 args_to_run=args.args_to_instance,
-                wait_for_responce=args.wait,
+                wait_for_response=args.wait,
             )
         )
         if args.wait:
@@ -93,11 +93,11 @@ def bjail_create_desktop_entry(args: Namespace) -> None:
 
 def bubblejail_main() -> None:
     parser = ArgumentParser()
-    subparcers = parser.add_subparsers(
+    subparsers = parser.add_subparsers(
         required=True,
     )
     # run subcommand
-    parser_run = subparcers.add_parser('run')
+    parser_run = subparsers.add_parser('run')
 
     parser_run.add_argument('--debug-shell', action='store_true')
     parser_run.add_argument('--dry-run', action='store_true')
@@ -112,7 +112,7 @@ def bubblejail_main() -> None:
     )
     parser_run.set_defaults(func=run_bjail)
     # create subcommand
-    parser_create = subparcers.add_parser('create')
+    parser_create = subparsers.add_parser('create')
     parser_create.set_defaults(func=bjail_create)
     parser_create.add_argument(
         '--profile',
@@ -130,7 +130,7 @@ def bubblejail_main() -> None:
     )
     parser_create.add_argument('new_instance_name')
     # list subcommand
-    parser_list = subparcers.add_parser('list')
+    parser_list = subparsers.add_parser('list')
     parser_list.add_argument(
         'list_what',
         choices=('instances', 'profiles', 'services'),
@@ -138,12 +138,12 @@ def bubblejail_main() -> None:
     parser_list.set_defaults(func=bjail_list)
 
     # Edit subcommand
-    parser_edit = subparcers.add_parser('edit')
+    parser_edit = subparsers.add_parser('edit')
     parser_edit.add_argument('instance_name')
     parser_edit.set_defaults(func=bjail_edit)
 
     # Generate desktop entry subcommand
-    parser_desktop_entry = subparcers.add_parser('generate-desktop-entry')
+    parser_desktop_entry = subparsers.add_parser('generate-desktop-entry')
     parser_desktop_entry.add_argument(
         '--profile',
     )
