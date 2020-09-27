@@ -25,6 +25,8 @@ from PyQt5.QtWidgets import (QApplication, QCheckBox, QComboBox, QFormLayout,
                              QPushButton, QScrollArea, QVBoxLayout, QWidget)
 
 from .bubblejail_directories import BubblejailDirectories
+from .bubblejail_instance import BubblejailProfile
+from .exceptions import BubblejailInstanceNotFoundError
 from .services import (BubblejailService, OptionBool, OptionSpaceSeparatedStr,
                        OptionStr, OptionStrList, ServiceOption,
                        ServiceOptionTypes)
@@ -370,8 +372,14 @@ class CreateInstanceWidget(CentralWidgets):
         self.profile_select_widget.combobox.textActivated.connect(
             self.selection_changed)
 
+        self.name_widget.line_edit.textChanged.connect(
+            self.refresh_create_button
+        )
+
         self.profile_text = QLabel('No profile selected')
         self.main_layout.addWidget(self.profile_text)
+
+        self.current_profile: Optional[BubblejailProfile] = None
 
         profiles_names = set()
         for profiles_directory in \
@@ -382,25 +390,51 @@ class CreateInstanceWidget(CentralWidgets):
         for profile_name in profiles_names:
             self.profile_select_widget.add_item(profile_name)
 
-    def selection_changed(self, new_text: str) -> None:
-        if new_text == 'None':
-            new_text = 'No profile selected'
-        else:
-            profile = BubblejailDirectories.profile_get(new_text)
+        self.refresh_create_button()
 
-            if profile.dot_desktop_path is not None and \
-                    not profile.dot_desktop_path.is_file():
-                new_text = (
+    def can_be_created(self) -> Tuple[bool, str]:
+        current_name = self.name_widget.get_data()
+        if not current_name:
+            return False, '⚠ Name is empty'
+        else:
+            try:
+                BubblejailDirectories.instance_get(current_name)
+                return False, '⚠ Name is already used'
+            except BubblejailInstanceNotFoundError:
+                ...
+
+        if self.current_profile is not None:
+            if self.current_profile.dot_desktop_path is not None and \
+                    not self.current_profile.dot_desktop_path.is_file():
+                warn_text = (
                     '⚠ WARNING \n'
                     'Desktop entry does not exist\n'
                     'Maybe you don\'t have application installed?'
                 )
-                self.save_button.setEnabled(False)
+                return False, warn_text
             else:
-                new_text = profile.description
-                self.save_button.setEnabled(True)
+                return True, self.current_profile.description
 
+        return True, 'Create empty profile'
+
+    def refresh_create_button(self) -> None:
+        is_allowed, new_text = self.can_be_created()
+
+        self.save_button.setEnabled(is_allowed)
         self.profile_text.setText(new_text)
+
+    def selection_changed(self, new_text: str) -> None:
+        if new_text == 'None':
+            self.current_profile = None
+        else:
+            self.current_profile = BubblejailDirectories.profile_get(new_text)
+            if self.current_profile is not None and \
+                    self.current_profile.dot_desktop_path is not None:
+                self.name_widget.line_edit.setText(
+                    self.current_profile.dot_desktop_path.stem
+                )
+
+        self.refresh_create_button()
 
     def create_instance(self) -> None:
         new_instance_name = self.name_widget.get_data()
@@ -412,7 +446,7 @@ class CreateInstanceWidget(CentralWidgets):
 
         BubblejailDirectories.create_new_instance(
             new_name=new_instance_name,
-            profile=profile_name,
+            profile_name=profile_name,
             create_dot_desktop=True,
         )
         self.parent.switch_to_selector()

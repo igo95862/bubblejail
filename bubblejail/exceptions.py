@@ -29,3 +29,7 @@ class ServiceUnavalibleError(BubblejailException):
 
 class MissingConfigurationError(BubblejailException):
     ...
+
+
+class BubblejailInstanceNotFoundError(BubblejailException):
+    ...

@@ -22,8 +22,7 @@ from unittest import IsolatedAsyncioTestCase
 from unittest import main as unittest_main
 
 from bubblejail.bubblejail_directories import BubblejailDirectories
-from bubblejail.bubblejail_instance import (BubblejailInstance,
-                                            BubblejailProfile)
+from bubblejail.bubblejail_instance import BubblejailInstance
 from bubblejail.bubblejail_utils import FILE_NAME_SERVICES
 
 
@@ -38,11 +37,10 @@ class TestInstanceGeneration(IsolatedAsyncioTestCase):
 
     async def test_empty_profile(self) -> None:
         instance_name = 'test_instance_no_profile'
-        profile = BubblejailProfile()
 
         new_instance = BubblejailDirectories.create_new_instance(
             new_name=instance_name,
-            profile=profile,
+            profile_name=None,
             create_dot_desktop=False,
         )
 

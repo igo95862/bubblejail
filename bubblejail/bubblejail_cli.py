@@ -73,7 +73,7 @@ def bjail_list(args: Namespace) -> None:
 def bjail_create(args: Namespace) -> None:
     BubblejailDirectories.create_new_instance(
         new_name=args.new_instance_name,
-        profile=args.profile,
+        profile_name=args.profile,
         create_dot_desktop=args.no_desktop_entry,
     )
 
