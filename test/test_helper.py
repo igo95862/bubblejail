@@ -45,18 +45,18 @@ class HelperTests(IsolatedAsyncioTestCase):
     async def asyncSetUp(self) -> None:
         # Start helper
         await self.helper.start_async()
-        # Get stream reader and writter
-        (reader, writter) = await open_unix_connection(
+        # Get stream reader and writer
+        (reader, writer) = await open_unix_connection(
             path=test_socket_path,
         )
         self.reader: StreamReader = reader
-        self.writter: StreamWriter = writter
+        self.writer: StreamWriter = writer
 
     async def test_ping(self) -> None:
         """Test pinging helper over unix socket"""
         ping_request = RequestPing('test')
-        self.writter.write(ping_request.to_json_byte_line())
-        await self.writter.drain()
+        self.writer.write(ping_request.to_json_byte_line())
+        await self.writer.drain()
 
         response = await self.reader.readline()
 
@@ -68,9 +68,9 @@ class HelperTests(IsolatedAsyncioTestCase):
         await self.helper
         # Cleanup socket
         unlink(test_socket_path)
-        # Close the reader and writter
-        self.writter.close()
-        await self.writter.wait_closed()
+        # Close the reader and writer
+        self.writer.close()
+        await self.writer.wait_closed()
 
 
 class HelperParserTests(TestCase):

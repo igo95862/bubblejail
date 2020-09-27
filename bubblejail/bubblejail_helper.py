@@ -90,7 +90,7 @@ class RequestRun(JsonRpcRequest):
     def __init__(
         self,
         args_to_run: List[str],
-        wait_responce: bool = False,
+        wait_response: bool = False,
         request_id: Optional[str] = None
     ) -> None:
         super().__init__(
@@ -98,22 +98,22 @@ class RequestRun(JsonRpcRequest):
             request_id=request_id,
             params={
                 'args_to_run': args_to_run,
-                'wait_responce': wait_responce,
+                'wait_response': wait_response,
             },
         )
         self.args_to_run = args_to_run
-        self.wait_responce = wait_responce
+        self.wait_response = wait_response
 
     def response_run(self, text: str) -> bytes:
         return self._get_reponse_bytes({'return': text})
 
-    def decode_responce(self, text: bytes) -> str:
+    def decode_response(self, text: bytes) -> str:
         possible_str = json_loads(text)['result']['return']
 
         if isinstance(possible_str, str):
             return possible_str
         else:
-            raise TypeError('Expected str in responce.')
+            raise TypeError('Expected str in response.')
 
 
 RpcRequests = Union[RequestPing, RequestRun]
@@ -274,7 +274,7 @@ class BubblejailHelper(Awaitable[bool]):
     async def client_handler(
             self,
             reader: StreamReader,
-            writter: StreamWriter) -> None:
+            writer: StreamWriter) -> None:
 
         if __debug__:
             print('Client connected', flush=True)
@@ -284,8 +284,8 @@ class BubblejailHelper(Awaitable[bool]):
             if not line:
                 if __debug__:
                     print('Reached end of reader. Returnning', flush=True)
-                writter.close()
-                await writter.wait_closed()
+                writer.close()
+                await writer.wait_closed()
                 return
 
             request = request_selector(line)
@@ -295,7 +295,7 @@ class BubblejailHelper(Awaitable[bool]):
             elif isinstance(request, RequestRun):
                 run_stdout = await self.run_command(
                     args_to_run=request.args_to_run,
-                    std_in_out_mode=PIPE if request.wait_responce else None,
+                    std_in_out_mode=PIPE if request.wait_response else None,
                 )
                 if run_stdout is None:
                     continue
@@ -304,8 +304,8 @@ class BubblejailHelper(Awaitable[bool]):
                         text=run_stdout,
                     )
 
-            writter.write(response)
-            await writter.drain()
+            writer.write(response)
+            await writer.drain()
 
     async def start_async(self) -> None:
         self.server = await start_unix_server(

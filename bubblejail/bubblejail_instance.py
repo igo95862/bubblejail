@@ -141,23 +141,23 @@ class BubblejailInstance:
     async def send_run_rpc(
         self,
         args_to_run: List[str],
-        wait_for_responce: bool = False,
+        wait_for_response: bool = False,
     ) -> Optional[str]:
-        (reader, writter) = await open_unix_connection(
+        (reader, writer) = await open_unix_connection(
             path=self.path_runtime_helper_socket,
         )
 
         request = RequestRun(
             args_to_run=args_to_run,
-            wait_responce=wait_for_responce,
+            wait_response=wait_for_response,
         )
-        writter.write(request.to_json_byte_line())
-        await writter.drain()
+        writer.write(request.to_json_byte_line())
+        await writer.drain()
 
         try:
-            if wait_for_responce:
+            if wait_for_response:
                 data: Optional[str] \
-                    = request.decode_responce(
+                    = request.decode_response(
                         await wait_for(
                             fut=reader.readline(),
                             timeout=3,
@@ -166,8 +166,8 @@ class BubblejailInstance:
             else:
                 data = None
         finally:
-            writter.close()
-            await writter.wait_closed()
+            writer.close()
+            await writer.wait_closed()
 
         return data
 
@@ -454,7 +454,7 @@ class BubblejailInit:
         self.genetate_args()
 
         # Create runtime dir
-        # If the dir exists exception will be raised inidicating that
+        # If the dir exists exception will be raised indicating that
         # instance is already running or did not clean-up properly.
         self.runtime_dir.mkdir(mode=0o700, parents=True, exist_ok=False)
         # Create helper directory

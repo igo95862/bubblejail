@@ -23,7 +23,7 @@ class FailedInitializeServiceError(BubblejailException):
     ...
 
 
-class ServiceUnavalibleError(BubblejailException):
+class ServiceUnavailableError(BubblejailException):
     ...
 
 
