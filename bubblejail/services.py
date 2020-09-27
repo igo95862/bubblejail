@@ -326,7 +326,7 @@ class BubblejailDefaults(BubblejailService):
     def __iter__(self) -> ServiceGeneratorType:
         # Defaults can't be disabled
 
-        # Distro packged libraries and binaries
+        # Distro packaged libraries and binaries
         yield ReadOnlyBind('/usr/include')
         yield ReadOnlyBind('/usr/bin')
         yield ReadOnlyBind('/usr/lib')
@@ -349,7 +349,7 @@ class BubblejailDefaults(BubblejailService):
         # yield ReadOnlyBind('/etc/resolv.conf'),
         yield ReadOnlyBind('/etc/login.defs')  # ???: is this file needed
         # ldconfig: linker cache
-        # particulary needed for steam runtime to work
+        # particularly needed for steam runtime to work
         yield ReadOnlyBind('/etc/ld.so.cache')
         yield ReadOnlyBind('/etc/ld.so.conf')
         yield ReadOnlyBind('/etc/ld.so.conf.d')
@@ -365,7 +365,7 @@ class BubblejailDefaults(BubblejailService):
         home_path = yield ServiceWantsHomeBind()
         yield Bind(str(home_path), '/home/user')
 
-        # Set enviromental variables
+        # Set environmental variables
         yield EnvrimentalVar('USER', 'user')
         yield EnvrimentalVar('USERNAME', 'user')
         yield EnvrimentalVar('HOME', '/home/user')
@@ -455,7 +455,7 @@ class CommonSettings(BubblejailService):
 
     name = 'common'
     pretty_name = 'Common Settings'
-    description = "Settins that don't fit any particular category"
+    description = "Settings that don't fit any particular category"
 
 
 class X11(BubblejailService):

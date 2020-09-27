@@ -65,7 +65,7 @@ class SeccompState:
     def __init__(self) -> None:
         self._seccomp_ruleset_ptr: c_void_p = seccomp_init(SCMP_ACT_ALLOW)
         # HACK: Assuming 99.9 percent of people will use x86_64 we only
-        # need to add x86 for compatabilities with 32 bit applications
+        # need to add x86 for compatibilities with 32 bit applications
         # I you plan on using bubblejail on ARM or any other arch
         # please open issue on github
         seccomp_arch_add(self._seccomp_ruleset_ptr, ARCH_X86)

@@ -167,7 +167,7 @@ class BubblejailHelper(Awaitable[bool]):
             return
 
         # Make sure that XDG_RUNTIME_DIR is 700
-        # otherwise KDE applicaitons do not work
+        # otherwise KDE applications do not work
         Path(get_runtime_dir()).chmod(0o700)
 
     @classmethod
