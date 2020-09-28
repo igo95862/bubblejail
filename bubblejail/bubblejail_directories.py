@@ -270,7 +270,7 @@ class BubblejailDirectories:
             #  and write meta data
             instance.metadata_desktop_entry_name = dot_desktop_path.name
         elif instance.metadata_desktop_entry_name == dot_desktop_path.name:
-            # 2. If the instace already occupies the same name
+            # 2. If the instance already occupies the same name
             # keep the name
             ...
         else:
