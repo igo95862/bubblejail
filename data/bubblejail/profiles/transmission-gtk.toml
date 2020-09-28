@@ -1,0 +1,19 @@
+# Transmission GTK
+dot_desktop_path = "/usr/share/applications/transmission-gtk.desktop"
+description='''
+Transmission torrent client.
+GTK version.
+'''
+
+[services.common]
+dbus_name = "com.transmissionbt.*"
+executable_name = "/usr/bin/transmission-gtk"
+[services.x11]
+[services.wayland]
+[services.network]
+
+[services.pulse_audio]
+[services.notify]
+
+[services.home_share]
+home_paths = [ "Downloads",]
