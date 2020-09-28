@@ -4,6 +4,7 @@ Lutris game launcher
 '''
 [services.common]
 executable_name = "/usr/bin/lutris"
+dbus_name = "net.lutris.Lutris"
 
 [services.x11]
 [services.network]
