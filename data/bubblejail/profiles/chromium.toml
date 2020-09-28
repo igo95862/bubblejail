@@ -1,0 +1,17 @@
+# Chromium
+dot_desktop_path = "/usr/share/applications/chromium.desktop"
+description='''
+Chromium web browser
+'''
+
+[services.common]
+executable_name = "/usr/bin/chromium"
+[services.x11]
+[services.network]
+[services.direct_rendering]
+[services.pulse_audio]
+[services.notify]
+
+[services.home_share]
+home_paths = [ "Downloads",]
+
