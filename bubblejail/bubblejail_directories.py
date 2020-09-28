@@ -21,7 +21,7 @@ from typing import Any, Dict, Generator, Optional
 from toml import dump as toml_dump
 from toml import load as toml_load
 from xdg import IniFile
-from xdg.BaseDirectory import xdg_data_home
+from xdg.BaseDirectory import xdg_config_home, xdg_data_home
 
 from .bubblejail_instance import BubblejailInstance, BubblejailProfile
 from .bubblejail_utils import FILE_NAME_SERVICES
@@ -32,6 +32,9 @@ PathGeneratorType = Generator[Path, None, None]
 UsrSharePath = Path('/usr/share/')
 UsrShareApplicationsPath = UsrSharePath / 'applications'
 SystemConfigsPath = UsrSharePath / 'bubblejail'
+
+UserConfigDir = Path(xdg_config_home) / 'bubblejail'
+UserConfigDir.mkdir(exist_ok=True)
 
 
 def convert_old_conf_to_new() -> None:
@@ -98,14 +101,16 @@ class BubblejailDirectories:
     @classmethod
     def iter_profile_directories(cls) -> PathGeneratorType:
         for conf_dir in cls.iterm_config_dirs():
-            yield conf_dir / 'profiles'
+            profiles_dir = conf_dir / 'profiles'
+            profiles_dir.mkdir(exist_ok=True)
+            yield profiles_dir
 
     @classmethod
     def iterm_config_dirs(cls) -> PathGeneratorType:
         try:
             conf_directories = environ['BUBBLEJAIL_CONFDIRS']
         except KeyError:
-            # TODO: add user directory
+            yield UserConfigDir
             yield SystemConfigsPath
             return
 
