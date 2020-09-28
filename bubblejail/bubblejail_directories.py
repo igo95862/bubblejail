@@ -148,6 +148,9 @@ class BubblejailDirectories:
             else:
                 cls.generate_empty_desktop_entry(new_name)
 
+        if profile_name is not None:
+            instance.metadata_creation_profile_name = profile_name
+
         return instance
 
     @classmethod
@@ -202,13 +205,24 @@ class BubblejailDirectories:
         new_name: Optional[str] = None,
     ) -> None:
 
+        instance = cls.instance_get(instance_name)
+
+        # Five ways to figure out desktop entry path
         if profile_object is not None:
+            # 1. Profile was passed directly
             profile = profile_object
             dot_desktop_path = profile.dot_desktop_path
+        elif instance.metadata_creation_profile_name is not None:
+            # 2. Use the profile name saved in meta data
+            profile = cls.profile_get(instance.metadata_creation_profile_name)
+            dot_desktop_path = profile.dot_desktop_path
         elif profile_name is not None:
+            # 3. Profile name was passed
             profile = cls.profile_get(profile_name)
             dot_desktop_path = profile.dot_desktop_path
         elif desktop_entry_name is not None:
+            # 4. Desktop entry path was passed.
+            # 5. Desktop entry name was passed
             dot_desktop_path = cls.desktop_entry_name_to_path(
                 desktop_entry_name)
         else:
@@ -217,8 +231,6 @@ class BubblejailDirectories:
         if dot_desktop_path is None:
             raise TypeError('Desktop entry path can\'t be None.',
                             dot_desktop_path)
-
-        cls.instance_get(instance_name)
 
         new_dot_desktop = IniFile.IniFile(
             filename=str(dot_desktop_path))
@@ -244,8 +256,25 @@ class BubblejailDirectories:
             value=f"{instance_name} bubble",
         )
 
+        # Three ways to resolve what file to write to
+        new_dot_desktop_path = (cls.desktop_entries_dir_get()
+                                / dot_desktop_path.name)
+        if not new_dot_desktop_path.exists():
+            # 1. If the entry under same name as the one
+            #  we are overwriting does not exist use the same name
+            #  and write meta data
+            instance.metadata_desktop_entry_name = dot_desktop_path.name
+        elif instance.metadata_desktop_entry_name == dot_desktop_path.name:
+            # 2. If the instace already occupies the same name
+            # keep the name
+            ...
+        else:
+            # 3. Use the generic name
+            new_dot_desktop_path = (cls.desktop_entries_dir_get()
+                                    / f"bubble_{instance_name}.desktop")
+
         new_dot_desktop.write(
-            filename=(cls.desktop_entries_dir_get() / dot_desktop_path.name)
+            filename=new_dot_desktop_path
         )
 
     @classmethod

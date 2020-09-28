@@ -24,7 +24,8 @@ from os import environ
 from pathlib import Path
 from socket import AF_UNIX, SOCK_STREAM, SocketType, socket
 from tempfile import TemporaryDirectory, TemporaryFile
-from typing import IO, Any, List, Optional, Set, Type, TypedDict, cast
+from typing import (IO, Any, List, MutableMapping, Optional, Set, Type,
+                    TypedDict, cast)
 
 from toml import dump as toml_dump
 from toml import loads as toml_loads
@@ -32,7 +33,7 @@ from xdg.BaseDirectory import get_runtime_dir
 
 from .bubblejail_helper import RequestRun
 from .bubblejail_seccomp import SeccompState
-from .bubblejail_utils import FILE_NAME_SERVICES
+from .bubblejail_utils import FILE_NAME_METADATA, FILE_NAME_SERVICES
 from .bwrap_config import (Bind, BwrapConfigBase, DbusSessionArgs,
                            DbusSystemArgs, EnvrimentalVar, FileTransfer,
                            LaunchArguments, SeccompDirective)
@@ -92,9 +93,13 @@ class BubblejailInstance:
 
     # region Paths
 
-    @ property
+    @property
     def path_config_file(self) -> Path:
         return self.instance_directory / FILE_NAME_SERVICES
+
+    @property
+    def path_metadata_file(self) -> Path:
+        return self.instance_directory / FILE_NAME_METADATA
 
     @property
     def path_home_directory(self) -> Path:
@@ -118,6 +123,56 @@ class BubblejailInstance:
         return self.runtime_dir / 'dbus_system_proxy'
 
     # endregion Paths
+
+    # region Metadata
+
+    def _get_metadata_dict(self) -> MutableMapping[Any, Any]:
+        try:
+            with open(self.path_metadata_file) as metadata_file:
+                return toml_loads(metadata_file.read())
+        except FileNotFoundError:
+            return {}
+
+    def _save_metadata_key(self, key: str, value: Any) -> None:
+        toml_dict = self._get_metadata_dict()
+        toml_dict[key] = value
+
+        with open(self.path_metadata_file, mode='w') as metadata_file:
+            toml_dump(toml_dict, metadata_file)
+
+    def _get_metadata_value(self, key: str) -> Optional[str]:
+        try:
+            value = self._get_metadata_dict()[key]
+            if isinstance(value, str):
+                return value
+            else:
+                raise TypeError(f"Expected str, got {value}")
+        except KeyError:
+            return None
+
+    @property
+    def metadata_creation_profile_name(self) -> Optional[str]:
+        return self._get_metadata_value('creation_profile_name')
+
+    @metadata_creation_profile_name.setter
+    def metadata_creation_profile_name(self, profile_name: str) -> None:
+        self._save_metadata_key(
+            key='creation_profile_name',
+            value=profile_name,
+        )
+
+    @property
+    def metadata_desktop_entry_name(self) -> Optional[str]:
+        return self._get_metadata_value('desktop_entry_name')
+
+    @metadata_desktop_entry_name.setter
+    def metadata_desktop_entry_name(self, desktop_entry_name: str) -> None:
+        self._save_metadata_key(
+            key='desktop_entry_name',
+            value=desktop_entry_name,
+        )
+
+    # endregion Metadata
 
     def _read_config_file(self) -> str:
         with (self.path_config_file).open() as f:
@@ -544,3 +599,15 @@ class BubblejailProfile:
         self.is_gtk_application = is_gtk_application
         self.config = BubblejailInstanceConfig(services)
         self.description = description
+
+
+class BubblejailInstanceMetadata:
+    def __init__(
+        self,
+        parent: BubblejailInstance,
+        creation_profile_name: Optional[str] = None,
+        desktop_entry_name: Optional[str] = None,
+    ):
+        self.parent = parent
+        self.creation_profile_name = creation_profile_name
+        self.desktop_entry_name = desktop_entry_name

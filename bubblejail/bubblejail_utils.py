@@ -16,3 +16,4 @@
 
 
 FILE_NAME_SERVICES = 'services.toml'
+FILE_NAME_METADATA = 'metadata_v1.toml'
