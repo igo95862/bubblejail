@@ -742,10 +742,53 @@ class Notifications(BubblejailService):
     description = 'Ability to send notifications to desktop'
 
 
+class GnomeToolkit(BubblejailService):
+    def __init__(
+        self,
+        dconf_dbus: bool = False,
+        gnome_vfs_dbus: bool = False,
+    ):
+        super().__init__()
+        self.dconf_dbus = OptionBool(
+            boolean=dconf_dbus,
+            name='dconf_dbus',
+            pretty_name='Dconf dbus',
+            description='Access to dconf dbus API',
+        )
+        self.gnome_vfs_dbus = OptionBool(
+            boolean=gnome_vfs_dbus,
+            name='gnome_vfs_dbus',
+            pretty_name='GNOME VFS',
+            description='Access to GNOME Virtual File System dbus API',
+        )
+
+        self.add_option(self.gnome_vfs_dbus)
+        self.add_option(self.dconf_dbus)
+
+    def __iter__(self) -> ServiceGeneratorType:
+        if not self.enabled:
+            return
+
+        if self.dconf_dbus.get_value():
+            yield DbusSessionTalkTo('ca.desrt.dconf')
+
+        if self.gnome_vfs_dbus.get_value():
+            yield DbusSessionTalkTo('org.gtk.vfs.*')
+
+        # TODO: org.a11y.Bus accessibility services
+        # Needs both dbus and socket, socket is address is
+        # acquired from dbus
+
+    name = 'gnome_toolkit'
+    pretty_name = 'GNOME toolkit'
+    description = 'Access to GNOME APIs'
+
+
 SERVICES_CLASSES: Tuple[Type[BubblejailService], ...] = (
     CommonSettings, X11, Wayland,
     Network, PulseAudio, HomeShare, DirectRendering,
     Systray, Joystick, RootShare, OpenJDK, Notifications,
+    GnomeToolkit,
 )
 
 ServicesConfDictType = Dict[str, Dict[str, ServiceOptionTypes]]
