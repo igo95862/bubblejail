@@ -164,7 +164,9 @@ class BubblejailDirectories:
         try:
             data_directories = environ['BUBBLEJAIL_DATADIRS']
         except KeyError:
-            yield Path(xdg_data_home + '/bubblejail')
+            home_path = Path(xdg_data_home + '/bubblejail')
+            home_path.mkdir(exist_ok=True)
+            yield home_path
             return
 
         yield from (Path(x) for x in data_directories.split(':'))
