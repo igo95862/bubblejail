@@ -1,0 +1,6 @@
+#!/usr/bin/python3 -IOO
+
+from bubblejail.bubblejail_gui_qt import run_gui
+
+
+run_gui()

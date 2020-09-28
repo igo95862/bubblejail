@@ -1,0 +1,6 @@
+[Desktop Entry]
+Type=Application
+Name=Bubblejail Configuration
+Icon=bubblejail-config
+Exec=bubblejail-config
+Categories=Settings;

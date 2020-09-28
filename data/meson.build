@@ -12,6 +12,28 @@ install_data(
     rename : 'bubblejail-helper',
 )
 
+install_data(
+    'bubblejail_gui_qt_launch',
+    install_dir : 'bin',
+    install_mode : 'rwxr-xr-x',
+    rename : 'bubblejail-config',
+)
+
+install_data(
+    'bubblejail-config.png',
+    install_dir : 'share/icons/hicolor/48x48/apps',
+)
+
+install_data(
+    'bubblejail-config.svg',
+    install_dir : 'share/icons/hicolor/scalable/apps',
+)
+
+install_data(
+    'bubblejail-config.desktop',
+    install_dir : 'share/applications',
+)
+
 install_subdir(
     'bubblejail',
     install_dir : 'share',
