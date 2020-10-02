@@ -5,6 +5,11 @@ description='''
 Firefox using wayland display protocol.
 '''
 
+import_tips='''
+Move .mozilla folder from your home directory in to instance
+home directory.
+'''
+
 #[import_conf]
 #copy = [".mozilla"]
 

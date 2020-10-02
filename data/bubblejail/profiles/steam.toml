@@ -8,6 +8,12 @@ from GloriousEggroll and Tk-Glitch glitch do not work.
 Please open issue on github if you are interested in
 testing them.
 '''
+
+import_tips='''
+$XDG_DATA_HOME/Steam/steamapps folder can be copied over.
+Share the libraries with "Root share" service.
+'''
+
 [services.common]
 executable_name = "/usr/bin/steam"
 
