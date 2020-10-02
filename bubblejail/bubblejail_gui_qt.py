@@ -413,7 +413,10 @@ class CreateInstanceWidget(CentralWidgets):
                 )
                 return False, warn_text
             else:
-                return True, self.current_profile.description
+                return True, (
+                    f"{self.current_profile.description}\n"
+                    f"Import tips:  {self.current_profile.import_tips}"
+                )
 
         return True, 'Create empty profile'
 
