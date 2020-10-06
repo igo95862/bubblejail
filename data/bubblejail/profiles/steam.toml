@@ -11,7 +11,7 @@ testing them.
 
 import_tips='''
 $XDG_DATA_HOME/Steam/steamapps folder can be copied over.
-Share the libraries with "Root share" service.
+Share the steam libraries with "Root share" or "Home share" service.
 '''
 
 [services.common]
