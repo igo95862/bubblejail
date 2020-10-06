@@ -117,13 +117,7 @@ def bubblejail_main() -> None:
     parser_create.add_argument(
         '--profile',
     )
-    parser_create.add_argument(
-        '--do-import',
-        action='store_true',
-    )
-    parser_create.add_argument(
-        '--import-from-instance',
-    )
+
     parser_create.add_argument(
         '--no-desktop-entry',
         action='store_false',
