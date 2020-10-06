@@ -122,6 +122,7 @@ class BubblejailDirectories:
             new_name: str,
             profile_name: Optional[str] = None,
             create_dot_desktop: bool = False,
+            print_import_tips: bool = True,
     ) -> BubblejailInstance:
 
         instance_directory = next(cls.iter_instances_directories()) / new_name
@@ -155,6 +156,9 @@ class BubblejailDirectories:
 
         if profile_name is not None:
             instance.metadata_creation_profile_name = profile_name
+
+        if profile_name is not None and print_import_tips:
+            print('Import tips: ', profile.import_tips)
 
         return instance
 
