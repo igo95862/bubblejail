@@ -23,7 +23,7 @@ Each instance has a `services.toml` file which defines the configuration of the 
 
 ## Quick start
 
-1. Install bubblejail from [AUR](https://aur.archlinux.org/packages/bubblejail-git/)
+1. Install bubblejail from [AUR git](https://aur.archlinux.org/packages/bubblejail-git/) or [AUR stable](https://aur.archlinux.org/packages/bubblejail/)
 1. Install the application you want to sandbox (for example, firefox)
 1. Run GUI.
 1. Press 'Create instance' button at the bottom.
