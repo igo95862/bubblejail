@@ -25,8 +25,12 @@ Each instance has a `config.toml` file which defines the configuration of the in
 
 1. Install bubblejail from [AUR](https://aur.archlinux.org/packages/bubblejail-git/)
 1. Install the application you want to sandbox (for example, firefox)
-1. Run `auto-create` command that will look for possible applications to sandbox.
-1. The desktop entry should be created and can be found under name __{Name} bubble__
+1. Run GUI.
+1. Press 'Create instance' button at the bottom.
+1. Select a profile. (for example, firefox)
+1. Optionally change name
+1. Press 'Create'
+1. The new instance is created along with new desktop entry.
 
 ## Command-line utility documentation
 
@@ -39,7 +43,6 @@ Creates a new instance.
 Optional arguments:
 
 * __--profile__ Specify the profile that the instance will use. For available profiles, look at the **Available profiles** section. If omitted an empty profile will be used and the user will have to define the configuration manually.
-* __--do-import__ Imports data from a home directory. **DOES NOT WORK YET**
 * __--no-desktop-entry__ Do not create a desktop entry.
 
 Required arguments:
@@ -69,8 +72,14 @@ Optional arguments:
 
 Example:
 
+Running with default arguments:
 ```
-bubblejail run myfirefox google.com
+bubblejail run myfirefox
+```
+
+Passing arguments:
+```
+bubblejail run myfirefox firefox google.com
 ```
 
 ### bubblejail list
@@ -79,7 +88,7 @@ Lists profiles or instances.
 
 Required arguments:
 
-* type List either instances or profiles
+* type List either `instances`, `profiles` or `services`
 
 Example:
 
@@ -97,40 +106,32 @@ Example:
 bubblejail edit myfirefox
 ```
 
-### bubblejail auto-create
-
-Tries to create new instances based on available profiles.
-
-## Editing config.toml
+## Editing services.toml
 
 Instance configuration is written in the [TOML](https://github.com/toml-lang/toml) format.
 
-**config.toml** file is located at `$XDG_DATA_HOME/bubblejail/instances/{name}/config.toml`.
+**services.toml** file is located at `$XDG_DATA_HOME/bubblejail/instances/{name}/services.toml`.
 
 The `edit` command can be used to open the config file in your EDITOR and validate after editing.
 
 Example config:
 
 ```
-executable_name = ["/usr/bin/firefox", "--class=bubble_Firefox", "--name=bubble_Firefox"]
-services = [
-  "x11", "network", "pulse_audio",
-]
+[common]
+executable_name = ["/usr/bin/firefox",] # This setting is optional.
 
-[service.home_share]
+[wayland]
+[network]
+[pulse_audio]
+[direct_rendering]
+
+[home_share]
 home_paths = [ "Downloads",]
 ```
 
-### Config keys
-
-* executable_name: Either a single string or a list that contains that executable name and arguments. Required unless you use the --debug-shell option to open shell.
-* share_local_time: boolean that controls if the local time is shared with the sandbox. On by default.
-* filter_disk_sync: boolean that makes application unable to force disk flush.
-* services: List of strings. Adds services without parameters.
-* service.{name}: Used to configure a particular service. The service does not need to be added to the services list as it will be enabled if a particular configuration section exists.
-
 ### Available services
 
+* common: settings that are not categorized
 * x11: X windowing system. Also includes Xwayland.
 * wayland: Pure wayland windowing system.
 * network: Access to network.
