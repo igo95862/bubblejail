@@ -49,3 +49,9 @@ It is recommended to regenerate all desktop entries.
 ### Imports have been removed
 
 Due to complexity. There are now import tips that might help you import your application in to instance.
+
+### Dbus is now always proxied. GTK applications might require dbus name ownership.
+
+GTK applications seem to crash if the dbus is present but they are unable to acquire the name.
+For example, `tranmsission-gtk` requires `com.transmissionbt.*` dbus ownership.
+This setting is controlled by  'Dbus name' (`dbus_name`) setting under common settings.
