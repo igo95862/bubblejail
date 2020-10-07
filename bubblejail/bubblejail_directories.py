@@ -169,7 +169,7 @@ class BubblejailDirectories:
             data_directories = environ['BUBBLEJAIL_DATADIRS']
         except KeyError:
             home_path = Path(xdg_data_home + '/bubblejail')
-            home_path.mkdir(exist_ok=True)
+            home_path.mkdir(exist_ok=True, parents=True)
             yield home_path
             return
 
@@ -178,7 +178,9 @@ class BubblejailDirectories:
     @classmethod
     def iter_instances_directories(cls) -> PathGeneratorType:
         for data_dir in cls.iter_bubblejail_data_directories():
-            yield (data_dir / 'instances')
+            instances_dir_path = (data_dir / 'instances')
+            instances_dir_path.mkdir(exist_ok=True)
+            yield instances_dir_path
 
     @classmethod
     def iter_instances_path(cls) -> PathGeneratorType:
