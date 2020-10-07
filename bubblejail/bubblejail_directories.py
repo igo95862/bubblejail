@@ -122,7 +122,7 @@ class BubblejailDirectories:
             new_name: str,
             profile_name: Optional[str] = None,
             create_dot_desktop: bool = False,
-            print_import_tips: bool = True,
+            print_import_tips: bool = False,
     ) -> BubblejailInstance:
 
         instance_directory = next(cls.iter_instances_directories()) / new_name
