@@ -55,3 +55,8 @@ Due to complexity. There are now import tips that might help you import your app
 GTK applications seem to crash if the dbus is present but they are unable to acquire the name.
 For example, `tranmsission-gtk` requires `com.transmissionbt.*` dbus ownership.
 This setting is controlled by  'Dbus name' (`dbus_name`) setting under common settings.
+
+### New build system.
+
+Build system was switched from `setuptools` to `meson`. If you are building package from AUR you can
+use `git pull` to get the new version of PKGBUILD adapted for meson.
