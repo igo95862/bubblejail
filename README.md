@@ -15,7 +15,7 @@ Bubblejail, instead of trying to transparently overlay an existing home director
 
 Every **Instance** represents a separate home directory. Typically, every sandboxed application has its own home directory.
 
-Each instance has a `config.toml` file which defines the configuration of the instance such as system resources that the sandbox should have access to.
+Each instance has a `services.toml` file which defines the configuration of the instance such as system resources that the sandbox should have access to.
 
 **Service** represents some system resources that the sandbox can be given access to. For example, the Pulse Audio service gives access to the Pulse Audio socket so that the application can use sound.
 
