@@ -484,19 +484,23 @@ class Wayland(BubblejailService):
         if not self.enabled:
             return
 
-        if 'WAYLAND_DISPLAY' not in environ:
+        try:
+            wayland_display_env = environ['WAYLAND_DISPLAY']
+        except KeyError:
             print("No wayland display.")
-            return
 
         for x in XDG_DESKTOP_VARS:
             if x in environ:
                 yield EnvrimentalVar(x)
 
-        yield EnvrimentalVar('WAYLAND_DISPLAY')
         yield EnvrimentalVar('GDK_BACKEND', 'wayland')
-        yield Bind((
-            f"{BaseDirectory.get_runtime_dir()}"
-            f"/{environ.get('WAYLAND_DISPLAY')}"))
+
+        yield EnvrimentalVar('WAYLAND_DISPLAY', 'wayland-0')
+        original_socket_path = (Path(BaseDirectory.get_runtime_dir())
+                                / wayland_display_env)
+
+        new_socket_path = Path('/run/user/1000') / 'wayland-0'
+        yield Bind(str(original_socket_path), str(new_socket_path))
         yield from generate_toolkits()
 
     name = 'wayland'
