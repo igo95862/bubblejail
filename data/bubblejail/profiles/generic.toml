@@ -1,0 +1,12 @@
+# Generic profile
+description='''
+Generic profile with most common settings.
+Useful for sanboxing applications that don't have a profile.
+'''
+
+[services.common]
+[services.x11]
+[services.wayland]
+[services.network]
+[services.pulse_audio]
+[services.direct_rendering]
