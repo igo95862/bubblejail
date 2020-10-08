@@ -46,6 +46,12 @@ Run command now does not prepend the `executable_name` unless during initializat
 Desktop entries overwrites now preserve all arguments.
 It is recommended to regenerate all desktop entries.
 
+Example, generating desktop entry for Firefox instance:
+```
+bubblejail generate-desktop-entry --profile firefox Firefox
+```
+`Firefox` is the name of the instance and `firefox` is the name of the profile.
+
 ### Imports have been removed
 
 Due to complexity. There are now import tips that might help you import your application in to instance.
