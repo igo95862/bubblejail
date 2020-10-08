@@ -506,7 +506,7 @@ class Wayland(BubblejailService):
     name = 'wayland'
     pretty_name = 'Wayland windowing system'
     description = (
-        'Make sure you are running Wayland sessiion\n'
+        'Make sure you are running Wayland session\n'
         'and your application supports Wayland'
     )
 
