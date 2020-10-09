@@ -19,6 +19,9 @@ from argparse import REMAINDER as ARG_REMAINDER
 from argparse import ArgumentParser, Namespace
 from asyncio import run as async_run
 from pathlib import Path
+from shlex import quote as shlex_quote
+from shlex import split as shlex_split
+from typing import Generator, List
 
 from .bubblejail_directories import BubblejailDirectories
 from .services import SERVICES_CLASSES
@@ -55,16 +58,26 @@ def run_bjail(args: Namespace) -> None:
         )
 
 
+def iter_profile_names() -> Generator[str, None, None]:
+    for profiles_directory in BubblejailDirectories.\
+            iter_profile_directories():
+
+        for profile_file in profiles_directory.iterdir():
+            yield profile_file.stem
+
+
+def iter_instance_names() -> Generator[str, None, None]:
+    for instance_directory in BubblejailDirectories.iter_instances_path():
+        yield instance_directory.name
+
+
 def bjail_list(args: Namespace) -> None:
     if args.list_what == 'instances':
-        for x in BubblejailDirectories.iter_instances_path():
-            print(x.name)
+        for instance_name in iter_instance_names():
+            print(instance_name)
     elif args.list_what == 'profiles':
-        for profiles_directory in BubblejailDirectories.\
-                iter_profile_directories():
-
-            for profile_file in profiles_directory.iterdir():
-                print(profile_file.stem)
+        for profile_name in iter_profile_names():
+            print(profile_name)
     elif args.list_what == 'services':
         for service in SERVICES_CLASSES:
             print(service.name)
@@ -90,6 +103,74 @@ def bjail_create_desktop_entry(args: Namespace) -> None:
         profile_name=args.profile,
         desktop_entry_name=args.desktop_entry,
     )
+
+
+def auto_complete_get_list(
+        args: Namespace,
+        words: List[str],
+        current_index: int) -> List[str]:
+
+    want_instance_set = {'edit', 'run', 'generate-desktop-entry'}
+
+    def get_sub_commands() -> List[str]:
+        return list(args.parser._subparsers._actions[-1].choices.keys())
+
+    # Parse base options and subcommands
+    try:
+        subcommand_text = words[1]
+    except IndexError:
+        return get_sub_commands()
+
+    if current_index == 1:
+        return get_sub_commands()
+
+    try:
+        completioning_word = words[current_index]
+    except IndexError:
+        completioning_word = ''
+
+    def get_sub_command_options() -> Generator[str, None, None]:
+        subcommand_parser = args.parser._subparsers._actions[-1].choices[
+            subcommand_text]
+
+        for options in subcommand_parser._actions:
+            for option_string in options.option_strings:
+                yield option_string
+
+    if completioning_word.startswith('-'):
+        try:
+            return list(get_sub_command_options())
+        except KeyError:
+            return []
+
+    if words[current_index-1] == '--profile':
+        return list(iter_profile_names())
+
+    if subcommand_text in want_instance_set:
+        instances = set(iter_instance_names())
+        if words[current_index-1] in instances \
+                and words[current_index-2] != '--profile':
+            return []
+
+        return list(instances)
+
+    if subcommand_text == 'list':
+        # TODO: pull options from subparser
+        return ['instances', 'profiles', 'services']
+
+    return []
+
+
+def bubblejail_auto_complete(args: Namespace) -> None:
+    words = shlex_split(args.words)
+    current_index = args.index
+
+    for i in auto_complete_get_list(
+        args=args,
+        words=words,
+        current_index=current_index
+    ):
+        print(shlex_quote(i))
 
 
 def bubblejail_main() -> None:
@@ -147,6 +228,22 @@ def bubblejail_main() -> None:
     )
     parser_desktop_entry.add_argument('instance_name')
     parser_desktop_entry.set_defaults(func=bjail_create_desktop_entry)
+    # Auto completion
+    parser_auto_completion = subparsers.add_parser(
+        '_auto_complete',
+        help='Do not use. For shell completions.',
+    )
+    parser_auto_completion.add_argument(
+        'words',
+    )
+    parser_auto_completion.add_argument(
+        'index',
+        type=int,
+    )
+    parser_auto_completion.set_defaults(
+        func=bubblejail_auto_complete,
+        parser=parser,
+    )
 
     args = parser.parse_args()
 
