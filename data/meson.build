@@ -42,4 +42,5 @@ install_subdir(
 install_data(
     'bubblejail_completion.bash',
     install_dir : 'share/bash-completion/completions',
+    rename : 'bubblejail',
 )
