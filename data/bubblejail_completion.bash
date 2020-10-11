@@ -3,7 +3,7 @@
 _complete_bubblejail()
 {
 	local IFS=$'\t\n'    # normalize IFS
-	local PYTHON_RETURN=$(bubblejail _auto_complete "$COMP_LINE" "$COMP_CWORD")
+	local PYTHON_RETURN=$(bubblejail list --command-line "${COMP_LINE::$COMP_POINT}"  _auto_complete)
 	COMPREPLY=( $(compgen -W "$PYTHON_RETURN" -- "$2") )
 }
 

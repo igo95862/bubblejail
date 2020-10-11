@@ -44,3 +44,9 @@ install_data(
     install_dir : 'share/bash-completion/completions',
     rename : 'bubblejail',
 )
+
+install_data(
+    'bubblejail_completion.fish',
+    install_dir : 'share/fish/vendor_completions.d',
+    rename : 'bubblejail.fish',
+)
