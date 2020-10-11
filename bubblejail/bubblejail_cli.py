@@ -20,7 +20,7 @@ from argparse import ArgumentParser, Namespace
 from asyncio import run as async_run
 from pathlib import Path
 from shlex import split as shlex_split
-from typing import Generator, Iterator, List, Iterable, Dict, Set, Optional
+from typing import Dict, Generator, Iterable, Iterator, List, Optional, Set
 
 from .bubblejail_directories import BubblejailDirectories
 from .services import SERVICES_CLASSES
