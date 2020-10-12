@@ -150,34 +150,13 @@ home_paths = [ "Downloads",]
 
 ## Available profiles
 
-### Firefox
-
-Firefox running on X11 protocol.
-
-Profile name: firefox
-
-### Firefox on wayland
-
-Firefox running on wayland without Xwayland access. Tested on GNOME not sure if it works on other wayland compositors.
-
-Profile name: firefox_wayland
-
-### Code OSS
-
-Open source build of VScode.
-
-Profile name: code_oss
-
-### Steam
-
-Steam with runtime.
-
-Profile name: steam
-
-### Lutris
-
-Lutris open-source gaming platform.
-
-Profile name: lutris
+* firefox
+* firefox_wayland: Firefox on wayland
+* code_oss: open source build of vscode
+* steam
+* lutris
+* chromium
+* transmission-gtk
+* generic: most common services, useful for sandboxing applications without profiles
 
 ## [TODO](https://github.com/igo95862/bubblejail/blob/master/docs/TODO.md)
