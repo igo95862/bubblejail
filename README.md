@@ -179,6 +179,4 @@ Lutris open-source gaming platform.
 
 Profile name: lutris
 
-## TODO
-
-* Graphical toolkits settings are not passed.
+## [TODO](https://github.com/igo95862/bubblejail/blob/master/docs/TODO.md)
