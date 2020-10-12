@@ -2,6 +2,7 @@
 
 [![Language grade: Python](https://img.shields.io/lgtm/grade/python/g/igo95862/bubblejail.svg?logo=lgtm&logoWidth=18)](https://lgtm.com/projects/g/igo95862/bubblejail/context:python)
 [![Total alerts](https://img.shields.io/lgtm/alerts/g/igo95862/bubblejail.svg?logo=lgtm&logoWidth=18)](https://lgtm.com/projects/g/igo95862/bubblejail/alerts/)
+![Python (mypy, flake8)](https://github.com/igo95862/bubblejail/workflows/Python%20(mypy,%20flake8)/badge.svg)
 
 Bubblejail is a [bubblewrap](https://github.com/containers/bubblewrap)-based alternative to Firejail.
 
