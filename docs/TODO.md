@@ -3,7 +3,6 @@
 * Some kind of dependency system for services? For example, both wayland and x11 want toolkits settings so they both can depend on toolkit settings service.
 * Passing file outside of sandbox to be opened by another application or sandbox. For example, being able to download a torrent from browser sandbox and pass it to torrent client sandbox. Flatpak has something like this with a dialoge.
 * MIME. Creating sanbox desktop entry overwrite detroyes MIME associations. (found update-desktop-database desktop-file-utils)
-* Use --args parametre to bwrap. Those launch arguments are pretty huge.
 * Free up temp files after the communication with helper has been established.
 
 # Applications

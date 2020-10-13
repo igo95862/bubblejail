@@ -250,29 +250,42 @@ class BubblejailInstance:
         )
 
         async with init:
+            bwrap_args = ['/usr/bin/bwrap']
+            # Pass option args file descriptor
+            bwrap_args.append('--args')
+            bwrap_args.append(str(init.get_args_file_descriptor()))
+            # Append command to bwrap depending on debug helper
+            if debug_helper_script is not None:
+                bwrap_args.extend(('python', '-X', 'dev', '-c'))
+                with open(debug_helper_script) as f:
+                    script_text = f.read()
+
+                bwrap_args.append(script_text)
+            else:
+                bwrap_args.append('/usr/bin/bubblejail-helper')
+
+            if debug_shell:
+                bwrap_args.append('--shell')
+
             if not args_to_run:
-                args_to_run = init.executable_args
+                bwrap_args.extend(init.executable_args)
+            else:
+                bwrap_args.extend(args_to_run)
 
             if dry_run:
+                print('Bwrap options: ')
+                print(' '.join(init.bwrap_options_args))
+
                 print('Bwrap args: ')
-                print(' '.join(init.bwrap_args), ' '.join(args_to_run))
+                print(' '.join(bwrap_args))
 
                 print('Dbus session args')
                 print(' '.join(init.dbus_proxy_args))
 
                 return
 
-            if debug_helper_script is not None:
-                with open(debug_helper_script) as f:
-                    script_text = f.read()
-
-                init.bwrap_args.append(script_text)
-
-            if debug_shell:
-                args_to_run = ['--shell']
-
             process = await create_subprocess_exec(
-                *init.bwrap_args, *args_to_run,
+                *bwrap_args,
                 pass_fds=init.file_descriptors_to_pass,
                 stdout=(asyncio_pipe
                         if not debug_shell
@@ -347,7 +360,7 @@ class BubblejailInit:
         self.dbus_system_socket_path = parent.path_runtime_dbus_system_socket
 
         # Args to bwrap
-        self.bwrap_args: List[str] = []
+        self.bwrap_options_args: List[str] = []
         # Debug mode
         self.is_helper_debug = is_helper_debug
         self.is_shell_debug = is_shell_debug
@@ -364,33 +377,32 @@ class BubblejailInit:
     def genetate_args(self) -> None:
         # TODO: Reorganize the order to allow for
         # better binding multiple resources in same filesystem path
-        self.bwrap_args.append('bwrap')
 
         dbus_session_opts: Set[str] = set()
         dbus_system_opts: Set[str] = set()
         seccomp_state: Optional[SeccompState] = None
         # Unshare all
-        self.bwrap_args.append('--unshare-all')
+        self.bwrap_options_args.append('--unshare-all')
         # Die with parent
-        self.bwrap_args.append('--die-with-parent')
+        self.bwrap_options_args.append('--die-with-parent')
 
         if not self.is_shell_debug:
             # Set new session
-            self.bwrap_args.append('--new-session')
+            self.bwrap_options_args.append('--new-session')
 
         # Set user and group id to pseudo user
-        self.bwrap_args.extend(
+        self.bwrap_options_args.extend(
             ('--uid', '1000', '--gid', '1000')
         )
 
         # Proc
-        self.bwrap_args.extend(('--proc', '/proc'))
+        self.bwrap_options_args.extend(('--proc', '/proc'))
         # Devtmpfs
-        self.bwrap_args.extend(('--dev', '/dev'))
+        self.bwrap_options_args.extend(('--dev', '/dev'))
 
         # Unset all variables
         for e in environ:
-            self.bwrap_args.extend(('--unsetenv', e))
+            self.bwrap_options_args.extend(('--unsetenv', e))
 
         for service in self.instance_config.iter_services():
             config_iterator = service.__iter__()
@@ -406,7 +418,7 @@ class BubblejailInit:
                     config = config_iterator.send(self.home_bind_path)
 
                 if isinstance(config, BwrapConfigBase):
-                    self.bwrap_args.extend(config.to_args())
+                    self.bwrap_options_args.extend(config.to_args())
                 elif isinstance(config, FileTransfer):
                     # Copy files
                     temp_f = copy_data_to_temp_file(config.content)
@@ -414,7 +426,7 @@ class BubblejailInit:
                     temp_file_descriptor = temp_f.fileno()
                     self.file_descriptors_to_pass.append(
                         temp_file_descriptor)
-                    self.bwrap_args.extend(
+                    self.bwrap_options_args.extend(
                         ('--file', str(temp_file_descriptor), config.dest))
                 elif isinstance(config, DbusSessionArgs):
                     dbus_session_opts.add(config.to_args())
@@ -439,7 +451,7 @@ class BubblejailInit:
             seccomp_fd = seccomp_temp_file.fileno()
             self.file_descriptors_to_pass.append(seccomp_fd)
             self.temp_files.append(seccomp_temp_file)
-            self.bwrap_args.extend(('--seccomp', str(seccomp_fd)))
+            self.bwrap_options_args.extend(('--seccomp', str(seccomp_fd)))
 
         env_dbus_session_addr = 'DBUS_SESSION_BUS_ADDRESS'
 
@@ -456,12 +468,12 @@ class BubblejailInit:
             self.dbus_proxy_args.append('--log')
 
         # Bind session socket inside the sandbox
-        self.bwrap_args.extend(
+        self.bwrap_options_args.extend(
             EnvrimentalVar(
                 env_dbus_session_addr,
                 'unix:path=/run/user/1000/bus').to_args()
         )
-        self.bwrap_args.extend(
+        self.bwrap_options_args.extend(
             Bind(
                 str(self.dbus_session_socket_path),
                 '/run/user/1000/bus').to_args()
@@ -478,13 +490,13 @@ class BubblejailInit:
             self.dbus_proxy_args.append('--log')
 
         # Bind twice, in /var and /run
-        self.bwrap_args.extend(
+        self.bwrap_options_args.extend(
             Bind(
                 str(self.dbus_system_socket_path),
                 '/var/run/dbus/system_bus_socket').to_args()
         )
 
-        self.bwrap_args.extend(
+        self.bwrap_options_args.extend(
             Bind(
                 str(self.dbus_system_socket_path),
                 '/run/dbus/system_bus_socket').to_args()
@@ -492,17 +504,21 @@ class BubblejailInit:
         # endregion dbus
 
         # Bind helper directory
-        self.bwrap_args.extend(
+        self.bwrap_options_args.extend(
             Bind(str(self.helper_runtime_dir), '/run/bubblehelp').to_args())
 
         # Change directory
-        self.bwrap_args.extend(('--chdir', '/home/user'))
+        self.bwrap_options_args.extend(('--chdir', '/home/user'))
 
-        # Append command to bwrap depending on debug helper
-        if self.is_helper_debug:
-            self.bwrap_args.extend(('python', '-X', 'dev', '-c'))
-        else:
-            self.bwrap_args.append('bubblejail-helper')
+    def get_args_file_descriptor(self) -> int:
+        options_null = '\0'.join(self.bwrap_options_args)
+
+        args_tempfile = copy_data_to_temp_file(options_null.encode())
+        args_tempfile_fileno = args_tempfile.fileno()
+        self.file_descriptors_to_pass.append(args_tempfile_fileno)
+        self.temp_files.append(args_tempfile)
+
+        return args_tempfile_fileno
 
     async def __aenter__(self) -> None:
         # Generate args
