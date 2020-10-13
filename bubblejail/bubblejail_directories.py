@@ -17,6 +17,7 @@
 from os import environ
 from pathlib import Path
 from typing import Any, Dict, Generator, Optional
+from subprocess import run as subprocess_run
 
 from toml import dump as toml_dump
 from toml import load as toml_load
@@ -289,6 +290,24 @@ class BubblejailDirectories:
         new_dot_desktop.write(
             filename=new_dot_desktop_path
         )
+
+        # Update desktop MIME database
+        # Requires `update-desktop-database` binary
+        # Arch package desktop-file-utils
+        print('Updating desktop MIME database')
+        try:
+            subprocess_run(
+                args=(
+                    '/usr/bin/update-desktop-database',
+                    str(cls.desktop_entries_dir_get())
+                )
+            )
+        except FileNotFoundError:
+            from warnings import warn
+            warn(
+                ('Could not find update-desktop-database binary.'
+                 'Do you have correct dependencies installed?')
+            )
 
     @classmethod
     def generate_empty_desktop_entry(
