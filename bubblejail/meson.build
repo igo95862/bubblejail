@@ -13,6 +13,6 @@ source_files = [
    'services.py',
 ]
 
-py_installation.install_sources(source_files,
-    subdir : meson.project_name()
+install_data(source_files,
+    install_dir : 'lib/bubblejail/python_packages/bubblejail',
 )

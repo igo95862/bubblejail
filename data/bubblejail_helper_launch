@@ -1,6 +1,11 @@
 #!/usr/bin/python3 -IOO
 
-from bubblejail.bubblejail_helper import bubblejail_helper_main
+from sys import path
+from importlib import import_module
 
 
-bubblejail_helper_main()
+path.append('/usr/lib/bubblejail/python_packages')
+
+
+import_module('bubblejail.bubblejail_helper'
+              ).bubblejail_helper_main()  # type: ignore
