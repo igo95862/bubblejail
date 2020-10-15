@@ -398,6 +398,8 @@ class BubblejailInit:
         self.bwrap_options_args.append('--unshare-all')
         # Die with parent
         self.bwrap_options_args.append('--die-with-parent')
+        # We have our own reaper
+        self.bwrap_options_args.append('--as-pid-1')
 
         if not self.is_shell_debug:
             # Set new session

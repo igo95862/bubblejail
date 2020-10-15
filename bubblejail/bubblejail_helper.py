@@ -17,15 +17,16 @@
 from argparse import REMAINDER as ARG_REMAINDER
 from argparse import ArgumentParser
 from asyncio import (AbstractServer, CancelledError, Event, StreamReader,
-                     StreamWriter, Task, create_subprocess_exec, create_task)
-from asyncio import run as async_run
-from asyncio import sleep, start_unix_server
+                     StreamWriter, Task, create_subprocess_exec, create_task,
+                     get_event_loop, sleep, start_unix_server)
 from asyncio.subprocess import DEVNULL, PIPE, STDOUT
 from json import dumps as json_dumps
 from json import loads as json_loads
+from os import WNOHANG, waitpid
 from pathlib import Path
+from signal import SIGCHLD
 from typing import (Any, Awaitable, Dict, Generator, List, Literal, Optional,
-                    Union)
+                    Tuple, Union)
 
 from xdg.BaseDirectory import get_runtime_dir
 
@@ -136,6 +137,28 @@ def request_selector(data: bytes) -> RpcRequests:
     else:
         raise TypeError('Unknown rpc method.')
 # endregion Rpc
+
+
+def handle_children() -> None:
+    """Reaps dead children."""
+    # Needs to be in exception
+    # Seems like the sometimes python raises ChildProcessError
+    # Most often however (0, 0)
+    wait_pid_tuple: Tuple[int, int] = (0, 0)
+    try:
+        # Walrus in action
+        while (wait_pid_tuple := waitpid(-1, WNOHANG)) != (0, 0):
+            exit_pid, exit_code = wait_pid_tuple
+            if exit_pid == 0:
+                return
+
+            if __debug__:
+                print('Reaped: ', exit_pid,
+                      ' Exit code: ', exit_code,
+                      flush=True)
+
+    except ChildProcessError:
+        ...
 
 
 class BubblejailHelper(Awaitable[bool]):
@@ -375,7 +398,9 @@ def bubblejail_helper_main() -> None:
         await helper.start_async()
         await helper
 
-    async_run(run_helper())
+    event_loop = get_event_loop()
+    event_loop.add_signal_handler(SIGCHLD, handle_children)
+    event_loop.run_until_complete(run_helper())
 
 
 if __name__ == '__main__':
