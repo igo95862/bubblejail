@@ -29,7 +29,7 @@ Obviously does not work on Wayland. (upstream bug?)
 
 ## Wayland
 
-* Being able to spawn an independent Xwayland server. (possibly fixes Firefox)
+* ~~~Being able to spawn an independent Xwayland server. (possibly fixes Firefox)~~~ Not possible without compositor support.
 
 ## Direct Rendering
 
