@@ -15,13 +15,14 @@
 # along with bubblejail.  If not, see <https://www.gnu.org/licenses/>.
 
 from asyncio import (CancelledError, Task, create_subprocess_exec, create_task,
-                     open_unix_connection, wait_for)
+                     get_event_loop, open_unix_connection, wait_for)
 from asyncio.subprocess import DEVNULL as asyncio_devnull
 from asyncio.subprocess import PIPE as asyncio_pipe
 from asyncio.subprocess import STDOUT as asyncio_stdout
 from asyncio.subprocess import Process
-from os import environ
+from os import environ, kill
 from pathlib import Path
+from signal import SIGTERM
 from socket import AF_UNIX, SOCK_STREAM, SocketType, socket
 from tempfile import TemporaryDirectory, TemporaryFile
 from typing import (IO, Any, Generator, List, MutableMapping, Optional, Set,
@@ -40,6 +41,15 @@ from .bwrap_config import (Bind, BwrapConfigBase, DbusSessionArgs,
 from .exceptions import BubblejailException
 from .services import ServiceContainer as BubblejailInstanceConfig
 from .services import ServicesConfDictType, ServiceWantsHomeBind
+
+
+def sigterm_bubblejail_handler(bwrap_pid: int) -> None:
+    with open(f"/proc/{bwrap_pid}/task/{bwrap_pid}/children") as child_file:
+        # HACK: assuming first child of the first task is the bubblejail-helper
+        helper_pid = int(child_file.read().split()[0])
+
+    kill(helper_pid, SIGTERM)
+    # No need to wait as the bwrap should terminate when helper exits
 
 
 def copy_data_to_temp_file(data: bytes) -> IO[bytes]:
@@ -297,7 +307,7 @@ class BubblejailInstance:
 
                 return
 
-            process = await create_subprocess_exec(
+            bwrap_process = await create_subprocess_exec(
                 *bwrap_args,
                 pass_fds=init.file_descriptors_to_pass,
                 stdout=(asyncio_pipe
@@ -306,16 +316,28 @@ class BubblejailInstance:
                 stderr=asyncio_stdout,
             )
             if __debug__:
-                print(f"Bubblewrap started. PID: {repr(process)}")
+                print(f"Bubblewrap started. PID: {repr(bwrap_process)}")
 
             if not debug_shell:
                 task_bwrap_main = create_task(
-                    process_watcher(process), name='bwrap main')
-                await task_bwrap_main
+                    process_watcher(bwrap_process), name='bwrap main')
             else:
-                print("Starting debug shell")
-                await process.wait()
-                print("Debug shell ended")
+                async def shell_task() -> None:
+                    await bwrap_process.wait()
+
+                task_bwrap_main = create_task(
+                    shell_task(),
+                    name='debug shell'
+                )
+
+            loop = get_event_loop()
+            loop.add_signal_handler(SIGTERM, sigterm_bubblejail_handler,
+                                    bwrap_process.pid)
+
+            try:
+                await task_bwrap_main
+            except CancelledError:
+                print('Bwrap cancelled')
 
             if __debug__:
                 print("Bubblewrap terminated")

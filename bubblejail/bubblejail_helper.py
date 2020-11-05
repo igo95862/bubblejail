@@ -13,6 +13,7 @@
 # GNU General Public License for more details.
 # You should have received a copy of the GNU General Public License
 # along with bubblejail.  If not, see <https://www.gnu.org/licenses/>.
+from __future__ import annotations
 
 from argparse import REMAINDER as ARG_REMAINDER
 from argparse import ArgumentParser
@@ -22,9 +23,10 @@ from asyncio import (AbstractServer, CancelledError, Event, StreamReader,
 from asyncio.subprocess import DEVNULL, PIPE, STDOUT
 from json import dumps as json_dumps
 from json import loads as json_loads
-from os import WNOHANG, waitpid
+from os import WNOHANG, kill, wait3, waitpid
 from pathlib import Path
-from signal import SIGCHLD
+from signal import SIGCHLD, SIGKILL, SIGTERM
+from time import sleep as sync_sleep
 from typing import (Any, Awaitable, Dict, Generator, List, Literal, Optional,
                     Tuple, Union)
 
@@ -159,6 +161,47 @@ def handle_children() -> None:
 
     except ChildProcessError:
         ...
+
+
+def terminate_children(run_helper_task: Task[None]) -> None:
+    """Send SIGTERM to all children of this process"""
+    signal_counter = 0
+    pids_sigtermed = set()
+
+    def signal_all_children() -> None:
+        nonlocal signal_counter
+        signal_counter += 1
+        # Send SIGTERM to all our children
+        for task_dir in Path('/proc/self/task/').iterdir():
+            # Open task
+            with open(task_dir / 'children') as children_file:
+                children_file_pids = children_file.read().split()
+                for pid in (int(pid_str) for pid_str in children_file_pids):
+                    if signal_counter > 20:
+                        # if we tried to send sigterm 20 times and it still
+                        # did not work use SIGKILL
+                        kill(pid, SIGKILL)
+                        continue
+
+                    if pid not in pids_sigtermed:
+                        kill(pid, SIGTERM)
+                        pids_sigtermed.add(pid)
+
+    signal_all_children()
+    while True:
+        # Reap the rest of the children
+        # this will block
+        # might cause stalls in shutdown
+        # might also have race conditions with SIGCHLD
+        try:
+            pid_reaped, _, _ = wait3(WNOHANG)
+            if pid_reaped == 0:
+                sync_sleep(0.5)
+                signal_all_children()
+        except ChildProcessError:
+            break
+
+    run_helper_task.cancel()
 
 
 class BubblejailHelper(Awaitable[bool]):
@@ -399,8 +442,13 @@ def bubblejail_helper_main() -> None:
         await helper
 
     event_loop = get_event_loop()
+    run_helper_task = event_loop.create_task(run_helper(), name='Run helper')
     event_loop.add_signal_handler(SIGCHLD, handle_children)
-    event_loop.run_until_complete(run_helper())
+    event_loop.add_signal_handler(SIGTERM, terminate_children, run_helper_task)
+    try:
+        event_loop.run_until_complete(run_helper_task)
+    except CancelledError:
+        print('Termninated by CancelledError')
 
 
 if __name__ == '__main__':
