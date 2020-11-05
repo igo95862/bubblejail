@@ -1,9 +1,10 @@
 #!/usr/bin/python3 -IOO
 
 from sys import path
-from importlib import import_module
 
 
 path.append('/usr/lib/bubblejail/python_packages')
 
-import_module('bubblejail.bubblejail_gui_qt').run_gui()  # type: ignore
+if __name__ == "__main__":
+    from bubblejail.bubblejail_gui_qt import run_gui
+    run_gui()
