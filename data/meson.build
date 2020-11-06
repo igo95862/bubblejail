@@ -7,7 +7,7 @@ install_data(
 
 install_data(
     'bubblejail_helper_launch',
-    install_dir : 'bin',
+    install_dir : 'lib/bubblejail',
     install_mode : 'rwxr-xr-x',
     rename : 'bubblejail-helper',
 )

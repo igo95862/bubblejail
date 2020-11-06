@@ -285,7 +285,7 @@ class BubblejailInstance:
 
                 bwrap_args.append(script_text)
             else:
-                bwrap_args.append('/usr/bin/bubblejail-helper')
+                bwrap_args.append('/usr/lib/bubblejail/bubblejail-helper')
 
             if debug_shell:
                 bwrap_args.append('--shell')
