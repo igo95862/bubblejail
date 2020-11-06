@@ -612,9 +612,12 @@ class BubblejailInit:
             except CancelledError:
                 ...
 
-        if self.dbus_proxy_process is not None:
-            self.dbus_proxy_process.terminate()
-            await self.dbus_proxy_process.wait()
+        try:
+            if self.dbus_proxy_process is not None:
+                self.dbus_proxy_process.terminate()
+                await self.dbus_proxy_process.wait()
+        except ProcessLookupError:
+            ...
 
         for t in self.temp_files:
             t.close()
