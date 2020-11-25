@@ -494,6 +494,8 @@ class Wayland(BubblejailService):
                 yield EnvrimentalVar(x)
 
         yield EnvrimentalVar('GDK_BACKEND', 'wayland')
+        yield EnvrimentalVar('MOZ_DBUS_REMOTE', '1')
+        yield EnvrimentalVar('MOZ_ENABLE_WAYLAND', '1')
 
         yield EnvrimentalVar('WAYLAND_DISPLAY', 'wayland-0')
         original_socket_path = (Path(BaseDirectory.get_runtime_dir())
