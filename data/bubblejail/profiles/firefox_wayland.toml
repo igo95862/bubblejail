@@ -10,11 +10,10 @@ Move .mozilla folder from your home directory in to instance
 home directory.
 '''
 
-#[import_conf]
-#copy = [".mozilla"]
 
 [services.common]
 executable_name = "/usr/bin/firefox"
+dbus_name = "org.mozilla.*"
 [services.wayland]
 [services.network]
 [services.pulse_audio]
