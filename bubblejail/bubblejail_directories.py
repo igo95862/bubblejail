@@ -222,23 +222,23 @@ class BubblejailDirectories:
         instance = cls.instance_get(instance_name)
 
         # Five ways to figure out desktop entry path
-        if profile_object is not None:
-            # 1. Profile was passed directly
-            profile = profile_object
-            dot_desktop_path = profile.dot_desktop_path
-        elif instance.metadata_creation_profile_name is not None:
-            # 2. Use the profile name saved in meta data
-            profile = cls.profile_get(instance.metadata_creation_profile_name)
-            dot_desktop_path = profile.dot_desktop_path
-        elif profile_name is not None:
-            # 3. Profile name was passed
-            profile = cls.profile_get(profile_name)
-            dot_desktop_path = profile.dot_desktop_path
-        elif desktop_entry_name is not None:
-            # 4. Desktop entry path was passed.
-            # 5. Desktop entry name was passed
+        if desktop_entry_name is not None:
+            # 1. Desktop entry path was passed.
+            # 2. Desktop entry name was passed
             dot_desktop_path = cls.desktop_entry_name_to_path(
                 desktop_entry_name)
+        elif profile_object is not None:
+            # 3. Profile was passed directly
+            profile = profile_object
+            dot_desktop_path = profile.dot_desktop_path
+        elif profile_name is not None:
+            # 4. Profile name was passed
+            profile = cls.profile_get(profile_name)
+            dot_desktop_path = profile.dot_desktop_path
+        elif instance.metadata_creation_profile_name is not None:
+            # 5. Use the profile name saved in meta data
+            profile = cls.profile_get(instance.metadata_creation_profile_name)
+            dot_desktop_path = profile.dot_desktop_path
         else:
             raise RuntimeError('No profile or desktop entry specified')
 
