@@ -1,5 +1,7 @@
 # General
 
+* Need Dbus support for stuff like systemd integration. Waiting on my new dbus library. https://github.com/igo95862/py-sd-bus
+* Maybe port GUIs to Dbus integration. Less spagthetti, GTK and Qt will be written in native languages. (C and C++)
 * Some kind of dependency system for services? For example, both wayland and x11 want toolkits settings so they both can depend on toolkit settings service.
 * Passing file outside of sandbox to be opened by another application or sandbox. For example, being able to download a torrent from browser sandbox and pass it to torrent client sandbox. Flatpak has something like this with a dialoge.
 * Free up temp files after the communication with helper has been established.
@@ -8,13 +10,6 @@
 
 More profiles for commonly used applications.
 Maybe check Arch Linux stats for commonly used applications?
-
-## Firefox
-
-Figure out why Firefox gives "already running but not responding"
-It seems like it uses some weird X11 IPC to communicate.
-When I was running KDE it would create the new sandbox windows even when launching un-sandboxed desktop entry. 
-Obviously does not work on Wayland. (upstream bug?)
 
 # Services
 
@@ -29,7 +24,7 @@ Obviously does not work on Wayland. (upstream bug?)
 
 ## Wayland
 
-* ~~~Being able to spawn an independent Xwayland server. (possibly fixes Firefox)~~~ Not possible without compositor support.
+* Being able to spawn an independent Xwayland server. Needs compositor support. How do I ask GNOME team to consider such option?
 
 ## Direct Rendering
 
