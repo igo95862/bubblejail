@@ -336,7 +336,7 @@ class BubblejailDefaults(BubblejailService):
                     or root_path.name == 'bin'
                     or root_path.name == 'sbin'):
                 if root_path.is_symlink():
-                    yield Symlink(str(root_path.readlink()), str(root_path))
+                    yield Symlink(str(readlink(root_path)), str(root_path))
                 else:
                     yield ReadOnlyBind(str(root_path))
 
