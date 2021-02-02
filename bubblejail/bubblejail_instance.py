@@ -34,7 +34,8 @@ from xdg.BaseDirectory import get_runtime_dir
 
 from .bubblejail_helper import RequestRun
 from .bubblejail_seccomp import SeccompState
-from .bubblejail_utils import FILE_NAME_METADATA, FILE_NAME_SERVICES
+from .bubblejail_utils import (BubblejailSettings, FILE_NAME_METADATA,
+                               FILE_NAME_SERVICES)
 from .bwrap_config import (Bind, BwrapConfigBase, DbusSessionArgs,
                            DbusSystemArgs, EnvrimentalVar, FileTransfer,
                            LaunchArguments, SeccompDirective)
@@ -285,7 +286,7 @@ class BubblejailInstance:
 
                 bwrap_args.append(script_text)
             else:
-                bwrap_args.append('/usr/lib/bubblejail/bubblejail-helper')
+                bwrap_args.append(BubblejailSettings.HELPER_PATH_STR)
 
             if debug_shell:
                 bwrap_args.append('--shell')

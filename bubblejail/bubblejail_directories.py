@@ -16,8 +16,8 @@
 
 from os import environ
 from pathlib import Path
-from typing import Any, Dict, Generator, Optional
 from subprocess import run as subprocess_run
+from typing import Any, Dict, Generator, Optional
 
 from toml import dump as toml_dump
 from toml import load as toml_load
@@ -25,12 +25,12 @@ from xdg import IniFile
 from xdg.BaseDirectory import xdg_config_home, xdg_data_home
 
 from .bubblejail_instance import BubblejailInstance, BubblejailProfile
-from .bubblejail_utils import FILE_NAME_SERVICES
+from .bubblejail_utils import FILE_NAME_SERVICES, BubblejailSettings
 from .exceptions import BubblejailException, BubblejailInstanceNotFoundError
 
 PathGeneratorType = Generator[Path, None, None]
 
-UsrSharePath = Path('/usr/share/')
+UsrSharePath = Path(BubblejailSettings.SHARE_PATH_STR)
 UsrShareApplicationsPath = UsrSharePath / 'applications'
 SystemConfigsPath = UsrSharePath / 'bubblejail'
 

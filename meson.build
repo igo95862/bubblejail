@@ -3,10 +3,12 @@ project('bubblejail')
 pymod = import('python')
 py_installation = pymod.find_installation('python3')
 
-subdir(meson.project_name())
-subdir('data')
+bytecode_compiler = find_program('bytecode_compiler.build')
+m4_compiler = find_program('m4')
 
-meson.add_install_script('meson_complile_bytecode.build')
+subdir(meson.project_name())
+subdir('m4')
+subdir('data')
 
 test('unittest', py_installation,
     args : ['-m', 'unittest'],

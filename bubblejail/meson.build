@@ -13,6 +13,18 @@ source_files = [
    'services.py',
 ]
 
-install_data(source_files,
-    install_dir : 'lib/bubblejail/python_packages/bubblejail',
+bubblejail_package_dir = get_option('libdir') / 'bubblejail/python_packages/bubblejail'
+
+bubblejail_lib_package = custom_target(
+    'bubblejail_lib_package',
+    build_by_default : true,
+    input : source_files,
+    output : source_files + ['__pycache__'],
+    install : true,
+    install_dir : bubblejail_package_dir,
+    command : [bytecode_compiler,
+               '--input-files', '@INPUT@',
+               '--output-dir', '@OUTDIR@',
+               '--lib-prefix', get_option('prefix') / bubblejail_package_dir,
+               ],
 )
