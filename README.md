@@ -22,6 +22,39 @@ Each instance has a `services.toml` file which defines the configuration of the 
 
 **Profile** is a predefined set of services that a particular application uses. Using profiles is entirely optional.
 
+## Installation
+
+**AUR is preferred way of installing**
+
+[AUR git](https://aur.archlinux.org/packages/bubblejail-git/)
+
+[AUR stable](https://aur.archlinux.org/packages/bubblejail/)
+
+### Manual Installation
+
+If you are not using Arch Linux you can try to manually install with meson
+
+#### Requirements
+
+* Python 3 - version 3.8 or higher
+* Python XDG - XDG standards for python
+* Python TOML -  TOML file support for python
+* Bubblewrap - sandboxing command line utility
+* XDG D-Bus Proxy - filtering dbus proxy
+* Desktop File Utils - to manipulate default applications
+* Python Qt5 - for GUI
+* Meson - build system
+* m4 - macro generator used during build
+
+#### Using meson to install
+
+1. Run `meson setup build` to setup build directory
+1. Switch to build directory `cd build`
+1. Compile `meson compile`
+1. Install `sudo meson install`
+
+If you want to uninstall run `ninja uninstall` from build directory.
+
 ## Quick start
 
 1. Install bubblejail from [AUR git](https://aur.archlinux.org/packages/bubblejail-git/) or [AUR stable](https://aur.archlinux.org/packages/bubblejail/)
