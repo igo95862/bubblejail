@@ -537,7 +537,6 @@ class PulseAudio(BubblejailService):
             f"{BaseDirectory.get_runtime_dir()}/pulse/native",
             '/run/user/1000/pulse/native'
         )
-        yield Symlink('/usr/bin/true', '/usr/local/bin/pulseaudio')
 
     name = 'pulse_audio'
     pretty_name = 'Pulse Audio'
