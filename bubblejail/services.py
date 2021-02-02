@@ -326,24 +326,19 @@ class BubblejailDefaults(BubblejailService):
         # Defaults can't be disabled
 
         # Distro packaged libraries and binaries
-        yield ReadOnlyBind('/usr/include')
-        yield ReadOnlyBind('/usr/bin')
-        yield ReadOnlyBind('/usr/lib')
-        yield ReadOnlyBind('/usr/lib32')
-        yield ReadOnlyBind('/usr/share')
-        yield ReadOnlyBind('/usr/src')
+        yield ReadOnlyBind('/usr')
         yield ReadOnlyBind('/opt')
-        # Symlinks for /usr merge
-        # Arch Linux does not separate sbin from bin unlike Debian
-        # PS: why does debian do that? I can't run usermod --help
-        #  to quickly check the arguments
-        # Some distros do not use /usr merge
-        yield Symlink('/usr/lib', '/lib')
-        yield Symlink('/usr/lib64', '/lib64')
-        yield Symlink('/usr/bin', '/bin')
-        yield Symlink('/usr/sbin', '/sbin')
-        yield Symlink('/usr/lib', '/usr/lib64')
-        yield Symlink('/usr/bin', '/usr/sbin')
+        # Recreate symlinks in / or mount them read-only if its not a symlink.
+        # Should be portable between distros.
+        for root_path in Path('/').iterdir():
+            if (
+                    root_path.name.startswith('lib')  # /lib /lib64 /lib32
+                    or root_path.name == 'bin'
+                    or root_path.name == 'sbin'):
+                if root_path.is_symlink():
+                    yield Symlink(str(root_path.readlink()), str(root_path))
+                else:
+                    yield ReadOnlyBind(str(root_path))
 
         # yield ReadOnlyBind('/etc/resolv.conf'),
         yield ReadOnlyBind('/etc/login.defs')  # ???: is this file needed
