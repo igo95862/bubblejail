@@ -184,7 +184,9 @@ def generate_path_var() -> str:
     paths = environ['PATH'].split(':')
     # Filter by /usr and /tmp then join by semicolon
     return ':'.join(filter(
-        lambda s: s.startswith('/usr/') or s.startswith('/tmp/'),
+        lambda s: s.startswith('/usr/')
+        or s == '/bin'
+        or s == '/sbin',
         paths))
 
 
