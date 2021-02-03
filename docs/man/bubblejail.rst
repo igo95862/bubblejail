@@ -147,3 +147,13 @@ extracted from metadata when instance was created.
     ``--desktop-entry`` use desktop entry name. Can either be an absolute
     path or name (with or without .desktop) which will be searched under
     /usr/share/applications.
+
+See also
++++++++++++++++++++++++++++
+
+Bubblejail home page: https://github.com/igo95862/bubblejail
+
+Bugs
++++++++++++++++++++++++++++
+
+Report bugs to the bugtracker: https://github.com/igo95862/bubblejail/issues
