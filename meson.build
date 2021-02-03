@@ -9,6 +9,7 @@ m4_compiler = find_program('m4')
 subdir(meson.project_name())
 subdir('m4')
 subdir('data')
+subdir('docs')
 
 test('unittest', py_installation,
     args : ['-m', 'unittest'],
