@@ -122,6 +122,16 @@ Options:
     ``--debug-helper-script [script]`` use the specified helper script.
     This is mainly development command.
 
+*
+    ``--debug-bwrap-args [bwrap_option] [bwrap_option_args]`` add extra option to bwrap.
+    The bwrap option must be without -- as it will be added automatically.
+    The instance name must be separated with extra -- from the instance name.
+
+    This option can be repeated multiple times for multiple args to bwrap.
+
+    Example with adding capability and running as UID and GID 0 for test_instance instance: ::
+
+        bubblejail run --debug-bwrap-args cap-add CAP_SYS_ADMIN --debug-bwrap-args uid 0 --debug-bwrap-args gid 0 -- test_instance
 
 edit [instance]
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
