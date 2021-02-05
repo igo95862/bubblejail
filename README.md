@@ -55,6 +55,12 @@ If you are not using Arch Linux you can try to manually install with meson
 
 If you want to uninstall run `ninja uninstall` from build directory.
 
+## Screenshots
+
+Configuration utility
+
+![bubblejailGUI](https://user-images.githubusercontent.com/8576552/107064385-58c50780-67d3-11eb-9399-45e3f565acd3.png)
+
 ## Quick start
 
 1. Install bubblejail from [AUR git](https://aur.archlinux.org/packages/bubblejail-git/) or [AUR stable](https://aur.archlinux.org/packages/bubblejail/)
