@@ -260,6 +260,7 @@ class BubblejailInstance:
         dry_run: bool = False,
         debug_helper_script: Optional[Path] = None,
         debug_log_dbus: bool = False,
+        extra_bwrap_args: Optional[List[str]] = None,
     ) -> None:
 
         instance_config = self._read_config()
@@ -278,6 +279,11 @@ class BubblejailInstance:
             # Pass option args file descriptor
             bwrap_args.append('--args')
             bwrap_args.append(str(init.get_args_file_descriptor()))
+
+            # Append extra args
+            if extra_bwrap_args is not None:
+                bwrap_args.extend(extra_bwrap_args)
+
             # Append command to bwrap depending on debug helper
             if debug_helper_script is not None:
                 bwrap_args.extend(('python', '-X', 'dev', '-c'))

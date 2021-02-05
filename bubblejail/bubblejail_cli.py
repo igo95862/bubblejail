@@ -57,6 +57,20 @@ class CommandMetadata:
             raise RuntimeError('Expected current command got None')
 
 
+def _extra_args_converter(command_sequence: List[str]
+                          ) -> Generator[str, None, None]:
+    command_iter = iter(command_sequence)
+
+    try:
+        argword = next(command_iter)
+    except StopIteration:
+        raise ValueError('Expected atleast one argument')
+
+    yield f"--{argword}"
+
+    yield from command_iter
+
+
 def run_bjail(args: Namespace) -> None:
     instance_name = args.instance_name
 
@@ -79,6 +93,15 @@ def run_bjail(args: Namespace) -> None:
         if args.wait:
             print(command_return_text)
     else:
+        extra_args: Optional[List[str]]
+        if args.debug_bwrap_args is not None:
+            extra_args_not_flat: List[List[str]] = args.debug_bwrap_args
+            extra_args = []
+            for x in extra_args_not_flat:
+                extra_args.extend(_extra_args_converter(x))
+        else:
+            extra_args = None
+
         async_run(
             instance.async_run_init(
                 args_to_run=args.args_to_instance,
@@ -86,6 +109,7 @@ def run_bjail(args: Namespace) -> None:
                 debug_helper_script=args.debug_helper_script,
                 debug_log_dbus=args.debug_log_dbus,
                 dry_run=args.dry_run,
+                extra_bwrap_args=extra_args,
             )
         )
 
@@ -270,6 +294,11 @@ def bubblejail_main() -> None:
         CommandMetadata.add_option('--debug-log-dbus'), action='store_true')
     parser_run.add_argument(
         CommandMetadata.add_option('--wait'), action='store_true')
+
+    parser_run.add_argument(
+        CommandMetadata.add_option('--debug-bwrap-args'),
+        action='append',
+        nargs='+')
 
     parser_run.add_argument(CommandMetadata.instance_arg())
     parser_run.add_argument(
