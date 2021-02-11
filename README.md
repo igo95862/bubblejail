@@ -46,6 +46,11 @@ If you are not using Arch Linux you can try to manually install with meson
 * Meson - build system
 * m4 - macro generator used during build
 
+Optional:
+
+* bash-completion - auto-completions for bash shell
+* fish - auto-completions for fish shell
+
 #### Using meson to install
 
 1. Run `meson setup build` to setup build directory
