@@ -78,6 +78,20 @@ See man page:
 
 [man 1 bubblejail](https://github.com/igo95862/bubblejail/blob/master/docs/man/bubblejail.rst)
 
+### Usage examples
+
+#### Create new instance using firefox profile
+
+`bubblejail create --profile firefox FirefoxInstance`
+
+#### Run instance
+
+`bubblejail run FirefoxInstance`
+
+#### Create a generic instance without a desktop entry
+
+`bubblejail create --no-desktop-entry --profile generic Test`
+
 ### Available services
 
 * common: settings that are not categorized
