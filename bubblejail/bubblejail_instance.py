@@ -20,7 +20,7 @@ from asyncio.subprocess import DEVNULL as asyncio_devnull
 from asyncio.subprocess import PIPE as asyncio_pipe
 from asyncio.subprocess import STDOUT as asyncio_stdout
 from asyncio.subprocess import Process
-from os import environ, kill
+from os import environ, kill, stat
 from pathlib import Path
 from signal import SIGTERM
 from socket import AF_UNIX, SOCK_STREAM, SocketType, socket
@@ -356,10 +356,18 @@ class BubblejailInstance:
             temp_file_path = Path(tempdir + 'temp.toml')
             with open(temp_file_path, mode='w') as tempfile:
                 tempfile.write(self._read_config_file())
+
+            initial_modification_time = stat(temp_file_path).st_mtime
             # Launch EDITOR on the temporary file
             run_args = [environ['EDITOR'], str(temp_file_path)]
             p = await create_subprocess_exec(*run_args)
             await p.wait()
+
+            # If file was not modified do nothing
+            if initial_modification_time >= stat(temp_file_path).st_mtime:
+                print('File not modified. Not overwriting config')
+                return
+
             # Verify that the new config is valid and save to variable
             with open(temp_file_path) as tempfile:
                 new_config_toml = tempfile.read()
