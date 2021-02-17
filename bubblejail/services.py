@@ -749,6 +749,7 @@ class GnomeToolkit(BubblejailService):
         self,
         dconf_dbus: bool = False,
         gnome_vfs_dbus: bool = False,
+        gnome_portal: bool = False,
     ):
         super().__init__()
         self.dconf_dbus = OptionBool(
@@ -763,13 +764,24 @@ class GnomeToolkit(BubblejailService):
             pretty_name='GNOME VFS',
             description='Access to GNOME Virtual File System dbus API',
         )
+        self.gnome_portal = OptionBool(
+            boolean=gnome_portal,
+            name='gnome_portal',
+            pretty_name='GNOME Portal',
+            description='Access to GNOME Portal dbus API',
+        )
 
         self.add_option(self.gnome_vfs_dbus)
         self.add_option(self.dconf_dbus)
+        self.add_option(self.gnome_portal)
 
     def __iter__(self) -> ServiceGeneratorType:
         if not self.enabled:
             return
+
+        if self.gnome_portal.get_value():
+            yield EnvrimentalVar('GTK_USE_PORTAL', '1')
+            yield DbusSessionTalkTo('org.freedesktop.portal.*')
 
         if self.dconf_dbus.get_value():
             yield DbusSessionTalkTo('ca.desrt.dconf')
