@@ -4,3 +4,4 @@ Name=Bubblejail Configuration
 Icon=bubblejail-config
 Exec=bubblejail-config
 Categories=Settings;
+Hidden=true
