@@ -23,7 +23,7 @@ from shlex import split as shlex_split
 from typing import Dict, Generator, Iterable, Iterator, List, Optional, Set
 
 from .bubblejail_directories import BubblejailDirectories
-from .services import SERVICES_CLASSES
+from .services import ServicesDatabase
 
 
 class CommandMetadata:
@@ -234,7 +234,7 @@ def bjail_list(args: Namespace) -> None:
     elif args.list_what == 'profiles':
         str_iterator = iter_profile_names()
     elif args.list_what == 'services':
-        str_iterator = (x.name for x in SERVICES_CLASSES)
+        str_iterator = iter(ServicesDatabase.services_classes.keys())
     elif args.list_what == 'subcommands':
         str_iterator = iter_subcommands()
     elif args.list_what == '_auto_complete':

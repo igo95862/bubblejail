@@ -19,6 +19,18 @@ class BubblejailException(Exception):
     ...
 
 
+class ServiceUnknownError(BubblejailException):
+    ...
+
+
+class ServiceOptionUnknownError(BubblejailException):
+    ...
+
+
+class ServiceOptionWrongTypeError(BubblejailException):
+    ...
+
+
 class FailedInitializeServiceError(BubblejailException):
     ...
 

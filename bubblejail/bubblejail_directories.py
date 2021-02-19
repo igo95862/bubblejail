@@ -141,7 +141,7 @@ class BubblejailDirectories:
         with (instance_directory / FILE_NAME_SERVICES).open(
                 mode='x') as instance_conf_file:
 
-            toml_dump(profile.config.get_service_conf_dict(),
+            toml_dump(profile.config.services_dicts,
                       instance_conf_file)
 
         instance = BubblejailInstance(instance_directory)

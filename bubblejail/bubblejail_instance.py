@@ -26,7 +26,7 @@ from signal import SIGTERM
 from socket import AF_UNIX, SOCK_STREAM, SocketType, socket
 from tempfile import TemporaryDirectory, TemporaryFile
 from typing import (IO, Any, Generator, List, MutableMapping, Optional, Set,
-                    Type, TypedDict, cast)
+                    Type, cast)
 
 from toml import dump as toml_dump
 from toml import loads as toml_loads
@@ -34,14 +34,14 @@ from xdg.BaseDirectory import get_runtime_dir
 
 from .bubblejail_helper import RequestRun
 from .bubblejail_seccomp import SeccompState
-from .bubblejail_utils import (BubblejailSettings, FILE_NAME_METADATA,
-                               FILE_NAME_SERVICES)
+from .bubblejail_utils import (FILE_NAME_METADATA, FILE_NAME_SERVICES,
+                               BubblejailSettings)
 from .bwrap_config import (Bind, BwrapConfigBase, DbusSessionArgs,
                            DbusSystemArgs, EnvrimentalVar, FileTransfer,
                            LaunchArguments, SeccompDirective)
 from .exceptions import BubblejailException
-from .services import ServiceContainer as BubblejailInstanceConfig
-from .services import ServicesConfDictType, ServiceWantsHomeBind
+from .services import (MultipleServicesOptionsType, ServicesConfig,
+                       ServiceWantsHomeBind)
 
 
 def sigterm_bubblejail_handler(bwrap_pid: int) -> None:
@@ -77,14 +77,6 @@ async def process_watcher(process: Process) -> None:
             print(new_line_data)
         else:
             return
-
-
-class ConfDict(TypedDict, total=False):
-    service: ServicesConfDictType
-    services: List[str]
-    executable_name: List[str]
-    share_local_time: bool
-    filter_disk_sync: bool
 
 
 class BubblejailInstance:
@@ -191,18 +183,19 @@ class BubblejailInstance:
 
     def _read_config(
             self,
-            config_contents: Optional[str] = None) -> BubblejailInstanceConfig:
+            config_contents: Optional[str] = None) -> ServicesConfig:
 
         if config_contents is None:
             config_contents = self._read_config_file()
 
-        conf_dict = cast(ServicesConfDictType, toml_loads(config_contents))
+        conf_dict = cast(MultipleServicesOptionsType,
+                         toml_loads(config_contents))
 
-        return BubblejailInstanceConfig(conf_dict)
+        return ServicesConfig(conf_dict)
 
-    def save_config(self, config: BubblejailInstanceConfig) -> None:
+    def save_config(self, config: ServicesConfig) -> None:
         with open(self.path_config_file, mode='w') as conf_file:
-            toml_dump(config.get_service_conf_dict(), conf_file)
+            toml_dump(config.services_dicts, conf_file)
 
     async def send_run_rpc(
         self,
@@ -371,8 +364,9 @@ class BubblejailInstance:
             # Verify that the new config is valid and save to variable
             with open(temp_file_path) as tempfile:
                 new_config_toml = tempfile.read()
-                BubblejailInstanceConfig(
-                    cast(ServicesConfDictType, toml_loads(new_config_toml))
+                ServicesConfig(
+                    cast(MultipleServicesOptionsType,
+                         toml_loads(new_config_toml))
                 )
             # Write to instance config file
             with open(self.path_config_file, mode='w') as conf_file:
@@ -383,7 +377,7 @@ class BubblejailInit:
     def __init__(
         self,
         parent: BubblejailInstance,
-        instance_config: BubblejailInstanceConfig,
+        instance_config: ServicesConfig,
         is_shell_debug: bool = False,
         is_helper_debug: bool = False,
         is_log_dbus: bool = False,
@@ -456,44 +450,37 @@ class BubblejailInit:
         for e in environ:
             self.bwrap_options_args.extend(('--unsetenv', e))
 
-        for service in self.instance_config.iter_services():
-            config_iterator = service.__iter__()
+        service_iterator = self.instance_config.iter_services()
+        for config in service_iterator:
+            # When we need to send something to generator
+            if isinstance(config, ServiceWantsHomeBind):
+                config = service_iterator.send(self.home_bind_path)
 
-            while True:
-                try:
-                    config = next(config_iterator)
-                except StopIteration:
-                    break
+            if isinstance(config, BwrapConfigBase):
+                self.bwrap_options_args.extend(config.to_args())
+            elif isinstance(config, FileTransfer):
+                # Copy files
+                temp_f = copy_data_to_temp_file(config.content)
+                self.temp_files.append(temp_f)
+                temp_file_descriptor = temp_f.fileno()
+                self.file_descriptors_to_pass.append(
+                    temp_file_descriptor)
+                self.bwrap_options_args.extend(
+                    ('--file', str(temp_file_descriptor), config.dest))
+            elif isinstance(config, DbusSessionArgs):
+                dbus_session_opts.add(config.to_args())
+            elif isinstance(config, DbusSystemArgs):
+                dbus_system_opts.add(config.to_args())
+            elif isinstance(config, SeccompDirective):
+                if seccomp_state is None:
+                    seccomp_state = SeccompState()
 
-                # When we need to send something to generator
-                if isinstance(config, ServiceWantsHomeBind):
-                    config = config_iterator.send(self.home_bind_path)
-
-                if isinstance(config, BwrapConfigBase):
-                    self.bwrap_options_args.extend(config.to_args())
-                elif isinstance(config, FileTransfer):
-                    # Copy files
-                    temp_f = copy_data_to_temp_file(config.content)
-                    self.temp_files.append(temp_f)
-                    temp_file_descriptor = temp_f.fileno()
-                    self.file_descriptors_to_pass.append(
-                        temp_file_descriptor)
-                    self.bwrap_options_args.extend(
-                        ('--file', str(temp_file_descriptor), config.dest))
-                elif isinstance(config, DbusSessionArgs):
-                    dbus_session_opts.add(config.to_args())
-                elif isinstance(config, DbusSystemArgs):
-                    dbus_system_opts.add(config.to_args())
-                elif isinstance(config, SeccompDirective):
-                    if seccomp_state is None:
-                        seccomp_state = SeccompState()
-
-                    seccomp_state.add_directive(config)
-                elif isinstance(config, LaunchArguments):
-                    # TODO: implement priority
-                    self.executable_args.extend(config.launch_args)
-                else:
-                    raise TypeError('Unknown bwrap config.')
+                seccomp_state.add_directive(config)
+            elif isinstance(config, LaunchArguments):
+                # TODO: implement priority
+                self.executable_args.extend(config.launch_args)
+            else:
+                raise TypeError('Unknown bwrap config.')
 
         if seccomp_state is not None:
             if __debug__:
@@ -662,14 +649,18 @@ class BubblejailProfile:
         self,
         dot_desktop_path: Optional[str] = None,
         is_gtk_application: bool = False,
-        services:  Optional[ServicesConfDictType] = None,
+        services:  Optional[MultipleServicesOptionsType] = None,
         description: str = 'No description',
         import_tips: str = 'None',
     ) -> None:
         self.dot_desktop_path = (Path(dot_desktop_path)
                                  if dot_desktop_path is not None else None)
         self.is_gtk_application = is_gtk_application
-        self.config = BubblejailInstanceConfig(services)
+
+        if services is None:
+            services = {}
+
+        self.config = ServicesConfig(services)
         self.description = description
         self.import_tips = import_tips
 

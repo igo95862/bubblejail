@@ -15,59 +15,49 @@
 # along with bubblejail.  If not, see <https://www.gnu.org/licenses/>.
 
 
-from typing import Dict, List, get_type_hints
 from unittest import TestCase
 from unittest import main as unittest_main
 
-from bubblejail.services import (SERVICES_CLASSES, BubblejailService,
-                                 ServiceOption)
+from bubblejail.exceptions import (ServiceOptionUnknownError,
+                                   ServiceOptionWrongTypeError,
+                                   ServiceUnknownError)
+from bubblejail.services import MultipleServicesOptionsType, ServicesConfig
 
-argless_dict = {'return': type(None)}
+wrong_service_dict: MultipleServicesOptionsType = {
+    'bad_service': {
+        'some_option': 'asdas',
+    }
+}
+
+wrong_option_dict: MultipleServicesOptionsType = {
+    'common': {
+        'some_option': 'asdas',
+    }
+}
+
+wrong_option_type_dict: MultipleServicesOptionsType = {
+    'common': {
+        'share_local_time': 'Test',
+    }
+}
 
 
 class TestServices(TestCase):
 
-    def setUp(self) -> None:
-        self.services: List[BubblejailService] = [
-            x() for x in SERVICES_CLASSES
-        ]
+    def test_service_wrong_option(self) -> None:
+        self.assertRaises(
+            ServiceUnknownError,
+            lambda: ServicesConfig(wrong_service_dict))
 
-    def test_service_options(self) -> None:
-        for service in self.services:
-            with self.subTest(f"Service: {service.pretty_name}"):
-                service_init_types = get_type_hints(service.__class__.__init__)
+        self.assertRaises(
+            ServiceOptionUnknownError,
+            lambda: ServicesConfig(wrong_option_dict)
+        )
 
-                if service_init_types == argless_dict:
-                    service_init_types = {}
-
-                service_options: Dict[str, ServiceOption] = {
-                    option.name: option for option in service.iter_options()
-                }
-
-                with self.subTest((f"Service {service.pretty_name}:"
-                                   "compare init args and option names")):
-                    service_option_names = set(service_options.keys())
-                    service_init_args_name = set(service_init_types.keys())
-
-                    self.assertEqual(
-                        first=service_option_names,
-                        second=service_init_args_name,
-                        msg=(f"Options: {service_option_names},"
-                             f" Init: {service_init_args_name}"),
-                    )
-
-                with self.subTest((f"Service {service.pretty_name}:"
-                                   "compare init args and option types")):
-                    # TODO: implement
-                    ...
-
-    def test_not_enabled_no_yields(self) -> None:
-        for service in self.services:
-            with self.subTest(f"Service: {service.pretty_name}"):
-                service.enabled = False
-                should_be_empty = list(service)
-
-                self.assertFalse(should_be_empty)
+        self.assertRaises(
+            ServiceOptionWrongTypeError,
+            lambda: ServicesConfig(wrong_option_type_dict)
+        )
 
 
 if __name__ == '__main__':
