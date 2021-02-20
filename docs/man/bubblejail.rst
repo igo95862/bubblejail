@@ -133,6 +133,11 @@ Options:
 
         bubblejail run --debug-bwrap-args cap-add CAP_SYS_ADMIN --debug-bwrap-args uid 0 --debug-bwrap-args gid 0 -- test_instance
 
+list-options [service]
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+Lists the options and type of a given service.
+
 edit [instance]
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
