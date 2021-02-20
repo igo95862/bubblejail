@@ -41,6 +41,12 @@ wrong_option_type_dict: MultipleServicesOptionsType = {
     }
 }
 
+correct_dict: MultipleServicesOptionsType = {
+    'common': {
+        'share_local_time': True,
+    }
+}
+
 
 class TestServices(TestCase):
 
@@ -58,6 +64,40 @@ class TestServices(TestCase):
             ServiceOptionWrongTypeError,
             lambda: ServicesConfig(wrong_option_type_dict)
         )
+
+    def test_service_manipulation(self) -> None:
+        test_dict = correct_dict.copy()
+
+        test_config = ServicesConfig(test_dict)
+
+        test_config.set_service_option('common', 'share_local_time', False)
+
+        def wrong_type() -> None:
+            test_config.set_service_option(
+                'common', 'share_local_time', 'asdasd')
+
+        self.assertRaises(ServiceOptionWrongTypeError, wrong_type)
+
+        def wrong_service() -> None:
+            test_config.enable_service('asdasdasd')
+
+        self.assertRaises(ServiceUnknownError, wrong_service)
+
+        self.assertNotIn('direct_rendering', test_config.services_dicts)
+
+        test_config.enable_service('direct_rendering')
+
+        self.assertIn('direct_rendering', test_config.services_dicts)
+
+        test_config.set_service_option('direct_rendering', 'enable_aco', True)
+
+        self.assertEqual(
+            True,
+            test_config.get_service_option('direct_rendering', 'enable_aco'))
+
+        test_config.disable_service('direct_rendering')
+
+        self.assertNotIn('direct_rendering', test_config.services_dicts)
 
 
 if __name__ == '__main__':
