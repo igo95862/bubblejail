@@ -122,6 +122,10 @@ def iter_profile_names() -> Generator[str, None, None]:
             yield profile_file.stem
 
 
+def iter_services_names() -> Generator[str, None, None]:
+    yield from ServicesDatabase.services_classes.keys()
+
+
 def iter_instance_names() -> Generator[str, None, None]:
     for instance_directory in BubblejailDirectories.iter_instances_path():
         yield instance_directory.name
@@ -151,6 +155,7 @@ class AutoCompleteParser:
     ) -> None:
 
         want_instance_set = {'edit', 'run', 'generate-desktop-entry'}
+        want_service_set = {'list-options'}
         base_options = {'--help'}
 
         # enumerate words to allow LL parser lookahead
@@ -214,7 +219,12 @@ class AutoCompleteParser:
                 subject_set = True
                 continue
 
-            # Does not want anything
+            if subcommand in want_service_set:
+                self.auto_complete_iterable = iter_services_names()
+                subject_set = True
+                continue
+
+                # Does not want anything
             self.auto_complete_iterable = []
 
     def auto_complete(self) -> Generator[str, None, None]:
@@ -226,6 +236,21 @@ class AutoCompleteParser:
         yield from self.auto_complete_iterable
 
 
+def bubblejail_list_options(args: Namespace) -> None:
+    service_name = args.service_name
+    assert isinstance(service_name, str)
+
+    found_option = False
+
+    for option_name, option_meta in ServicesDatabase.get_service_options_meta(
+            service_name).items():
+        print(f"\t{option_name}: \t{option_meta}")
+        found_option = True
+
+    if not found_option:
+        print("Service has no options")
+
+
 def bjail_list(args: Namespace) -> None:
     str_iterator: Iterator[str]
 
@@ -234,7 +259,7 @@ def bjail_list(args: Namespace) -> None:
     elif args.list_what == 'profiles':
         str_iterator = iter_profile_names()
     elif args.list_what == 'services':
-        str_iterator = iter(ServicesDatabase.services_classes.keys())
+        str_iterator = iter_services_names()
     elif args.list_what == 'subcommands':
         str_iterator = iter_subcommands()
     elif args.list_what == '_auto_complete':
@@ -337,7 +362,13 @@ def bubblejail_main() -> None:
         func=bjail_list,
         parser=parser,
     )
+    # List service options command
+    parser_list_options = subparsers.add_parser(
+        CommandMetadata.add_subcommand('list-options')
+    )
+    parser_list_options.add_argument('service_name')
 
+    parser_list_options.set_defaults(func=bubblejail_list_options)
     # Edit subcommand
     parser_edit = subparsers.add_parser(
         CommandMetadata.add_subcommand('edit')

@@ -20,7 +20,8 @@ from pathlib import Path
 from random import choices
 from string import ascii_letters, hexdigits
 from typing import (Any, Dict, FrozenSet, Generator, List, Optional, Set,
-                    Tuple, Type, Union, cast, get_args, get_type_hints)
+                    Tuple, Type, Union, cast, get_args, get_type_hints,
+                    Literal)
 
 from xdg import BaseDirectory
 
@@ -54,6 +55,8 @@ ServiceGeneratorType = Generator[ServiceIterTypes, ServiceSendType, None]
 ServiceOptionTypes = Union[str, List[str], bool]
 SingleServiceOptionsType = Dict[str, ServiceOptionTypes]
 MultipleServicesOptionsType = Dict[str, SingleServiceOptionsType]
+
+OptionMeta = Literal['bool', 'str', 'List[str]', 'Union[str, List[str]]']
 
 # endregion Service Typing
 
@@ -161,23 +164,24 @@ def generate_machine_id_bytes() -> bytes:
 # endregion HelperFunctions
 
 
-# HACK: makes typing easier rather than None
-EMPTY_LIST: List[str] = []
-
-
 class ServicesDatabase:
 
     services_classes: Dict[str, Type[ServiceBase]] = {}
 
     @classmethod
+    def get_service(cls, service_name: str) -> Type[ServiceBase]:
+        try:
+            return cls.services_classes[service_name]
+        except KeyError:
+            raise ServiceUnknownError(f"Unknown service: {service_name}")
+
+    @classmethod
     def get_service_option_types(
             cls,
             service_name: str,
-            option_name: str) -> List[Any]:
-        try:
-            service = cls.services_classes[service_name]
-        except KeyError:
-            raise ServiceUnknownError(f"Unknown service: {service_name}")
+            option_name: str) -> Tuple[Any, ...]:
+
+        service = cls.get_service(service_name)
 
         type_hints = get_type_hints(service.iter_args)
 
@@ -187,15 +191,38 @@ class ServicesDatabase:
             raise ServiceOptionUnknownError(
                 f"Unknown option {option_name} of service {service_name}")
 
-        return list(get_args(option_type_hints))
+        return get_args(option_type_hints)
 
     @classmethod
-    def get_services_options_meta(cls) -> Dict[str, Dict[str, str]]:
-        ...
+    def get_service_options_meta(
+            cls,
+            service_name: str) -> Dict[str, OptionMeta]:
+        service = cls.get_service(service_name)
 
-    @classmethod
-    def get_service_class(cls) -> Type[ServiceBase]:
-        ...
+        type_hints = get_type_hints(service.iter_args)
+
+        option_meta: Dict[str, OptionMeta] = {}
+
+        for option_name, option_type_hints in type_hints.items():
+            if option_name == 'return':
+                continue
+
+            if option_name == 'kwargs':
+                continue
+
+            if option_type_hints == Optional[bool]:
+                option_meta[option_name] = 'bool'
+            elif option_type_hints == Optional[str]:
+                option_meta[option_name] = 'str'
+            elif option_type_hints == Optional[List[str]]:
+                option_meta[option_name] = 'List[str]'
+            elif option_type_hints == Optional[Union[str, List[str]]]:
+                option_meta[option_name] = 'Union[str, List[str]]'
+            else:
+                raise ValueError(
+                    f"Unknown option type hints {option_type_hints}")
+
+        return option_meta
 
 
 class ServiceMeta(type):
