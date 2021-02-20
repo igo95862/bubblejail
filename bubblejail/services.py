@@ -619,45 +619,85 @@ class ServicesConfig:
 
         for service_name, service_options in services_config_dict.items():
             for option_name, option_value in service_options.items():
-                possible_types = ServicesDatabase.get_service_option_types(
-                    service_name, option_name)
-
-                try:
-                    possible_types.remove(List[str])
-                    possible_types.append(list)
-                    check_str_list = isinstance(option_value, list)
-                except ValueError:
-                    check_str_list = False
-
-                if not isinstance(option_value, tuple(possible_types)):
-                    raise ServiceOptionWrongTypeError(
-                        f"Option {option_name} of service "
-                        f"{service_name} has wrong type "
-                        f"{type(option_value)}"
-                    )
-
-                if check_str_list:
-                    assert isinstance(option_value, list)
-                    for x in option_value:
-                        if not isinstance(x, str):
-                            raise ServiceOptionWrongTypeError(
-                                f"Option {option_name} of service "
-                                f"{service_name} has wrong type "
-                                f"list of str has a {type(x)}"
-                            )
+                self.validate_value_for_option(
+                    service_name, option_name, option_value)
 
         self.services_dicts = services_config_dict
+
+    def validate_value_for_option(
+            self, service_name: str,
+            option_name: str,
+            option_value: ServiceOptionTypes) -> None:
+        possible_types = ServicesDatabase.get_service_option_types(
+            service_name, option_name)
+
+        for type_to_check in possible_types:
+
+            if type_to_check is List[str]:
+
+                if not isinstance(option_value, list):
+                    continue
+
+                if (all((isinstance(x, str) for x in option_value))):
+                    return
+
+            if isinstance(option_value, type_to_check):
+                return
+
+        raise ServiceOptionWrongTypeError(
+            f"Option {option_name} of service "
+            f"{service_name} has wrong type "
+            f"{type(option_value)}"
+        )
+
+    def enable_service(self, service_name: str) -> None:
+        try:
+            ServicesDatabase.services_classes[service_name]
+        except KeyError:
+            raise ServiceUnknownError(
+                f"Tried to add unknown service: {service_name}")
+
+        self.services_dicts[service_name] = {}
+
+    def disable_service(self, service_name: str) -> None:
+        try:
+            self.services_dicts.pop(service_name)
+        except KeyError:
+            raise ServiceUnknownError(
+                "Tried to remove unknown or "
+                f"not enabled service: {service_name}"
+            )
 
     def set_service_option(self,
                            service_name: str,
                            option_name: str,
                            option_value: ServiceOptionTypes) -> None:
-        ...
+        self.validate_value_for_option(
+            service_name,
+            option_name,
+            option_value)
+
+        self.services_dicts[service_name][option_name] = option_value
 
     def get_service_option(self,
                            service_name: str,
                            option_name: str) -> ServiceOptionTypes:
-        ...
+        try:
+            service_dict = self.services_dicts[service_name]
+        except KeyError:
+            raise ServiceUnknownError(
+                f"Service unknown or not enabled: {service_name}"
+            )
+
+        try:
+            option_value = service_dict[option_name]
+        except KeyError:
+            raise ServiceOptionUnknownError(
+                f"Service {service_name} option {option_value} "
+                "unknown or not enabled"
+            )
+
+        return option_value
 
     def iter_services(self) -> ServiceGeneratorType:
         yield from BubblejailDefaults.iter_args()
