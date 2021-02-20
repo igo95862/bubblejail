@@ -257,7 +257,7 @@ def bjail_list(args: Namespace) -> None:
     if args.list_what == 'instances':
         str_iterator = iter_instance_names()
     elif args.list_what == 'profiles':
-        str_iterator = iter_profile_names()
+        str_iterator = BubblejailDirectories.iter_profile_names()
     elif args.list_what == 'services':
         str_iterator = iter_services_names()
     elif args.list_what == 'subcommands':

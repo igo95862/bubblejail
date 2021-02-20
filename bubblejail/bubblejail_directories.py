@@ -107,6 +107,13 @@ class BubblejailDirectories:
             yield profiles_dir
 
     @classmethod
+    def iter_profile_names(cls) -> Generator[str, None, None]:
+
+        for profiles_directory in cls.iter_profile_directories():
+            for profile_file in profiles_directory.iterdir():
+                yield profile_file.stem
+
+    @classmethod
     def iterm_config_dirs(cls) -> PathGeneratorType:
         try:
             conf_directories = environ['BUBBLEJAIL_CONFDIRS']
