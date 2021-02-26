@@ -94,6 +94,21 @@ class BubblejailInstance:
         self.runtime_dir: Path = Path(
             get_runtime_dir() + f'/bubblejail/{self.name}')
 
+        # Verify that this is a correct instance directory
+        # The instance directory MUST have home directory
+        # TODO: Maybe better detection?
+        if not self.path_home_directory.exists():
+            raise BubblejailException(
+                f'Home directory of instance {self.name} not found. '
+                f'Is this correct instance directory? {instance_home}'
+            )
+
+        if not self.path_config_file.exists():
+            raise BubblejailException(
+                f'Service config of instance {self.name} not found. '
+                f'Is this correct instance directory? {instance_home}'
+            )
+
     # region Paths
 
     @property
