@@ -88,6 +88,12 @@ class BubblejailDirectories:
         raise BubblejailInstanceNotFoundError(instance_name)
 
     @classmethod
+    def iter_instances(cls) -> Generator[BubblejailInstance, None, None]:
+        for instances_dir in cls.iter_instances_directories():
+            for instance_dir in instances_dir.iterdir():
+                yield BubblejailInstance(instance_dir)
+
+    @classmethod
     def profile_get(cls, profile_name: str) -> BubblejailProfile:
         profile_file_name = profile_name + '.toml'
         for profiles_directory in cls.iter_profile_directories():
