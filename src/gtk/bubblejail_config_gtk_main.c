@@ -18,6 +18,35 @@
 #include <gtk/gtk.h>
 
 const gint gnome_recommended_horizontal_spacing = 12;
+static GDBusConnection *dbus_connection = NULL;
+
+static GDBusArgInfo bubblejail_manager_method_list_instaces = {
+    .name = "list_of_instaces",
+    .signature = "a(ss)",
+    .ref_count = -1,
+};
+
+static GDBusMethodInfo bubblejail_manager_methods = {
+    .name = "ListInstancesWithDesktopEntries",
+    .ref_count = -1,
+    .out_args = (GDBusArgInfo *[]){
+        &bubblejail_manager_method_list_instaces,
+        NULL,
+    },
+    .annotations = NULL,
+};
+
+static GDBusInterfaceInfo bubblejail_manager_info = {
+    .name = "org.bubblejail.Manager.Unstable",
+    .ref_count = -1,
+    .methods = (GDBusMethodInfo *[]){
+        &bubblejail_manager_methods,
+        NULL,
+    },
+    .signals = NULL,
+};
+
+static GDBusProxy *bubblejail_manager_proxy = NULL;
 
 GtkHeaderBar *create_instace_selection_header()
 {
@@ -45,6 +74,8 @@ typedef struct bubblejail_config_gtk_main_instance_list
   GtkScrolledWindow *scrolled_window;
   GtkListBox *list_box;
 } BubblejailInstanceList;
+
+static BubblejailInstanceList instances_list = {0};
 
 BubblejailInstanceList create_instance_list()
 {
@@ -101,10 +132,73 @@ void instance_list_insert(BubblejailInstanceList instance_list, BubblejailInstan
   gtk_container_add(GTK_CONTAINER(instance_list.list_box), GTK_WIDGET(new_item.container));
 }
 
+void update_instaces_list(GObject *source_object,
+                          GAsyncResult *res,
+                          gpointer G_GNUC_UNUSED(user_data))
+{
+  GError *error = NULL;
+
+  GVariant *result_variant = g_dbus_proxy_call_finish(bubblejail_manager_proxy, res, &error);
+  if (error != NULL)
+  {
+    g_abort();
+  }
+  g_assert_cmpstr(g_variant_get_type_string(result_variant), ==, "(a(ss))");
+
+  GVariant *list_of_instances = g_variant_get_child_value(result_variant, 0);
+  g_assert_cmpstr(g_variant_get_type_string(list_of_instances), ==, "a(ss)");
+
+  GVariantIter iter = {0};
+  GVariant *instance_struct = NULL;
+  g_variant_iter_init(&iter, list_of_instances);
+  while ((instance_struct = g_variant_iter_next_value(&iter)))
+  {
+    g_assert_cmpstr(g_variant_get_type_string(instance_struct), ==, "(ss)");
+    const char *instance_name = NULL;
+    const char *desktop_name = NULL;
+    g_variant_get_child(instance_struct, 0, "s", &instance_name);
+    g_variant_get_child(instance_struct, 1, "s", &desktop_name);
+
+    g_assert(instance_name);
+
+    BubblejailInstanceListItem new_instance_list_item = create_instance_list_entry(instance_name, "firefox");
+    instance_list_insert(instances_list, new_instance_list_item);
+  }
+  gtk_widget_show_all(GTK_WIDGET(instances_list.scrolled_window));
+}
+
+void dbus_init()
+{
+  dbus_connection = g_bus_get_sync(G_BUS_TYPE_SESSION, NULL, NULL);
+  if (dbus_connection == NULL)
+  {
+    g_abort();
+  }
+
+  GError *error = NULL;
+
+  bubblejail_manager_proxy = g_dbus_proxy_new_sync(
+      dbus_connection,
+      G_DBUS_PROXY_FLAGS_NONE,
+      &bubblejail_manager_info,
+      "org.bubblejail.Manager",
+      "/org/bubblejail/manager",
+      "org.bubblejail.Manager.Unstable",
+      NULL,
+      &error);
+
+  if (error != NULL)
+  {
+    g_abort();
+  }
+}
+
 static void
 activate(GtkApplication *app,
          gpointer G_GNUC_UNUSED user_data)
 {
+  dbus_init();
+
   GtkWindow *main_window = GTK_WINDOW(gtk_application_window_new(app));
   gtk_window_set_default_size(main_window, 640, 500);
 
@@ -115,11 +209,17 @@ activate(GtkApplication *app,
 
   gtk_container_add(GTK_CONTAINER(main_window), GTK_WIDGET(instance_list.scrolled_window));
 
-  BubblejailInstanceListItem firefox_test = create_instance_list_entry("Firefox Bubble", "firefox");
-  BubblejailInstanceListItem steam_test = create_instance_list_entry("Steam Bubble", "steam");
+  instances_list = instance_list;
 
-  instance_list_insert(instance_list, firefox_test);
-  instance_list_insert(instance_list, steam_test);
+  g_dbus_proxy_call(
+      bubblejail_manager_proxy,
+      "ListInstancesWithDesktopEntries",
+      NULL,
+      G_DBUS_CALL_FLAGS_NONE,
+      1000,
+      NULL,
+      &update_instaces_list,
+      NULL);
 
   gtk_widget_show_all(GTK_WIDGET(main_window));
 }
