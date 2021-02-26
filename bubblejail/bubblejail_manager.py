@@ -16,7 +16,7 @@
 from __future__ import annotations
 
 from asyncio import get_event_loop
-from typing import Dict, List
+from typing import Dict, List, Tuple
 
 from sdbus import (DbusInterfaceCommonAsync, dbus_method_async,
                    encode_object_path, request_default_bus_name_async)
@@ -44,6 +44,25 @@ class BubblejailManager(
             new_instance_name, profile_name, create_desktop_entry
         )
         self.create_instance_objects()
+
+    @dbus_method_async(
+        result_signature='a(ss)',
+        result_args_names=('instance_names_with_desktop_entries',)
+    )
+    async def list_instances_with_desktop_entries(
+            self) -> List[Tuple[str, str]]:
+        list_of_instances: List[Tuple[str, str]] = []
+
+        for instance in BubblejailDirectories.iter_instances():
+            desktop_entry_name = instance.metadata_desktop_entry_name
+            if desktop_entry_name is None:
+                desktop_entry_name = ''
+
+            list_of_instances.append(
+                (instance.name, desktop_entry_name)
+            )
+
+        return list_of_instances
 
     @dbus_method_async(
         result_signature='as',
