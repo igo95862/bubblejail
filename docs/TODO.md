@@ -35,6 +35,10 @@ Maybe check Arch Linux stats for commonly used applications?
 * Custom resolv.conf per instance? Can this be a solution for captive portals in cases when you use dnscrypt-proxy.
 * Custom gai.conf? Being able to prefer ipv4 or ipv6 per instance. Can you even prefer a specific route? (for VPNs)
 
+## Pipewire
+
+* Add new service with Pipewire. (new audio/video system)
+
 # GUI
 
 * Error message screens
@@ -49,3 +53,5 @@ Maybe check Arch Linux stats for commonly used applications?
 
 * Being able to run ephemeral home directory that gets destroyed after closing.
 * Preload certain files in to memory to speed up startup? (looking at you Steam) vmtouch exists but is not packaged in Arch.
+* New command ``terminal``. Spawns a terminal inside the instance.
+
