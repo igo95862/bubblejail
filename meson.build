@@ -10,6 +10,7 @@ subdir(meson.project_name())
 subdir('m4')
 subdir('data')
 subdir('docs')
+subdir('src/gtk/bubblejail_config')
 
 test('unittest', py_installation,
     args : ['-m', 'unittest'],
