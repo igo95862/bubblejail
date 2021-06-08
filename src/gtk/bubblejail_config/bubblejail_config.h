@@ -1,6 +1,6 @@
 /* SPDX-License-Identifier: GPL-3.0-or-later */
 /*
-  Copyright 2019-2021 igo95862, ls0h
+  Copyright 2019-2021 igo95862
 
   This file is part of bubblejail.
   bubblejail is free software: you can redistribute it and/or modify
@@ -14,29 +14,9 @@
   GNU General Public License for more details.
   along with bubblejail.  If not, see <https://www.gnu.org/licenses/>.
 */
-
+#pragma once
 #include <gtk/gtk.h>
 
-static void
-activate(GtkApplication *app,
-         gpointer G_GNUC_UNUSED user_data)
-{
+const gint gnome_recommended_horizontal_spacing = 12;
 
-    GtkWindow *main_window = GTK_WINDOW(gtk_application_window_new(app));
-    gtk_window_set_default_size(main_window, 640, 500);
-
-    show_instance_list(main_window);
-}
-
-int main(int argc,
-         char **argv)
-{
-    GtkApplication *app = gtk_application_new("org.bubblejail.Config", G_APPLICATION_FLAGS_NONE);
-
-    g_signal_connect(app, "activate", G_CALLBACK(activate), NULL);
-
-    int status = g_application_run(G_APPLICATION(app), argc, argv);
-    g_object_unref(app);
-
-    return status;
-}
+void show_instance_list(GtkWindow *main_window);
