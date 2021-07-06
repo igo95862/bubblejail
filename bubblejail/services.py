@@ -644,27 +644,50 @@ class Joystick(BubblejailService):
             return
 
         look_for_names: Set[str] = set()
-        # Find the *-joystick in /dev/input/by-path/
+
         dev_input_path = Path('/dev/input')
-        for x in (dev_input_path / 'by-path').iterdir():
-            name = x.name
-            if name.split('-')[-1] == 'joystick':
-                # Add both symlink and device it self
-                joystick_dev_path = x.resolve()
-                look_for_names.add(joystick_dev_path.name)
-                yield DevBind(str(joystick_dev_path))
-                yield Symlink(str(joystick_dev_path), str(x))
+        sys_class_input_path = Path('/sys/class/input')
+        js_names: Set[str] = set()
+        for input_dev in dev_input_path.iterdir():
+            if not input_dev.is_char_device():
+                continue
+            # If device dooes not have read permission
+            # for others it is not a gamepad
+            # Only jsX devices have this, we need to find eventX of gamepad
+            if (input_dev.stat().st_mode & 0o004) == 0:
+                continue
 
-        # Add device under /sys/ and a symlink from /sys/class/input
-        for sys_class_input_symlink in Path('/sys/class/input').iterdir():
-            if sys_class_input_symlink.name in look_for_names:
-                resolved_path = sys_class_input_symlink.resolve()
-                yield Symlink(
-                    str(readlink(sys_class_input_symlink)),
-                    str(sys_class_input_symlink)
-                )
+            js_names.add(input_dev.name)
 
-                yield DevBind(str(resolved_path.parents[2]))
+        look_for_names.update(js_names)
+        # Find event name of js device
+        # Resolve the PCI name. Should be something like this:
+        # /sys/devices/.../input/input23/js0
+        # Iterate over names in this directory
+        # and add eventX names
+        for js_name in js_names:
+            sys_class_input_js = sys_class_input_path / js_name
+
+            js_reloved = sys_class_input_js.resolve()
+            js_input_path = js_reloved.parents[0]
+            for input_element in js_input_path.iterdir():
+                if input_element.name.startswith('event'):
+                    look_for_names.add(input_element.name)
+
+        # Find the *-joystick in /dev/input/by-path/
+        for dev_name in look_for_names:
+            # Add /dev/input/X device
+            yield DevBind(str(dev_input_path / dev_name))
+
+            sys_class_path = sys_class_input_path / dev_name
+
+            yield Symlink(
+                str(readlink(sys_class_path)),
+                str(sys_class_path)
+            )
+
+            pci_path = sys_class_path.resolve()
+            yield DevBind(str(pci_path.parents[2]))
 
     name = 'joystick'
     pretty_name = 'Joysticks and gamepads'
