@@ -17,6 +17,6 @@
 #pragma once
 #include <gtk/gtk.h>
 
-const gint gnome_recommended_horizontal_spacing = 12;
+extern const gint gnome_recommended_horizontal_spacing;
 
 void show_instance_list(GtkWindow *main_window);

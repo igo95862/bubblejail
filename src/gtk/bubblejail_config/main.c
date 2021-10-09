@@ -15,7 +15,9 @@
   along with bubblejail.  If not, see <https://www.gnu.org/licenses/>.
 */
 
-#include <gtk/gtk.h>
+#include "bubblejail_config.h"
+
+const gint gnome_recommended_horizontal_spacing = 12;
 
 static void
 activate(GtkApplication *app,
