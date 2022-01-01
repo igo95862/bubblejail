@@ -821,11 +821,29 @@ class GnomeToolkit(BubblejailService):
     description = 'Access to GNOME APIs'
 
 
+class Pipewire(BubblejailService):
+    def __iter__(self) -> ServiceGeneratorType:
+        if not self.enabled:
+            return
+
+        PIPEWIRE_SOCKET_NAME = 'pipewire-0'
+        original_socket_path = (Path(BaseDirectory.get_runtime_dir())
+                                / PIPEWIRE_SOCKET_NAME)
+
+        new_socket_path = Path('/run/user/1000') / 'pipewire-0'
+
+        yield ReadOnlyBind(str(original_socket_path), str(new_socket_path))
+
+    name = 'pipewire'
+    pretty_name = 'Pipewire'
+    description = 'Pipewire sound and screencapture system'
+
+
 SERVICES_CLASSES: Tuple[Type[BubblejailService], ...] = (
     CommonSettings, X11, Wayland,
     Network, PulseAudio, HomeShare, DirectRendering,
     Systray, Joystick, RootShare, OpenJDK, Notifications,
-    GnomeToolkit,
+    GnomeToolkit, Pipewire,
 )
 
 ServicesConfDictType = Dict[str, Dict[str, ServiceOptionTypes]]
