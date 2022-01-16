@@ -35,7 +35,6 @@ UsrShareApplicationsPath = UsrSharePath / 'applications'
 SystemConfigsPath = UsrSharePath / 'bubblejail'
 
 UserConfigDir = Path(xdg_config_home) / 'bubblejail'
-UserConfigDir.mkdir(exist_ok=True)
 
 
 def convert_old_conf_to_new() -> None:
@@ -111,6 +110,7 @@ class BubblejailDirectories:
         try:
             conf_directories = environ['BUBBLEJAIL_CONFDIRS']
         except KeyError:
+            UserConfigDir.mkdir(parents=True, exist_ok=True)
             yield UserConfigDir
             yield SystemConfigsPath
             return
