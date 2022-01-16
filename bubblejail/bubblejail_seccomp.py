@@ -13,7 +13,7 @@
 # GNU General Public License for more details.
 # You should have received a copy of the GNU General Public License
 # along with bubblejail.  If not, see <https://www.gnu.org/licenses/>.
-
+from __future__ import annotations
 
 from ctypes import CDLL, c_char_p, c_int, c_uint, c_uint32, c_void_p
 from ctypes.util import find_library

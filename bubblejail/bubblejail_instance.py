@@ -13,6 +13,7 @@
 # GNU General Public License for more details.
 # You should have received a copy of the GNU General Public License
 # along with bubblejail.  If not, see <https://www.gnu.org/licenses/>.
+from __future__ import annotations
 
 from asyncio import (CancelledError, Task, create_subprocess_exec, create_task,
                      get_event_loop, open_unix_connection, wait_for)
