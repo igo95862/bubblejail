@@ -839,11 +839,46 @@ class Pipewire(BubblejailService):
     description = 'Pipewire sound and screencapture system'
 
 
+class VideoForLinux(BubblejailService):
+    def __iter__(self) -> ServiceGeneratorType:
+        if not self.enabled:
+            return
+
+        yield DevBind('/dev/v4l')
+        yield DevBind('/sys/class/video4linux')
+        yield DevBind('/sys/bus/media/')
+
+        for sys_path in Path('/sys/class/video4linux').iterdir():
+            pcie_path = sys_path.resolve()
+
+            for char_path in Path('/sys/dev/char/').iterdir():
+                if char_path.resolve() == pcie_path:
+                    yield Symlink(str(readlink(char_path)), str(char_path))
+
+            yield DevBind(str(pcie_path.parents[1]))
+
+        for dev_path in Path('/dev').iterdir():
+
+            name = dev_path.name
+
+            if not (name.startswith('video') or name.startswith('media')):
+                continue
+
+            if not name[5:].isnumeric():
+                continue
+
+            yield DevBind(str(dev_path))
+
+    name = 'v4l'
+    pretty_name = 'Video4Linux'
+    description = 'Video capture. (webcams and etc.)'
+
+
 SERVICES_CLASSES: Tuple[Type[BubblejailService], ...] = (
     CommonSettings, X11, Wayland,
     Network, PulseAudio, HomeShare, DirectRendering,
     Systray, Joystick, RootShare, OpenJDK, Notifications,
-    GnomeToolkit, Pipewire,
+    GnomeToolkit, Pipewire, VideoForLinux,
 )
 
 ServicesConfDictType = Dict[str, Dict[str, ServiceOptionTypes]]
