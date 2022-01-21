@@ -15,19 +15,37 @@
 # along with bubblejail.  If not, see <https://www.gnu.org/licenses/>.
 from __future__ import annotations
 
-from asyncio import (CancelledError, Task, create_subprocess_exec, create_task,
-                     get_event_loop, open_unix_connection, wait_for)
+from asyncio import (
+    CancelledError,
+    Future,
+    Task,
+    create_subprocess_exec,
+    create_task,
+    get_event_loop,
+    get_running_loop,
+    open_unix_connection,
+    wait_for,
+)
 from asyncio.subprocess import DEVNULL as asyncio_devnull
 from asyncio.subprocess import PIPE as asyncio_pipe
 from asyncio.subprocess import STDOUT as asyncio_stdout
 from asyncio.subprocess import Process
-from os import environ, kill, stat
+from os import O_CLOEXEC, O_NONBLOCK, environ, kill, pipe2, stat
 from pathlib import Path
 from signal import SIGTERM
-from socket import AF_UNIX, SOCK_STREAM, SocketType, socket
 from tempfile import TemporaryDirectory, TemporaryFile
-from typing import (IO, Any, Generator, List, MutableMapping, Optional, Set,
-                    Type, TypedDict, cast)
+from typing import (
+    IO,
+    Any,
+    Generator,
+    List,
+    MutableMapping,
+    Optional,
+    Set,
+    Type,
+    TypedDict,
+    cast,
+)
 
 from toml import dump as toml_dump
 from toml import loads as toml_loads
@@ -35,11 +53,21 @@ from xdg.BaseDirectory import get_runtime_dir
 
 from .bubblejail_helper import RequestRun
 from .bubblejail_seccomp import SeccompState
-from .bubblejail_utils import (BubblejailSettings, FILE_NAME_METADATA,
-                               FILE_NAME_SERVICES)
-from .bwrap_config import (Bind, BwrapConfigBase, DbusSessionArgs,
-                           DbusSystemArgs, EnvrimentalVar, FileTransfer,
-                           LaunchArguments, SeccompDirective)
+from .bubblejail_utils import (
+    FILE_NAME_METADATA,
+    FILE_NAME_SERVICES,
+    BubblejailSettings,
+)
+from .bwrap_config import (
+    Bind,
+    BwrapConfigBase,
+    DbusSessionArgs,
+    DbusSystemArgs,
+    EnvrimentalVar,
+    FileTransfer,
+    LaunchArguments,
+    SeccompDirective,
+)
 from .exceptions import BubblejailException
 from .services import ServiceContainer as BubblejailInstanceConfig
 from .services import ServicesConfDictType, ServiceWantsHomeBind
@@ -402,12 +430,13 @@ class BubblejailInit:
         self.dbus_proxy_args: List[str] = []
         self.dbus_proxy_process: Optional[Process] = None
 
+        self.dbus_proxy_pipe_read: int = -1
+        self.dbus_proxy_pipe_write: int = -1
+
         # Dbus session socket
-        self.dbus_session_socket: Optional[SocketType] = None
         self.dbus_session_socket_path = parent.path_runtime_dbus_session_socket
 
         # Dbus system socket
-        self.dbus_system_socket: Optional[SocketType] = None
         self.dbus_system_socket_path = parent.path_runtime_dbus_system_socket
 
         # Args to bwrap
@@ -515,6 +544,11 @@ class BubblejailInit:
             str(self.dbus_session_socket_path),
         ))
 
+        self.dbus_proxy_pipe_read, self.dbus_proxy_pipe_write \
+            = pipe2(O_NONBLOCK | O_CLOEXEC)
+
+        self.dbus_proxy_args.append(f"--fd={self.dbus_proxy_pipe_write}")
+
         self.dbus_proxy_args.extend(dbus_session_opts)
         self.dbus_proxy_args.append('--filter')
         if self.is_log_dbus:
@@ -585,14 +619,24 @@ class BubblejailInit:
         self.helper_runtime_dir.mkdir(mode=0o700)
 
         # Dbus session proxy
+        running_loop = get_running_loop()
+        dbus_proxy_ready_future: Future[bool] = Future()
 
-        self.dbus_session_socket = socket(AF_UNIX, SOCK_STREAM)
-        self.dbus_session_socket.bind(
-            str(self.dbus_session_socket_path))
+        def proxy_ready_callback() -> None:
+            try:
+                with open(self.dbus_proxy_pipe_read, closefd=False) as f:
+                    f.read()
+            except Exception as e:
+                dbus_proxy_ready_future.set_exception(e)
+            else:
+                dbus_proxy_ready_future.set_result(True)
 
-        self.dbus_system_socket = socket(AF_UNIX, SOCK_STREAM)
-        self.dbus_system_socket.bind(
-            str(self.dbus_system_socket_path))
+            running_loop.remove_reader(self.dbus_proxy_pipe_read)
+
+        running_loop.add_reader(
+            self.dbus_proxy_pipe_read,
+            proxy_ready_callback,
+        )
 
         # Pylint does not recognize *args for some reason
         # pylint: disable=E1120
@@ -603,12 +647,15 @@ class BubblejailInit:
                     else asyncio_devnull),
             stderr=asyncio_stdout,
             stdin=asyncio_devnull,
+            pass_fds=[self.dbus_proxy_pipe_write],
         )
 
         self.watch_dbus_proxy_task = create_task(
             process_watcher(self.dbus_proxy_process),
             name='dbus proxy',
         )
+
+        await wait_for(dbus_proxy_ready_future, timeout=1)
 
     async def __aexit__(
         self,
@@ -646,14 +693,8 @@ class BubblejailInit:
         if self.dbus_session_socket_path.exists():
             self.dbus_session_socket_path.unlink()
 
-        if self.dbus_session_socket is not None:
-            self.dbus_session_socket.close()
-
         if self.dbus_system_socket_path.exists():
             self.dbus_system_socket_path.unlink()
-
-        if self.dbus_system_socket is not None:
-            self.dbus_system_socket.close()
 
         self.runtime_dir.rmdir()
 
