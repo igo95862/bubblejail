@@ -19,16 +19,39 @@ from os import environ, readlink
 from pathlib import Path
 from random import choices
 from string import ascii_letters, hexdigits
-from typing import (Dict, FrozenSet, Generator, Iterator, List, Optional, Set,
-                    Tuple, Type, Union)
+from typing import (
+    Dict,
+    FrozenSet,
+    Generator,
+    Iterator,
+    List,
+    Optional,
+    Set,
+    Tuple,
+    Type,
+    Union,
+)
 
 from xdg import BaseDirectory
 
-from .bwrap_config import (Bind, BwrapConfigBase, DbusCommon, DbusSessionOwn,
-                           DbusSessionTalkTo, DevBind, DirCreate,
-                           EnvrimentalVar, FileTransfer, LaunchArguments,
-                           ReadOnlyBind, SeccompDirective, SeccompSyscallErrno,
-                           ShareNetwork, Symlink)
+from .bwrap_config import (
+    Bind,
+    BwrapConfigBase,
+    DbusCommon,
+    DbusSessionOwn,
+    DbusSessionTalkTo,
+    DevBind,
+    DevBindTry,
+    DirCreate,
+    EnvrimentalVar,
+    FileTransfer,
+    LaunchArguments,
+    ReadOnlyBind,
+    SeccompDirective,
+    SeccompSyscallErrno,
+    ShareNetwork,
+    Symlink,
+)
 
 # region Service Typing
 
@@ -844,18 +867,22 @@ class VideoForLinux(BubblejailService):
         if not self.enabled:
             return
 
-        yield DevBind('/dev/v4l')
-        yield DevBind('/sys/class/video4linux')
-        yield DevBind('/sys/bus/media/')
+        yield DevBindTry('/dev/v4l')
+        yield DevBindTry('/sys/class/video4linux')
+        yield DevBindTry('/sys/bus/media/')
 
-        for sys_path in Path('/sys/class/video4linux').iterdir():
-            pcie_path = sys_path.resolve()
+        try:
+            sys_v4l_iterator = Path('/sys/class/video4linux').iterdir()
+            for sys_path in sys_v4l_iterator:
+                pcie_path = sys_path.resolve()
 
-            for char_path in Path('/sys/dev/char/').iterdir():
-                if char_path.resolve() == pcie_path:
-                    yield Symlink(str(readlink(char_path)), str(char_path))
+                for char_path in Path('/sys/dev/char/').iterdir():
+                    if char_path.resolve() == pcie_path:
+                        yield Symlink(str(readlink(char_path)), str(char_path))
 
-            yield DevBind(str(pcie_path.parents[1]))
+                yield DevBind(str(pcie_path.parents[1]))
+        except FileNotFoundError:
+            ...
 
         for dev_path in Path('/dev').iterdir():
 
