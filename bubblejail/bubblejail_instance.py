@@ -30,6 +30,7 @@ from asyncio.subprocess import DEVNULL as asyncio_devnull
 from asyncio.subprocess import PIPE as asyncio_pipe
 from asyncio.subprocess import STDOUT as asyncio_stdout
 from asyncio.subprocess import Process
+from functools import cached_property
 from os import O_CLOEXEC, O_NONBLOCK, environ, kill, pipe2, stat
 from pathlib import Path
 from signal import SIGTERM
@@ -127,38 +128,37 @@ class BubblejailInstance:
         if not self.instance_directory.exists():
             raise BubblejailException("Instance directory does not exist")
 
-        # Run-time directory
-        self.runtime_dir: Path = Path(
-            get_runtime_dir() + f'/bubblejail/{self.name}')
-
     # region Paths
+    @cached_property
+    def runtime_dir(self) -> Path:
+        return Path(get_runtime_dir() + f'/bubblejail/{self.name}')
 
-    @property
+    @cached_property
     def path_config_file(self) -> Path:
         return self.instance_directory / FILE_NAME_SERVICES
 
-    @property
+    @cached_property
     def path_metadata_file(self) -> Path:
         return self.instance_directory / FILE_NAME_METADATA
 
-    @property
+    @cached_property
     def path_home_directory(self) -> Path:
         return self.instance_directory / 'home'
 
-    @property
+    @cached_property
     def path_runtime_helper_dir(self) -> Path:
         """Helper run-time directory"""
         return self.runtime_dir / 'helper'
 
-    @property
+    @cached_property
     def path_runtime_helper_socket(self) -> Path:
         return self.path_runtime_helper_dir / 'helper.socket'
 
-    @property
+    @cached_property
     def path_runtime_dbus_session_socket(self) -> Path:
         return self.runtime_dir / 'dbus_session_proxy'
 
-    @property
+    @cached_property
     def path_runtime_dbus_system_socket(self) -> Path:
         return self.runtime_dir / 'dbus_system_proxy'
 
