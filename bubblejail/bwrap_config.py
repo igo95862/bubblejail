@@ -29,18 +29,6 @@ class BwrapConfigBase:
 
 
 @dataclass
-class ReadOnlyBind(BwrapConfigBase):
-    arg_word = '--ro-bind'
-    source: str
-    dest: Optional[str] = None
-
-    def to_args(self) -> Tuple[str, str, str]:
-        return (self.arg_word,
-                self.source,
-                self.dest if self.dest is not None else self.source)
-
-
-@dataclass
 class DirCreate(BwrapConfigBase):
     arg_word = '--dir'
     dest: str
@@ -80,8 +68,8 @@ class EnvrimentalVar(BwrapConfigBase):
 
 
 @dataclass
-class Bind(BwrapConfigBase):
-    arg_word = '--bind'
+class ReadOnlyBind(BwrapConfigBase):
+    arg_word = '--ro-bind'
     source: str
     dest: Optional[str] = None
 
@@ -92,8 +80,28 @@ class Bind(BwrapConfigBase):
 
 
 @dataclass
-class DevBind(Bind):
+class ReadOnlyBindTry(ReadOnlyBind):
+    arg_word = '--ro-bind-try'
+
+
+@dataclass
+class Bind(ReadOnlyBind):
+    arg_word = '--bind'
+
+
+@dataclass
+class BindTry(ReadOnlyBind):
+    arg_word = '--bind-try'
+
+
+@dataclass
+class DevBind(ReadOnlyBind):
     arg_word = '--dev-bind'
+
+
+@dataclass
+class DevBindTry(ReadOnlyBind):
+    arg_word = '--dev-bind-try'
 
 
 class DbusCommon:
