@@ -685,18 +685,34 @@ class BubblejailInit:
         for t in self.temp_files:
             t.close()
 
-        if self.helper_socket_path.exists():
+        try:
             self.helper_socket_path.unlink()
+        except FileNotFoundError:
+            ...
 
-        self.helper_runtime_dir.rmdir()
+        try:
+            self.helper_runtime_dir.rmdir()
+        except FileNotFoundError:
+            ...
+        except OSError:
+            ...
 
-        if self.dbus_session_socket_path.exists():
+        try:
             self.dbus_session_socket_path.unlink()
+        except FileNotFoundError:
+            ...
 
-        if self.dbus_system_socket_path.exists():
+        try:
             self.dbus_system_socket_path.unlink()
+        except FileNotFoundError:
+            ...
 
-        self.runtime_dir.rmdir()
+        try:
+            self.runtime_dir.rmdir()
+        except FileNotFoundError:
+            ...
+        except OSError:
+            ...
 
 
 class BubblejailProfile:
