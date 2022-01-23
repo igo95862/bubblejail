@@ -36,7 +36,7 @@ If you are not using Arch Linux you can try to manually install with meson
 
 #### Requirements
 
-* Python 3 (>= 3.9) - python interpretor
+* Python 3 (>= 3.9) - python interpreter
 * Python XDG - XDG standards for python
 * Python TOML -  TOML file support for python
 * Bubblewrap (>= 0.5.0) - sandboxing command line utility
@@ -45,6 +45,7 @@ If you are not using Arch Linux you can try to manually install with meson
 * Python Qt5 - for GUI
 * Meson - build system
 * m4 - macro generator used during build
+* x86_64 architecture (please open an issue if you are interested in other architectures)
 
 Optional:
 
