@@ -15,93 +15,117 @@
 # along with bubblejail.  If not, see <https://www.gnu.org/licenses/>.
 from __future__ import annotations
 
-from dataclasses import dataclass, field
+from dataclasses import dataclass
 from os import environ
-from typing import List, Optional, Tuple
+from collections.abc import Generator
+from typing import List, Optional
 
 
-@dataclass
 class BwrapConfigBase:
-    arg_word: str = field(init=False)
+    arg_word: str
 
-    def to_args(self) -> Tuple[str, ...]:
-        return (self.arg_word, )
+    def to_args(self) -> Generator[str, None, None]:
+        yield self.arg_word
 
 
-@dataclass
-class DirCreate(BwrapConfigBase):
+class ShareNetwork(BwrapConfigBase):
+    arg_word = "--share-net"
+
+
+class BwrapOptionWithPermissions(BwrapConfigBase):
+    def __init__(self, permissions: Optional[int] = None):
+        super().__init__()
+        self.permissions = permissions
+
+    def to_args(self) -> Generator[str, None, None]:
+        if self.permissions is not None:
+            yield '--perms'
+            yield oct(self.permissions).lstrip('0o')
+
+        yield from super().to_args()
+
+
+class DirCreate(BwrapOptionWithPermissions):
     arg_word = '--dir'
-    dest: str
 
-    def to_args(self) -> Tuple[str, str]:
-        return self.arg_word, self.dest
+    def __init__(self, dest: str, permissions: Optional[int] = None):
+        super().__init__(permissions)
+        self.dest = dest
+
+    def to_args(self) -> Generator[str, None, None]:
+        yield from super().to_args()
+        yield self.dest
 
 
-@dataclass
 class Symlink(BwrapConfigBase):
     arg_word = '--symlink'
-    source: str
-    dest: str
 
-    def to_args(self) -> Tuple[str, str, str]:
-        return self.arg_word, self.source, self.dest
+    def __init__(self, source: str, dest: str):
+        super().__init__()
+        self.source = source
+        self.dest = dest
+
+    def to_args(self) -> Generator[str, None, None]:
+        yield from super().to_args()
+        yield self.source
+        yield self.dest
+
+
+class EnvrimentalVar(BwrapConfigBase):
+    arg_word = '--setenv'
+
+    def __init__(self, var_name: str, var_value: Optional[str] = None):
+        super().__init__()
+        self.var_name = var_name
+        self.var_value = var_value
+
+    def to_args(self) -> Generator[str, None, None]:
+        yield from super().to_args()
+
+        yield self.var_name
+        yield (self.var_value if self.var_value is not None
+               else environ[self.var_name])
+
+
+class ReadOnlyBind(BwrapConfigBase):
+    arg_word = '--ro-bind'
+
+    def __init__(self, source: str, dest: Optional[str] = None):
+        super().__init__()
+        self.source = source
+        self.dest = dest
+
+    def to_args(self) -> Generator[str, None, None]:
+        yield from super().to_args()
+
+        yield self.source
+        yield self.dest if self.dest is not None else self.source
+
+
+class ReadOnlyBindTry(ReadOnlyBind):
+    arg_word = '--ro-bind-try'
+
+
+class Bind(ReadOnlyBind):
+    arg_word = '--bind'
+
+
+class BindTry(ReadOnlyBind):
+    arg_word = '--bind-try'
+
+
+class DevBind(ReadOnlyBind):
+    arg_word = '--dev-bind'
+
+
+class DevBindTry(ReadOnlyBind):
+    arg_word = '--dev-bind-try'
 
 
 @dataclass
 class FileTransfer:
     content: bytes
     dest: str
-
-
-@dataclass
-class EnvrimentalVar(BwrapConfigBase):
-    arg_word = '--setenv'
-    var_name: str
-    var_value: Optional[str] = None
-
-    def to_args(self) -> Tuple[str, str, str]:
-        return (
-            self.arg_word,
-            self.var_name,
-            self.var_value if self.var_value is not None
-            else environ[self.var_name])
-
-
-@dataclass
-class ReadOnlyBind(BwrapConfigBase):
-    arg_word = '--ro-bind'
-    source: str
-    dest: Optional[str] = None
-
-    def to_args(self) -> Tuple[str, str, str]:
-        return (self.arg_word,
-                self.source,
-                self.dest if self.dest is not None else self.source)
-
-
-@dataclass
-class ReadOnlyBindTry(ReadOnlyBind):
-    arg_word = '--ro-bind-try'
-
-
-@dataclass
-class Bind(ReadOnlyBind):
-    arg_word = '--bind'
-
-
-@dataclass
-class BindTry(ReadOnlyBind):
-    arg_word = '--bind-try'
-
-
-@dataclass
-class DevBind(ReadOnlyBind):
-    arg_word = '--dev-bind'
-
-
-@dataclass
-class DevBindTry(ReadOnlyBind):
-    arg_word = '--dev-bind-try'
 
 
 class DbusCommon:
@@ -128,10 +152,6 @@ class DbusSessionTalkTo(DbusSessionArgs):
 
 class DbusSessionOwn(DbusSessionArgs):
     arg_word = '--own'
-
-
-class ShareNetwork(BwrapConfigBase):
-    arg_word = "--share-net"
 
 
 class SeccompDirective:

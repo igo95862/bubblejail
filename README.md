@@ -36,10 +36,10 @@ If you are not using Arch Linux you can try to manually install with meson
 
 #### Requirements
 
-* Python 3 - version 3.8 or higher
+* Python 3 (>= 3.9) - python interpretor
 * Python XDG - XDG standards for python
 * Python TOML -  TOML file support for python
-* Bubblewrap - sandboxing command line utility
+* Bubblewrap (>= 0.5.0) - sandboxing command line utility
 * XDG D-Bus Proxy - filtering dbus proxy
 * Desktop File Utils - to manipulate default applications
 * Python Qt5 - for GUI
