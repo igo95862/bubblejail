@@ -21,7 +21,6 @@ from asyncio import (
     Task,
     create_subprocess_exec,
     create_task,
-    get_event_loop,
     get_running_loop,
     open_unix_connection,
     wait_for,
@@ -366,7 +365,7 @@ class BubblejailInstance:
                     name='debug shell'
                 )
 
-            loop = get_event_loop()
+            loop = get_running_loop()
             loop.add_signal_handler(SIGTERM, sigterm_bubblejail_handler,
                                     bwrap_process.pid)
 

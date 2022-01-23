@@ -17,9 +17,19 @@ from __future__ import annotations
 
 from argparse import REMAINDER as ARG_REMAINDER
 from argparse import ArgumentParser
-from asyncio import (AbstractServer, CancelledError, Event, StreamReader,
-                     StreamWriter, Task, create_subprocess_exec, create_task,
-                     get_event_loop, sleep, start_unix_server)
+from asyncio import (
+    AbstractServer,
+    CancelledError,
+    Event,
+    StreamReader,
+    StreamWriter,
+    Task,
+    create_subprocess_exec,
+    create_task,
+    new_event_loop,
+    sleep,
+    start_unix_server,
+)
 from asyncio.subprocess import DEVNULL, PIPE, STDOUT
 from json import dumps as json_dumps
 from json import loads as json_loads
@@ -27,9 +37,17 @@ from os import WNOHANG, kill, wait3, waitpid
 from pathlib import Path
 from signal import SIGCHLD, SIGKILL, SIGTERM
 from time import sleep as sync_sleep
-from typing import (Any, Awaitable, Dict, Generator, List, Literal, Optional,
-                    Tuple, Union)
-
+from typing import (
+    Any,
+    Awaitable,
+    Dict,
+    Generator,
+    List,
+    Literal,
+    Optional,
+    Tuple,
+    Union,
+)
 
 # region Rpc
 RpcMethods = Literal['ping', 'run']
@@ -436,7 +454,7 @@ def bubblejail_helper_main() -> None:
         await helper.start_async()
         await helper
 
-    event_loop = get_event_loop()
+    event_loop = new_event_loop()
     run_helper_task = event_loop.create_task(run_helper(), name='Run helper')
     event_loop.add_signal_handler(SIGCHLD, handle_children)
     event_loop.add_signal_handler(SIGTERM, terminate_children, run_helper_task)

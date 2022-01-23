@@ -15,7 +15,7 @@
 # along with bubblejail.  If not, see <https://www.gnu.org/licenses/>.
 
 from asyncio import (StreamReader, StreamWriter, create_subprocess_exec,
-                     create_task, get_event_loop, open_unix_connection)
+                     create_task, get_running_loop, open_unix_connection)
 from os import unlink
 from pathlib import Path
 from unittest import IsolatedAsyncioTestCase, TestCase
@@ -31,9 +31,6 @@ test_socket_path = Path('./test_socket')
 class HelperTests(IsolatedAsyncioTestCase):
 
     def setUp(self) -> None:
-        # Set asyncio debug mode
-        self.event_loop = get_event_loop()
-        self.event_loop.set_debug(True)
         # Create helper
         self.helper = BubblejailHelper(
             startup_args=[],
@@ -43,6 +40,8 @@ class HelperTests(IsolatedAsyncioTestCase):
         )
 
     async def asyncSetUp(self) -> None:
+        # Set asyncio debug mode
+        get_running_loop().set_debug(True)
         # Start helper
         await self.helper.start_async()
         # Get stream reader and writer
