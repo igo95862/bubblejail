@@ -30,7 +30,6 @@ from time import sleep as sync_sleep
 from typing import (Any, Awaitable, Dict, Generator, List, Literal, Optional,
                     Tuple, Union)
 
-from xdg.BaseDirectory import get_runtime_dir
 
 # region Rpc
 RpcMethods = Literal['ping', 'run']
@@ -231,10 +230,6 @@ class BubblejailHelper(Awaitable[bool]):
         # Fix-ups
         if not use_fixups:
             return
-
-        # Make sure that XDG_RUNTIME_DIR is 700
-        # otherwise KDE applications do not work
-        Path(get_runtime_dir()).chmod(0o700)
 
     @classmethod
     def iter_proc_process_directories(cls) -> Generator[Path, None, None]:

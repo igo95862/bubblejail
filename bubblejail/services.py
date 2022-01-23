@@ -377,7 +377,7 @@ class BubblejailDefaults(BubblejailService):
         yield DirCreate('/tmp')
         yield DirCreate('/var')
 
-        yield DirCreate('/run/user/1000')
+        yield DirCreate('/run/user/1000', permissions=0o700)
         yield DirCreate('/usr/local')  # Used for overwrites
 
         # Bind pseudo home
