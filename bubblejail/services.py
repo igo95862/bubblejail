@@ -401,6 +401,39 @@ class BubblejailDefaults(BubblejailService):
 
         yield FileTransfer(generate_machine_id_bytes(), '/etc/machine-id')
 
+        if not environ.get('BUBBLEJAIL_DISABLE_SECCOMP_DEFAULTS'):
+            for blocked_syscal in (
+                "bdflush", "io_pgetevents",
+                "kexec_file_load", "kexec_load",
+                "migrate_pages", "move_pages",
+                "nfsservctl", "nice", "oldfstat",
+                "oldlstat", "oldolduname", "oldstat",
+                "olduname", "pciconfig_iobase", "pciconfig_read",
+                "pciconfig_write", "sgetmask", "ssetmask", "swapcontext",
+                "swapoff", "swapon", "sysfs", "uselib", "userfaultfd",
+                "ustat", "vm86", "vm86old", "vmsplice",
+
+                "bpf", "fanotify_init", "lookup_dcookie",
+                "perf_event_open", "quotactl", "setdomainname",
+                "sethostname", "setns",
+
+                "chroot",
+
+                "delete_module", "init_module",
+                "finit_module", "query_module",
+
+                "acct",
+
+                "iopl", "ioperm",
+
+                "settimeofday", "stime",
+                "clock_settime", "clock_settime64"
+
+                "vhangup",
+
+            ):
+                yield SeccompSyscallErrno(blocked_syscal, 1)
+
     def __repr__(self) -> str:
         return "Bubblejail defaults."
 
