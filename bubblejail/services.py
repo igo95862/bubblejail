@@ -417,7 +417,8 @@ class BubblejailDefaults(BubblejailService):
                 "perf_event_open", "quotactl", "setdomainname",
                 "sethostname", "setns",
 
-                "chroot",
+                # "chroot",
+                # Firefox and Chromium fails if chroot is not available
 
                 "delete_module", "init_module",
                 "finit_module", "query_module",
