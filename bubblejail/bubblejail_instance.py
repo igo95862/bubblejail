@@ -482,8 +482,7 @@ class BubblejailInit:
         self.bwrap_options_args.extend(('--dev', '/dev'))
 
         # Unset all variables
-        for e in environ:
-            self.bwrap_options_args.extend(('--unsetenv', e))
+        self.bwrap_options_args.append('--clearenv')
 
         for service in self.instance_config.iter_services():
             config_iterator = service.__iter__()
