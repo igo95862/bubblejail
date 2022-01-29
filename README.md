@@ -45,7 +45,7 @@ If you are not using Arch Linux you can try to manually install with meson
 * Python Qt5 - for GUI
 * Meson - build system
 * m4 - macro generator used during build
-* x86_64 architecture (please open an issue if you are interested in other architectures)
+* libseccomp - helper library for seccomp rules
 
 Optional:
 

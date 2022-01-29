@@ -17,6 +17,7 @@ from __future__ import annotations
 
 from ctypes import CDLL, c_char_p, c_int, c_uint, c_uint32, c_void_p
 from ctypes.util import find_library
+from platform import machine
 from tempfile import TemporaryFile
 from typing import IO, Callable, Tuple, Type, TypeVar, cast
 
@@ -64,11 +65,11 @@ class SeccompState:
 
     def __init__(self) -> None:
         self._seccomp_ruleset_ptr: c_void_p = seccomp_init(SCMP_ACT_ALLOW)
-        # HACK: Assuming 99.9 percent of people will use x86_64 we only
-        # need to add x86 for compatibilities with 32 bit applications
-        # I you plan on using bubblejail on ARM or any other arch
-        # please open issue on github
-        seccomp_arch_add(self._seccomp_ruleset_ptr, ARCH_X86)
+
+        if machine() == 'x86_64':
+            seccomp_arch_add(self._seccomp_ruleset_ptr, ARCH_X86)
+
+        # TODO: Add armv7 on aarch64 systems
 
     def filter_syscall(self, syscall_name: str, error_number: int) -> None:
         resolved_syscall_int = seccomp_syscall_resolve_name(
