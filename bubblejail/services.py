@@ -47,6 +47,7 @@ from .bwrap_config import (
     FileTransfer,
     LaunchArguments,
     ReadOnlyBind,
+    ReadOnlyBindTry,
     SeccompDirective,
     SeccompSyscallErrno,
     ShareNetwork,
@@ -369,9 +370,9 @@ class BubblejailDefaults(BubblejailService):
         yield ReadOnlyBind('/etc/login.defs')  # ???: is this file needed
         # ldconfig: linker cache
         # particularly needed for steam runtime to work
-        yield ReadOnlyBind('/etc/ld.so.cache')
-        yield ReadOnlyBind('/etc/ld.so.conf')
-        yield ReadOnlyBind('/etc/ld.so.conf.d')
+        yield ReadOnlyBindTry('/etc/ld.so.cache')
+        yield ReadOnlyBindTry('/etc/ld.so.conf')
+        yield ReadOnlyBindTry('/etc/ld.so.conf.d')
 
         # Temporary directories
         yield DirCreate('/tmp')
