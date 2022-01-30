@@ -13,6 +13,8 @@ Maybe check Arch Linux stats for commonly used applications?
 
 # Services
 
+* Use libudev for device paths and attributes. Needs a new libudev ctype binds.
+
 ## GTK
 
 * How does directory metadata is shared. If you sort a directory by size, it is somehow is remmebered when not sandboxed. Is it a Dbus API? a file?
