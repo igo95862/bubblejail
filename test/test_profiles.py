@@ -35,7 +35,8 @@ class TestProfiles(TestCase):
     def test_profiles(self) -> None:
         for profile_path in Path('./data/bubblejail/profiles/').iterdir():
             with self.subTest(profile_path.stem):
-                BubblejailProfile(**toml_load(profile_path))
+                with open(profile_path, mode='rb') as f:
+                    BubblejailProfile(**toml_load(f))
 
 
 if __name__ == '__main__':
