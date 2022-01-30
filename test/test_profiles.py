@@ -16,15 +16,19 @@
 
 
 from pathlib import Path
+from typing import TYPE_CHECKING
 from unittest import TestCase
 from unittest import main as unittest_main
 
 from bubblejail.bubblejail_instance import BubblejailProfile
 
-try:
+if TYPE_CHECKING:
     from tomli import load as toml_load
-except ImportError:
-    from toml import load as toml_load
+else:
+    try:
+        from tomli import load as toml_load
+    except ImportError:
+        from toml import load as toml_load
 
 
 class TestProfiles(TestCase):

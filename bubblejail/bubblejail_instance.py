@@ -36,6 +36,7 @@ from signal import SIGTERM
 from tempfile import TemporaryDirectory, TemporaryFile
 from typing import (
     IO,
+    TYPE_CHECKING,
     Any,
     Generator,
     List,
@@ -46,15 +47,19 @@ from typing import (
     cast,
 )
 
-try:
-    from tomli_w import dump as toml_dump
-except ImportError:
-    from toml import dump as toml_dump
-
-try:
+if TYPE_CHECKING:
     from tomli import loads as toml_loads
-except ImportError:
-    from toml import loads as toml_loads
+    from tomli_w import dump as toml_dump
+else:
+    try:
+        from tomli_w import dump as toml_dump
+    except ImportError:
+        from toml import dump as toml_dump
+
+    try:
+        from tomli import loads as toml_loads
+    except ImportError:
+        from toml import loads as toml_loads
 
 from xdg.BaseDirectory import get_runtime_dir
 
