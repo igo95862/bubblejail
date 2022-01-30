@@ -20,8 +20,17 @@ from pathlib import Path
 from subprocess import run as subprocess_run
 from typing import Any, Dict, Generator, Optional
 
-from toml import dump as toml_dump
-from toml import load as toml_load
+try:
+    from tomli_w import dump as toml_dump
+except ImportError:
+    from toml import dump as toml_dump
+
+try:
+    from tomli import load as toml_load
+except ImportError:
+    from toml import load as toml_load
+
+
 from xdg import IniFile
 from xdg.BaseDirectory import xdg_config_home, xdg_data_home
 
@@ -47,7 +56,7 @@ def convert_old_conf_to_new() -> None:
         print(f"Converting {instance_directory.stem}")
 
         old_conf_path = instance_directory / 'config.toml'
-        with open(old_conf_path) as old_conf_file:
+        with open(old_conf_path, mode='b') as old_conf_file:
             old_conf_dict = toml_load(old_conf_file)
 
         new_conf: Dict[str, Any] = {}
@@ -70,7 +79,7 @@ def convert_old_conf_to_new() -> None:
 
         new_conf['common'] = old_conf_dict
 
-        with open(instance_directory / FILE_NAME_SERVICES, mode='x') as f:
+        with open(instance_directory / FILE_NAME_SERVICES, mode='xb') as f:
             toml_dump(new_conf, f)
 
 
@@ -94,7 +103,7 @@ class BubblejailDirectories:
             possible_profile_path = profiles_directory / profile_file_name
 
             if possible_profile_path.is_file():
-                with open(possible_profile_path) as profile_file:
+                with open(possible_profile_path, mode='b') as profile_file:
                     return BubblejailProfile(**toml_load(profile_file))
 
         raise BubblejailException(f"Profile {profile_name} not found")
@@ -140,7 +149,7 @@ class BubblejailDirectories:
 
         # Make config.json
         with (instance_directory / FILE_NAME_SERVICES).open(
-                mode='x') as instance_conf_file:
+                mode='xb') as instance_conf_file:
 
             toml_dump(profile.config.get_service_conf_dict(),
                       instance_conf_file)

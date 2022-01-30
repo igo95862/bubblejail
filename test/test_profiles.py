@@ -19,16 +19,19 @@ from pathlib import Path
 from unittest import TestCase
 from unittest import main as unittest_main
 
-
 from bubblejail.bubblejail_instance import BubblejailProfile
-from toml import load
+
+try:
+    from tomli import load as toml_load
+except ImportError:
+    from toml import load as toml_load
 
 
 class TestProfiles(TestCase):
     def test_profiles(self) -> None:
         for profile_path in Path('./data/bubblejail/profiles/').iterdir():
             with self.subTest(profile_path.stem):
-                BubblejailProfile(**load(profile_path))
+                BubblejailProfile(**toml_load(profile_path))
 
 
 if __name__ == '__main__':
