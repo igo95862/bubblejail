@@ -39,7 +39,6 @@ from typing import (
     Any,
     Generator,
     List,
-    MutableMapping,
     Optional,
     Set,
     Type,
@@ -47,8 +46,16 @@ from typing import (
     cast,
 )
 
-from toml import dump as toml_dump
-from toml import loads as toml_loads
+try:
+    from tomli_w import dump as toml_dump
+except ImportError:
+    from toml import dump as toml_dump
+
+try:
+    from tomli import loads as toml_loads
+except ImportError:
+    from toml import loads as toml_loads
+
 from xdg.BaseDirectory import get_runtime_dir
 
 from .bubblejail_helper import RequestRun
@@ -165,7 +172,7 @@ class BubblejailInstance:
 
     # region Metadata
 
-    def _get_metadata_dict(self) -> MutableMapping[Any, Any]:
+    def _get_metadata_dict(self) -> dict[str, Any]:
         try:
             with open(self.path_metadata_file) as metadata_file:
                 return toml_loads(metadata_file.read())
@@ -176,7 +183,7 @@ class BubblejailInstance:
         toml_dict = self._get_metadata_dict()
         toml_dict[key] = value
 
-        with open(self.path_metadata_file, mode='w') as metadata_file:
+        with open(self.path_metadata_file, mode='wb') as metadata_file:
             toml_dump(toml_dict, metadata_file)
 
     def _get_metadata_value(self, key: str) -> Optional[str]:
@@ -229,7 +236,7 @@ class BubblejailInstance:
         return BubblejailInstanceConfig(conf_dict)
 
     def save_config(self, config: BubblejailInstanceConfig) -> None:
-        with open(self.path_config_file, mode='w') as conf_file:
+        with open(self.path_config_file, mode='wb') as conf_file:
             toml_dump(config.get_service_conf_dict(), conf_file)
 
     async def send_run_rpc(
