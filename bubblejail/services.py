@@ -32,6 +32,7 @@ from typing import (
     Union,
 )
 
+from pyudev import Context as UdevContext
 from xdg import BaseDirectory
 
 from .bwrap_config import (
@@ -646,29 +647,14 @@ class DirectRendering(BubblejailService):
 
         # TODO: Allow to select which DRM devices to pass
 
-        # Bind /dev/dri and /sys/dev/char and /sys/devices
-        # Get names of cardX and renderX in /dev/dri
-        dev_dri_path = Path('/dev/dri/')
-        device_names = set()
-        for x in dev_dri_path.iterdir():
-            if x.is_char_device():
-                device_names.add(x.stem)
-
-        # Resolve links in /sys/dev/char/
+        udev = UdevContext()
         sys_dev_char_path = Path('/sys/dev/char/')
-        # For each symlink in /sys/dev/char/ resolve
-        # and see if they point to cardX or renderX
-        for x in sys_dev_char_path.iterdir():
-            x_resolved = x.resolve()
-            if x_resolved.name in device_names:
-                # Found the dri device
-                # Add the /sys/dev/char/ path
-                yield Symlink(str(x_resolved), str(x))
-                # Add the two times parent (parents[1])
-                # Seems like the dri devices are stored as
-                # /sys/devices/..pcie_id../drm/dri
-                # We want to bind the /sys/devices/..pcie_id../
-                yield DevBind(str(x_resolved.parents[1]))
+        # Enumerate card* and render* devices
+        for dri_dev in udev.list_devices(subsystem='drm', DEVTYPE='drm_minor'):
+            devnum = dri_dev['MAJOR'] + ':' + dri_dev['MINOR']
+            char_path = sys_dev_char_path / devnum
+            yield Symlink(str(readlink(char_path)), str(char_path))
+            yield DevBind(dri_dev.parent.sys_path)
 
         yield DevBind('/dev/dri')
 
@@ -701,51 +687,26 @@ class Joystick(BubblejailService):
         if not self.enabled:
             return
 
-        look_for_names: Set[str] = set()
-
         dev_input_path = Path('/dev/input')
         sys_class_input_path = Path('/sys/class/input')
-        js_names: Set[str] = set()
-        for input_dev in dev_input_path.iterdir():
-            if not input_dev.is_char_device():
-                continue
-            # If device dooes not have read permission
-            # for others it is not a gamepad
-            # Only jsX devices have this, we need to find eventX of gamepad
-            if (input_dev.stat().st_mode & 0o004) == 0:
-                continue
 
-            js_names.add(input_dev.name)
+        udev = UdevContext()
+        for input_dev in udev.list_devices(subsystem='input', sys_name='input*', ID_INPUT_JOYSTICK=1):
 
-        look_for_names.update(js_names)
-        # Find event name of js device
-        # Resolve the PCI name. Should be something like this:
-        # /sys/devices/.../input/input23/js0
-        # Iterate over names in this directory
-        # and add eventX names
-        for js_name in js_names:
-            sys_class_input_js = sys_class_input_path / js_name
+            # Ensure the parent device shows up in /sys
+            yield DevBind(input_dev.parent.sys_path)
 
-            js_reloved = sys_class_input_js.resolve()
-            js_input_path = js_reloved.parents[0]
-            for input_element in js_input_path.iterdir():
-                if input_element.name.startswith('event'):
-                    look_for_names.add(input_element.name)
+            # Add each of the corresponding event* or js* devices
+            for child in input_dev.children:
 
-        # Find the *-joystick in /dev/input/by-path/
-        for dev_name in look_for_names:
-            # Add /dev/input/X device
-            yield DevBind(str(dev_input_path / dev_name))
+                # Path in /dev
+                yield DevBind(child['DEVNAME'])
 
-            sys_class_path = sys_class_input_path / dev_name
-
-            yield Symlink(
-                str(readlink(sys_class_path)),
-                str(sys_class_path)
-            )
-
-            pci_path = sys_class_path.resolve()
-            yield DevBind(str(pci_path.parents[2]))
+                sys_class_path = sys_class_input_path / child.sys_name
+                yield Symlink(
+                    str(readlink(sys_class_path)),
+                    str(sys_class_path)
+                )
 
     name = 'joystick'
     pretty_name = 'Joysticks and gamepads'
