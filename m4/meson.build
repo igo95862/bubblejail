@@ -1,6 +1,18 @@
 lib_prefix_path = get_option('prefix') / get_option('libdir')
 share_prefix_path = get_option('prefix') / get_option('datadir')
 
+m4_commands = [
+    m4_compiler,
+    '--define', '_SHARE_PREFIX=' + share_prefix_path,
+    '--define', '_LIB_PREFIX=' + lib_prefix_path,
+]
+
+if not get_option('use_python_site_packages_dir')
+    m4_commands += ['--define', '_PYTHON_PACKAGES_DIR=' + get_option('prefix') / python_packages_dir]
+endif
+
+m4_commands +=  '@INPUT@'
+
 bubblejail_cli_launch_m4 = custom_target(
     'bubblejail_cli_launch_m4',
     build_by_default : true,
@@ -10,12 +22,7 @@ bubblejail_cli_launch_m4 = custom_target(
     install : true,
     install_dir : get_option('bindir'),
     install_mode : 'rwxr-xr-x',
-    command : [
-        m4_compiler,
-        '--define', '_LIB_PREFIX=' + lib_prefix_path,
-        '--define', '_SHARE_PREFIX=' + share_prefix_path,
-        '@INPUT@',
-    ]
+    command : m4_commands,
 )
 
 bubblejail_gui_qt_launch_m4 = custom_target(
@@ -27,12 +34,7 @@ bubblejail_gui_qt_launch_m4 = custom_target(
     install : true,
     install_dir : get_option('bindir'),
     install_mode : 'rwxr-xr-x',
-    command : [
-        m4_compiler,
-        '--define', '_LIB_PREFIX=' + lib_prefix_path,
-        '--define', '_SHARE_PREFIX=' + share_prefix_path,
-        '@INPUT@',
-    ]
+    command : m4_commands,
 )
 
 bubblejail_helper_launch_m4 = custom_target(
@@ -44,10 +46,5 @@ bubblejail_helper_launch_m4 = custom_target(
     install : true,
     install_dir : get_option('libdir') / 'bubblejail',
     install_mode : 'rwxr-xr-x',
-    command : [
-        m4_compiler,
-        '--define', '_LIB_PREFIX=' + lib_prefix_path,
-        '--define', '_SHARE_PREFIX=' + share_prefix_path,
-        '@INPUT@',
-    ]
+    command : m4_commands,
 )

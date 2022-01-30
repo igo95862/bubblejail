@@ -13,7 +13,13 @@ source_files = [
    'services.py',
 ]
 
-bubblejail_package_dir = get_option('libdir') / 'bubblejail/python_packages/bubblejail'
+if get_option('use_python_site_packages_dir')
+    python_packages_dir = py_installation.get_path('purelib')
+else
+    python_packages_dir = get_option('libdir') / 'bubblejail/python_packages/'
+endif
+
+bubblejail_package_dir = python_packages_dir / 'bubblejail'
 
 bubblejail_lib_package = custom_target(
     'bubblejail_lib_package',
