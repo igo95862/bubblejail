@@ -59,7 +59,7 @@ def convert_old_conf_to_new() -> None:
         print(f"Converting {instance_directory.stem}")
 
         old_conf_path = instance_directory / 'config.toml'
-        with open(old_conf_path, mode='b') as old_conf_file:
+        with open(old_conf_path, mode='rb') as old_conf_file:
             old_conf_dict = toml_load(old_conf_file)
 
         new_conf: Dict[str, Any] = {}
