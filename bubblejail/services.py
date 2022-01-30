@@ -26,7 +26,6 @@ from typing import (
     Iterator,
     List,
     Optional,
-    Set,
     Tuple,
     Type,
     Union,
@@ -687,12 +686,11 @@ class Joystick(BubblejailService):
         if not self.enabled:
             return
 
-        dev_input_path = Path('/dev/input')
-        sys_class_input_path = Path('/sys/class/input')
-
         udev = UdevContext()
-        for input_dev in udev.list_devices(subsystem='input', sys_name='input*', ID_INPUT_JOYSTICK=1):
-
+        sys_class_input_path = Path('/sys/class/input')
+        for input_dev in udev.list_devices(subsystem='input',
+                                           sys_name='input*',
+                                           ID_INPUT_JOYSTICK=1):
             # Ensure the parent device shows up in /sys
             yield DevBind(input_dev.parent.sys_path)
 
