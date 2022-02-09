@@ -24,7 +24,9 @@ Each instance has a `services.toml` file which defines the configuration of the 
 
 ## Installation
 
-**AUR is preferred way of installing**
+### Packages
+
+[![Packaging status](https://repology.org/badge/vertical-allrepos/bubblejail.svg)](https://repology.org/project/bubblejail/versions)
 
 [AUR git](https://aur.archlinux.org/packages/bubblejail-git/)
 
@@ -32,7 +34,7 @@ Each instance has a `services.toml` file which defines the configuration of the 
 
 ### Manual Installation
 
-If you are not using Arch Linux you can try to manually install with meson
+If your distro does not have a package you can try to manually install with meson
 
 #### Requirements
 
