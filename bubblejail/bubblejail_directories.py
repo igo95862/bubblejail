@@ -106,7 +106,7 @@ class BubblejailDirectories:
             possible_profile_path = profiles_directory / profile_file_name
 
             if possible_profile_path.is_file():
-                with open(possible_profile_path, mode='b') as profile_file:
+                with open(possible_profile_path, mode='rb') as profile_file:
                     return BubblejailProfile(**toml_load(profile_file))
 
         raise BubblejailException(f"Profile {profile_name} not found")
