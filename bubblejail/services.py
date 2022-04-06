@@ -936,11 +936,29 @@ class VideoForLinux(BubblejailService):
     description = 'Video capture. (webcams and etc.)'
 
 
+class IBus(BubblejailService):
+    def __iter__(self) -> ServiceGeneratorType:
+        if not self.enabled:
+            return
+
+        yield EnvrimentalVar('IBUS_USE_PORTAL', '1')
+        yield EnvrimentalVar('GTK_IM_MODULE', 'ibus')
+        yield EnvrimentalVar('QT_IM_MODULE', 'ibus')
+        yield EnvrimentalVar('XMODIFIERS', '@im=ibus')
+        yield EnvrimentalVar('GLFW_IM_MODULE', 'ibus')
+        yield DbusSessionTalkTo('org.freedesktop.portal.IBus.*')
+
+    name = 'ibus'
+    pretty_name = 'IBus input method'
+    description = ('Gives access to IBus input method.\n'
+                   'This is generally the default input method for multilingual input.')
+
+
 SERVICES_CLASSES: Tuple[Type[BubblejailService], ...] = (
     CommonSettings, X11, Wayland,
     Network, PulseAudio, HomeShare, DirectRendering,
     Systray, Joystick, RootShare, OpenJDK, Notifications,
-    GnomeToolkit, Pipewire, VideoForLinux,
+    GnomeToolkit, Pipewire, VideoForLinux, IBus,
 )
 
 ServicesConfDictType = Dict[str, Dict[str, ServiceOptionTypes]]
