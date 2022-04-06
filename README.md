@@ -117,6 +117,7 @@ See man page:
     * paths: List of path strings to share with sandbox. Required.
 * openjdk: Access to Java libraries.
 * notify: Access to desktop notifications.
+* ibus: Multilingual input.
 
 ## Available profiles
 
