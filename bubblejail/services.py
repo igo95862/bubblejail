@@ -675,6 +675,11 @@ class DirectRendering(BubblejailService):
         if self.enable_aco.get_value():
             yield EnvrimentalVar('RADV_PERFTEST', 'aco')
 
+        # Nvidia specifc binds
+        for x in Path('/dev/').iterdir():
+            if x.name.startswith('nvidia'):
+                yield DevBind(str(x))
+
     name = 'direct_rendering'
     pretty_name = 'Direct Rendering'
     description = 'Provides access to GPU'
