@@ -1,10 +1,17 @@
 lib_prefix_path = get_option('prefix') / get_option('libdir')
 share_prefix_path = get_option('prefix') / get_option('datadir')
 
+version_display = get_option('version_display')
+
+if version_display == ''
+    version_display = meson.project_version()
+endif
+
 m4_commands = [
     m4_compiler,
     '--define', '_SHARE_PREFIX=' + share_prefix_path,
     '--define', '_LIB_PREFIX=' + lib_prefix_path,
+    '--define', '_BUBBLEJAIL_VERSION=' + version_display,
 ]
 
 if not get_option('use_python_site_packages_dir')

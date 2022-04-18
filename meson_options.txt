@@ -1,1 +1,2 @@
 option('use_python_site_packages_dir', type: 'boolean', value: false, description: 'Use pythons site-packages dir for bubblejail python package instead of version independent location.')
+option('version_display', type: 'string', value: '', description: 'Custom --version display.')

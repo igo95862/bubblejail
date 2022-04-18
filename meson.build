@@ -1,4 +1,6 @@
-project('bubblejail')
+project('bubblejail',
+    version : '0.5.2'
+)
 
 pymod = import('python')
 py_installation = pymod.find_installation('python3')

@@ -23,6 +23,7 @@ from shlex import split as shlex_split
 from typing import Dict, Generator, Iterable, Iterator, List, Optional, Set
 
 from .bubblejail_directories import BubblejailDirectories
+from .bubblejail_utils import BubblejailSettings
 from .services import SERVICES_CLASSES
 
 
@@ -151,7 +152,7 @@ class AutoCompleteParser:
     ) -> None:
 
         want_instance_set = {'edit', 'run', 'generate-desktop-entry'}
-        base_options = {'--help'}
+        base_options = {'--help', '--version'}
 
         # enumerate words to allow LL parser lookahead
         enumer_words = enumerate(self.words)
@@ -276,6 +277,11 @@ def bjail_create_desktop_entry(args: Namespace) -> None:
 
 def bubblejail_main() -> None:
     parser = ArgumentParser()
+    parser.add_argument(
+        '--version',
+        action='version',
+        version=BubblejailSettings.VERSION,
+    )
     subparsers = parser.add_subparsers(
         required=True,
     )
