@@ -40,7 +40,8 @@ If your distro does not have a package you can try to manually install with meso
 
 * Python 3 (>= 3.9) - python interpreter
 * Python XDG - XDG standards for python
-* Python TOML -  TOML file support for python
+* Python Tomli -  TOML file support for python, `tomli` version
+* Python Tomli-W - writter part of `tomli`
 * Bubblewrap (>= 0.5.0) - sandboxing command line utility
 * XDG D-Bus Proxy - filtering dbus proxy
 * Desktop File Utils - to manipulate default applications

@@ -18,22 +18,10 @@ from __future__ import annotations
 from os import environ
 from pathlib import Path
 from subprocess import run as subprocess_run
-from typing import TYPE_CHECKING, Any, Dict, Generator, Optional
+from typing import Any, Dict, Generator, Optional
 
-if TYPE_CHECKING:
-    from tomli import load as toml_load
-    from tomli_w import dump as toml_dump
-else:
-    try:
-        from tomli_w import dump as toml_dump
-    except ImportError:
-        from toml import dump as toml_dump
-
-    try:
-        from tomli import load as toml_load
-    except ImportError:
-        from toml import load as toml_load
-
+from tomli import load as toml_load
+from tomli_w import dump as toml_dump
 from xdg import IniFile
 from xdg.BaseDirectory import xdg_config_home, xdg_data_home
 
