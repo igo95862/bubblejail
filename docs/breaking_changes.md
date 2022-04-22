@@ -1,3 +1,11 @@
+## From 0.5.0
+
+### TOML python package has been switched
+
+`toml` is an abandoned.
+
+New TOML packages are `tomli` (reading) and `tomli-w` (writting).
+
 ## From 0.2
 
 ### New configuration location and format
