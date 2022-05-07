@@ -18,7 +18,7 @@ from __future__ import annotations
 from os import environ, readlink
 from pathlib import Path
 from random import choices
-from string import ascii_letters, hexdigits
+from string import hexdigits
 from typing import (
     Dict,
     FrozenSet,
@@ -259,16 +259,9 @@ netgroup: files'''
     return FileTransfer(nsswitch.encode(), '/etc/nsswitch.conf')
 
 
-def random_hostname() -> str:
-    random_hostname = choices(
-        population=ascii_letters,
-        k=10,
-    )
-    return ''.join(random_hostname)
-
-
 def generate_hosts() -> Tuple[FileTransfer, FileTransfer]:
-    hostname = random_hostname()
+    from socket import gethostname
+    hostname = gethostname()
     hosts = '\n'.join((
         '127.0.0.1               localhost',
         '::1                     localhost',
