@@ -470,11 +470,6 @@ class BubblejailInit:
             # Set new session
             self.bwrap_options_args.append('--new-session')
 
-        # Set user and group id to pseudo user
-        self.bwrap_options_args.extend(
-            ('--uid', '1000', '--gid', '1000')
-        )
-
         # Proc
         self.bwrap_options_args.extend(('--proc', '/proc'))
         # Devtmpfs

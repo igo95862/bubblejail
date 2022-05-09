@@ -15,10 +15,8 @@
 # along with bubblejail.  If not, see <https://www.gnu.org/licenses/>.
 from __future__ import annotations
 
-from os import environ, readlink
+from os import environ, readlink, getuid
 from pathlib import Path
-from random import choices
-from string import hexdigits
 from typing import (
     Dict,
     FrozenSet,
@@ -47,7 +45,6 @@ from .bwrap_config import (
     FileTransfer,
     LaunchArguments,
     ReadOnlyBind,
-    ReadOnlyBindTry,
     SeccompDirective,
     SeccompSyscallErrno,
     ShareNetwork,
@@ -214,63 +211,6 @@ def generate_path_var() -> str:
         paths))
 
 
-def generate_passwd() -> FileTransfer:
-    passwd = '\n'.join((
-        'root:x:0:0::/root:/bin/nologin',
-        'user:x:1000:1000::/home/user:/bin/nologin',
-        'nobody:x:65534:65534:Nobody:/:/usr/bin/nologin',
-    ))
-
-    return FileTransfer(passwd.encode(), '/etc/passwd')
-
-
-def generate_group() -> FileTransfer:
-    group = '\n'.join((
-        'root:x:0:root',
-        'user:x:1000:user',
-        'nobody:x:65534:',
-    ))
-
-    return FileTransfer(group.encode(), '/etc/group')
-
-
-def generate_nssswitch() -> FileTransfer:
-    """
-    Based on what Arch Linux packages by default
-
-    Disables some systemd stuff that we don't need in sandbox
-    """
-
-    nsswitch = '''passwd: files
-group: files
-shadow: files
-
-publickey: files
-
-hosts: files myhostname dns
-networks: files
-
-protocols: files
-services: files
-ethers: files
-rpc: files
-
-netgroup: files'''
-    return FileTransfer(nsswitch.encode(), '/etc/nsswitch.conf')
-
-
-def generate_hosts() -> Tuple[FileTransfer, FileTransfer]:
-    from socket import gethostname
-    hostname = gethostname()
-    hosts = '\n'.join((
-        '127.0.0.1               localhost',
-        '::1                     localhost',
-        f'127.0.1.1               {hostname}.localdomain {hostname}',
-    ))
-    return (FileTransfer(hostname.encode(), '/etc/hostname'),
-            FileTransfer(hosts.encode(), '/etc/hosts'))
-
-
 def generate_toolkits() -> Generator[ServiceIterTypes, None, None]:
     config_home_path = Path(BaseDirectory.xdg_config_home)
     kde_globals_conf = config_home_path / 'kdeglobals'
@@ -278,15 +218,6 @@ def generate_toolkits() -> Generator[ServiceIterTypes, None, None]:
         yield ReadOnlyBind(
             str(kde_globals_conf),
             '/home/user/.config/kdeglobals')
-
-
-def generate_machine_id_bytes() -> bytes:
-    random_hex_string = choices(
-        population=hexdigits.lower(),
-        k=32,
-    )
-
-    return b''.join((x.encode() for x in random_hex_string))
 
 # endregion HelperFunctions
 
@@ -296,6 +227,7 @@ EMPTY_LIST: List[str] = []
 
 
 class BubblejailService:
+    xdg_runtime_dir = Path('/run/user/1000')
 
     def __init__(self) -> None:
         self.option_list: List[ServiceOption] = []
@@ -359,20 +291,14 @@ class BubblejailDefaults(BubblejailService):
                 else:
                     yield ReadOnlyBind(str(root_path))
 
-        # yield ReadOnlyBind('/etc/resolv.conf'),
-        yield ReadOnlyBind('/etc/login.defs')  # ???: is this file needed
-        # ldconfig: linker cache
-        # particularly needed for steam runtime to work
-        yield ReadOnlyBindTry('/etc/ld.so.cache')
-        yield ReadOnlyBindTry('/etc/ld.so.conf')
-        yield ReadOnlyBindTry('/etc/ld.so.conf.d')
+        yield ReadOnlyBind('/etc')
 
         # Temporary directories
         yield DirCreate('/tmp')
         yield DirCreate('/var')
 
-        yield DirCreate('/run/user/1000', permissions=0o700)
-        yield DirCreate('/usr/local')  # Used for overwrites
+        self.xdg_runtime_dir = Path(f"/run/user/{getuid()}")
+        yield DirCreate(str(self.xdg_runtime_dir), permissions=0o700)
 
         # Bind pseudo home
         home_path = yield ServiceWantsHomeBind()
@@ -383,17 +309,9 @@ class BubblejailDefaults(BubblejailService):
         yield EnvrimentalVar('USERNAME', 'user')
         yield EnvrimentalVar('HOME', '/home/user')
         yield EnvrimentalVar('PATH', generate_path_var())
-        yield EnvrimentalVar('XDG_RUNTIME_DIR', '/run/user/1000')
+        yield EnvrimentalVar('XDG_RUNTIME_DIR', str(self.xdg_runtime_dir))
 
         yield EnvrimentalVar('LANG')
-
-        yield generate_passwd()
-        yield generate_group()
-        yield generate_nssswitch()
-        yield FileTransfer(b'multi on', '/etc/host.conf')
-        yield from generate_hosts()
-
-        yield FileTransfer(generate_machine_id_bytes(), '/etc/machine-id')
 
         if not environ.get('BUBBLEJAIL_DISABLE_SECCOMP_DEFAULTS'):
             for blocked_syscal in (
@@ -493,9 +411,6 @@ class CommonSettings(BubblejailService):
             yield SeccompSyscallErrno('sync', 0)
             yield SeccompSyscallErrno('fsync', 0)
 
-        if self.share_local_time.get_value():
-            yield ReadOnlyBind('/etc/localtime')
-
         dbus_name = self.dbus_name.get_value()
         if dbus_name:
             yield DbusSessionOwn(dbus_name)
@@ -517,7 +432,6 @@ class X11(BubblejailService):
         yield EnvrimentalVar('DISPLAY')
         yield Bind(f"/tmp/.X11-unix/X{environ['DISPLAY'][1:]}")
         yield ReadOnlyBind(environ['XAUTHORITY'], '/tmp/.Xauthority')
-        yield ReadOnlyBind('/etc/fonts')
         yield EnvrimentalVar('XAUTHORITY', '/tmp/.Xauthority')
         yield from generate_toolkits()
 
@@ -549,7 +463,7 @@ class Wayland(BubblejailService):
         original_socket_path = (Path(BaseDirectory.get_runtime_dir())
                                 / wayland_display_env)
 
-        new_socket_path = Path('/run/user/1000') / 'wayland-0'
+        new_socket_path = self.xdg_runtime_dir / 'wayland-0'
         yield Bind(str(original_socket_path), str(new_socket_path))
         yield from generate_toolkits()
 
@@ -567,9 +481,6 @@ class Network(BubblejailService):
             return
 
         yield ShareNetwork()
-        yield ReadOnlyBind('/etc/resolv.conf')
-        yield ReadOnlyBind('/etc/ca-certificates')
-        yield ReadOnlyBind('/etc/ssl')
 
     name = 'network'
     pretty_name = 'Network access'
@@ -583,7 +494,7 @@ class PulseAudio(BubblejailService):
 
         yield Bind(
             f"{BaseDirectory.get_runtime_dir()}/pulse/native",
-            '/run/user/1000/pulse/native'
+            str(self.xdg_runtime_dir / 'pulse/native')
         )
 
     name = 'pulse_audio'
@@ -799,9 +710,8 @@ class OpenJDK(BubblejailService):
         if not self.enabled:
             return
 
-        yield ReadOnlyBind('/etc/java-openjdk')
-        yield ReadOnlyBind('/etc/profile.d/jre.csh')
-        yield ReadOnlyBind('/etc/profile.d/jre.sh')
+        return
+        yield
 
     name = 'openjdk'
     pretty_name = 'Java'
@@ -886,7 +796,7 @@ class Pipewire(BubblejailService):
         original_socket_path = (Path(BaseDirectory.get_runtime_dir())
                                 / PIPEWIRE_SOCKET_NAME)
 
-        new_socket_path = Path('/run/user/1000') / 'pipewire-0'
+        new_socket_path = self.xdg_runtime_dir / 'pipewire-0'
 
         yield ReadOnlyBind(str(original_socket_path), str(new_socket_path))
 
