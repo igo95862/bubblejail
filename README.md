@@ -49,6 +49,7 @@ If your distro does not have a package you can try to manually install with meso
 * Meson - build system
 * m4 - macro generator used during build
 * libseccomp - helper library for seccomp rules
+* notify-send - command to send desktop notification (part of `libnotify`)
 
 Optional:
 

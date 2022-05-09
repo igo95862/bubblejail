@@ -72,15 +72,21 @@ def _extra_args_converter(command_sequence: List[str]
     yield from command_iter
 
 
-def run_bjail(args: Namespace) -> None:
-    instance_name = args.instance_name
-
+def run_instace(instance_name: str,
+                args_to_instance: List[str],
+                wait: bool,
+                dry_run: bool,
+                debug_bwrap_args: List[List[str]],
+                debug_shell: bool,
+                debug_log_dbus: bool,
+                debug_helper_script: Optional[Path],
+                ) -> None:
     instance = BubblejailDirectories.instance_get(instance_name)
 
     if instance.is_running():
-        args_to_run = list(instance.rewrite_arguments(args.args_to_instance))
+        args_to_run = list(instance.rewrite_arguments(args_to_instance))
 
-        if args.dry_run:
+        if dry_run:
             print('Found helper socket.')
             print('Args to be sent: ', args_to_run)
             return
@@ -88,31 +94,62 @@ def run_bjail(args: Namespace) -> None:
         command_return_text = async_run(
             instance.send_run_rpc(
                 args_to_run=args_to_run,
-                wait_for_response=args.wait,
+                wait_for_response=wait,
             )
         )
-        if args.wait:
+        if wait:
             print(command_return_text)
     else:
         extra_args: Optional[List[str]]
-        if args.debug_bwrap_args is not None:
-            extra_args_not_flat: List[List[str]] = args.debug_bwrap_args
+        if debug_bwrap_args is not None:
             extra_args = []
-            for x in extra_args_not_flat:
+            for x in debug_bwrap_args:
                 extra_args.extend(_extra_args_converter(x))
         else:
             extra_args = None
 
         async_run(
             instance.async_run_init(
-                args_to_run=args.args_to_instance,
-                debug_shell=args.debug_shell,
-                debug_helper_script=args.debug_helper_script,
-                debug_log_dbus=args.debug_log_dbus,
-                dry_run=args.dry_run,
+                args_to_run=args_to_instance,
+                debug_shell=debug_shell,
+                debug_helper_script=debug_helper_script,
+                debug_log_dbus=debug_log_dbus,
+                dry_run=dry_run,
                 extra_bwrap_args=extra_args,
             )
         )
+
+
+def run_bjail(args: Namespace) -> None:
+    instance_name = args.instance_name
+
+    try:
+        run_instace(
+            instance_name,
+            args.args_to_instance,
+            args.wait,
+            args.dry_run,
+            args.debug_bwrap_args,
+            args.debug_shell,
+            args.debug_log_dbus,
+            args.debug_helper_script,
+        )
+    except Exception:
+        from os import isatty
+        from sys import stderr
+
+        if not isatty(stderr.fileno()):
+            from subprocess import run as subprocess_run
+            from traceback import format_exc
+
+            subprocess_run(
+                ('notify-send',
+                 '--urgency', 'critical',
+                 '--icon', 'bubblejail-config',
+                 f"Failed to run instance: {instance_name}",
+                 f"Exception: {format_exc(0)}")
+            )
+        raise
 
 
 def iter_profile_names() -> Generator[str, None, None]:
