@@ -309,8 +309,9 @@ class BubblejailDefaults(BubblejailService):
         yield Bind(str(home_path), '/home/user')
 
         # Set environmental variables
-        yield EnvrimentalVar('USER', 'user')
-        yield EnvrimentalVar('USERNAME', 'user')
+        from getpass import getuser
+        yield EnvrimentalVar('USER', getuser())
+        yield EnvrimentalVar('USERNAME', getuser())
         yield EnvrimentalVar('HOME', '/home/user')
         yield EnvrimentalVar('PATH', generate_path_var())
         yield EnvrimentalVar('XDG_RUNTIME_DIR', str(self.xdg_runtime_dir))
