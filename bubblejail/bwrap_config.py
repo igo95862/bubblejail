@@ -122,6 +122,18 @@ class DevBindTry(ReadOnlyBind):
     arg_word = '--dev-bind-try'
 
 
+class ChangeDir(BwrapConfigBase):
+    arg_word = '--chdir'
+
+    def __init__(self, dest: str):
+        super().__init__()
+        self.dest = dest
+
+    def to_args(self) -> Generator[str, None, None]:
+        yield from super().to_args()
+        yield self.dest
+
+
 @dataclass
 class FileTransfer:
     content: bytes
