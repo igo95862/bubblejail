@@ -954,11 +954,32 @@ class IBus(BubblejailService):
     )
 
 
+class Fcitx(BubblejailService):
+    def __iter__(self) -> ServiceGeneratorType:
+        if not self.enabled:
+            return
+
+        yield EnvrimentalVar('GTK_IM_MODULE', 'fcitx')
+        yield EnvrimentalVar('QT_IM_MODULE', 'fcitx')
+        yield EnvrimentalVar('XMODIFIERS', '@im=fcitx')
+        yield EnvrimentalVar('SDL_IM_MODULE', 'fcitx')
+        yield EnvrimentalVar('GLFW_IM_MODULE', 'ibus')
+        yield DbusSessionTalkTo('org.freedesktop.portal.Fcitx.*')
+        yield DbusSessionTalkTo('org.freedesktop.portal.IBus.*')
+
+    name = 'fcitx'
+    pretty_name = 'Fcitx/Fcitx5 input method'
+    description = (
+        'Gives access to Fcitx/Fcitx5 input method.\n'
+        'This is another popular input method framework.'
+    )
+
+
 SERVICES_CLASSES: Tuple[Type[BubblejailService], ...] = (
     CommonSettings, X11, Wayland,
     Network, PulseAudio, HomeShare, DirectRendering,
     Systray, Joystick, RootShare, OpenJDK, Notifications,
-    GnomeToolkit, Pipewire, VideoForLinux, IBus,
+    GnomeToolkit, Pipewire, VideoForLinux, IBus, Fcitx,
 )
 
 ServicesConfDictType = Dict[str, Dict[str, ServiceOptionTypes]]
