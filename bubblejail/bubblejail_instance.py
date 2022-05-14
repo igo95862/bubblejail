@@ -62,14 +62,17 @@ from .bwrap_config import (
     BwrapConfigBase,
     DbusSessionArgs,
     DbusSystemArgs,
-    EnvrimentalVar,
     FileTransfer,
     LaunchArguments,
     SeccompDirective,
 )
 from .exceptions import BubblejailException
 from .services import ServiceContainer as BubblejailInstanceConfig
-from .services import ServicesConfDictType, ServiceWantsHomeBind
+from .services import (
+    ServicesConfDictType,
+    ServiceWantsDbusSessionBind,
+    ServiceWantsHomeBind,
+)
 
 
 def sigterm_bubblejail_handler(bwrap_pid: int) -> None:
@@ -490,6 +493,9 @@ class BubblejailInit:
                 # When we need to send something to generator
                 if isinstance(config, ServiceWantsHomeBind):
                     config = config_iterator.send(self.home_bind_path)
+                elif isinstance(config, ServiceWantsDbusSessionBind):
+                    config = config_iterator.send(
+                        self.dbus_session_socket_path)
 
                 if isinstance(config, BwrapConfigBase):
                     self.bwrap_options_args.extend(config.to_args())
@@ -527,12 +533,11 @@ class BubblejailInit:
             self.temp_files.append(seccomp_temp_file)
             self.bwrap_options_args.extend(('--seccomp', str(seccomp_fd)))
 
-        env_dbus_session_addr = 'DBUS_SESSION_BUS_ADDRESS'
-
         # region dbus
+        # Session dbus
         self.dbus_proxy_args.extend((
             'xdg-dbus-proxy',
-            environ[env_dbus_session_addr],
+            environ['DBUS_SESSION_BUS_ADDRESS'],
             str(self.dbus_session_socket_path),
         ))
 
@@ -545,18 +550,6 @@ class BubblejailInit:
         self.dbus_proxy_args.append('--filter')
         if self.is_log_dbus:
             self.dbus_proxy_args.append('--log')
-
-        # Bind session socket inside the sandbox
-        self.bwrap_options_args.extend(
-            EnvrimentalVar(
-                env_dbus_session_addr,
-                'unix:path=/run/user/1000/bus').to_args()
-        )
-        self.bwrap_options_args.extend(
-            Bind(
-                str(self.dbus_session_socket_path),
-                '/run/user/1000/bus').to_args()
-        )
 
         # System dbus
         self.dbus_proxy_args.extend((

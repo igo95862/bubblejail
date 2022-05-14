@@ -20,17 +20,36 @@ from sys import argv
 from typing import Any, Iterator, List, Optional, Tuple, Type
 
 from PyQt5.QtCore import QModelIndex
-from PyQt5.QtWidgets import (QApplication, QCheckBox, QComboBox, QFormLayout,
-                             QGroupBox, QHBoxLayout, QLabel, QLineEdit,
-                             QListWidget, QListWidgetItem, QMainWindow,
-                             QPushButton, QScrollArea, QVBoxLayout, QWidget)
+from PyQt5.QtWidgets import (
+    QApplication,
+    QCheckBox,
+    QComboBox,
+    QFormLayout,
+    QGroupBox,
+    QHBoxLayout,
+    QLabel,
+    QLineEdit,
+    QListWidget,
+    QListWidgetItem,
+    QMainWindow,
+    QPushButton,
+    QScrollArea,
+    QVBoxLayout,
+    QWidget,
+)
 
 from .bubblejail_directories import BubblejailDirectories
 from .bubblejail_instance import BubblejailProfile
 from .exceptions import BubblejailInstanceNotFoundError
-from .services import (BubblejailService, OptionBool, OptionSpaceSeparatedStr,
-                       OptionStr, OptionStrList, ServiceOption,
-                       ServiceOptionTypes)
+from .services import (
+    BubblejailService,
+    OptionBool,
+    OptionSpaceSeparatedStr,
+    OptionStr,
+    OptionStrList,
+    ServiceOption,
+    ServiceOptionTypes,
+)
 
 
 class BubblejailGuiWidget:

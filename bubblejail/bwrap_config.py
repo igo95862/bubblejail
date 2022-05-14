@@ -15,9 +15,9 @@
 # along with bubblejail.  If not, see <https://www.gnu.org/licenses/>.
 from __future__ import annotations
 
+from collections.abc import Generator
 from dataclasses import dataclass
 from os import environ
-from collections.abc import Generator
 from typing import List, Optional
 
 

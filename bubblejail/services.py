@@ -15,7 +15,7 @@
 # along with bubblejail.  If not, see <https://www.gnu.org/licenses/>.
 from __future__ import annotations
 
-from os import environ, readlink, getuid
+from os import environ, getuid, readlink
 from pathlib import Path
 from typing import (
     Dict,
@@ -59,6 +59,10 @@ class ServiceWantsSend:
 
 
 class ServiceWantsHomeBind(ServiceWantsSend):
+    ...
+
+
+class ServiceWantsDbusSessionBind(ServiceWantsSend):
     ...
 
 
@@ -346,6 +350,16 @@ class BubblejailDefaults(BubblejailService):
 
             ):
                 yield SeccompSyscallErrno(blocked_syscal, 1)
+
+        # Bind session socket inside the sandbox
+        dbus_session_inside_path = self.xdg_runtime_dir / 'bus'
+        dbus_session_outside_path = yield ServiceWantsDbusSessionBind()
+        yield EnvrimentalVar(
+            'DBUS_SESSION_BUS_ADDRESS',
+            f"unix:path={dbus_session_inside_path}")
+        yield Bind(
+            str(dbus_session_outside_path),
+            str(dbus_session_inside_path))
 
     def __repr__(self) -> str:
         return "Bubblejail defaults."
