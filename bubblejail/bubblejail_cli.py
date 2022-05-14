@@ -84,16 +84,14 @@ def run_instace(instance_name: str,
     instance = BubblejailDirectories.instance_get(instance_name)
 
     if instance.is_running():
-        args_to_run = list(instance.rewrite_arguments(args_to_instance))
-
         if dry_run:
             print('Found helper socket.')
-            print('Args to be sent: ', args_to_run)
+            print('Args to be sent: ', args_to_instance)
             return
 
         command_return_text = async_run(
             instance.send_run_rpc(
-                args_to_run=args_to_run,
+                args_to_run=args_to_instance,
                 wait_for_response=wait,
             )
         )

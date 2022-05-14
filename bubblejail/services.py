@@ -35,6 +35,7 @@ from xdg import BaseDirectory
 from .bwrap_config import (
     Bind,
     BwrapConfigBase,
+    ChangeDir,
     DbusCommon,
     DbusSessionOwn,
     DbusSessionTalkTo,
@@ -219,9 +220,7 @@ def generate_toolkits() -> Generator[ServiceIterTypes, None, None]:
     config_home_path = Path(BaseDirectory.xdg_config_home)
     kde_globals_conf = config_home_path / 'kdeglobals'
     if kde_globals_conf.exists():
-        yield ReadOnlyBind(
-            str(kde_globals_conf),
-            '/home/user/.config/kdeglobals')
+        yield ReadOnlyBind(str(kde_globals_conf))
 
 # endregion HelperFunctions
 
@@ -305,14 +304,18 @@ class BubblejailDefaults(BubblejailService):
         yield DirCreate(str(self.xdg_runtime_dir), permissions=0o700)
 
         # Bind pseudo home
+        real_home = Path.home()
         home_path = yield ServiceWantsHomeBind()
-        yield Bind(str(home_path), '/home/user')
+        yield Bind(str(home_path), str(real_home))
+        yield EnvrimentalVar('HOME', str(real_home))
+        # Compatibilty symlink
+        yield Symlink(str(real_home), '/home/user')
+        yield ChangeDir(str(real_home))
 
         # Set environmental variables
         from getpass import getuser
         yield EnvrimentalVar('USER', getuser())
         yield EnvrimentalVar('USERNAME', getuser())
-        yield EnvrimentalVar('HOME', '/home/user')
         yield EnvrimentalVar('PATH', generate_path_var())
         yield EnvrimentalVar('XDG_RUNTIME_DIR', str(self.xdg_runtime_dir))
 
@@ -536,7 +539,6 @@ class HomeShare(BubblejailService):
             for path_relative_to_home in self.home_paths.get_value():
                 yield Bind(
                     str(Path.home() / path_relative_to_home),
-                    str(Path('/home/user') / path_relative_to_home),
                 )
 
     name = 'home_share'

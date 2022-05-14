@@ -34,17 +34,7 @@ from os import O_CLOEXEC, O_NONBLOCK, environ, kill, pipe2, stat
 from pathlib import Path
 from signal import SIGTERM
 from tempfile import TemporaryDirectory, TemporaryFile
-from typing import (
-    IO,
-    Any,
-    Generator,
-    List,
-    Optional,
-    Set,
-    Type,
-    TypedDict,
-    cast,
-)
+from typing import IO, Any, List, Optional, Set, Type, TypedDict, cast
 
 from tomli import loads as toml_loads
 from tomli_w import dump as toml_dump
@@ -270,19 +260,6 @@ class BubblejailInstance:
     def is_running(self) -> bool:
         return self.path_runtime_helper_socket.is_socket()
 
-    def rewrite_arguments(
-            self,
-            arguments: List[str]) -> Generator[str, None, None]:
-        """Rewrites real user home with sandboxed one."""
-        user_real_home_str = str(Path.home())
-        sandbox_home = '/home/user'
-
-        for arg in arguments:
-            if arg.startswith(user_real_home_str):
-                yield arg.replace(user_real_home_str, sandbox_home, 1)
-            else:
-                yield arg
-
     async def async_run_init(
         self,
         args_to_run: List[str],
@@ -330,7 +307,7 @@ class BubblejailInstance:
             if not args_to_run:
                 bwrap_args.extend(init.executable_args)
             else:
-                bwrap_args.extend(self.rewrite_arguments(args_to_run))
+                bwrap_args.extend(args_to_run)
 
             if dry_run:
                 print('Bwrap options: ')
@@ -578,9 +555,6 @@ class BubblejailInit:
         # Bind helper directory
         self.bwrap_options_args.extend(
             Bind(str(self.helper_runtime_dir), '/run/bubblehelp').to_args())
-
-        # Change directory
-        self.bwrap_options_args.extend(('--chdir', '/home/user'))
 
     def get_args_file_descriptor(self) -> int:
         options_null = '\0'.join(self.bwrap_options_args)
