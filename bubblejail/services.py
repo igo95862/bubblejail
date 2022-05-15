@@ -399,6 +399,7 @@ class CommonSettings(BubblejailService):
             name='share_local_time',
             pretty_name='Share local time',
             description='Instance will know local time instead of UTC',
+            is_deprecated=True,
         )
 
         self.filter_disk_sync = OptionBool(
