@@ -18,6 +18,7 @@ from __future__ import annotations
 from os import environ, getuid, readlink
 from pathlib import Path
 from typing import (
+    ClassVar,
     Dict,
     FrozenSet,
     Generator,
@@ -230,7 +231,7 @@ EMPTY_LIST: List[str] = []
 
 
 class BubblejailService:
-    xdg_runtime_dir = Path('/run/user/1000')
+    xdg_runtime_dir: ClassVar[Path] = Path(f"/run/user/{getuid()}")
 
     def __init__(self) -> None:
         self.option_list: List[ServiceOption] = []
@@ -300,7 +301,6 @@ class BubblejailDefaults(BubblejailService):
         yield DirCreate('/tmp')
         yield DirCreate('/var')
 
-        self.xdg_runtime_dir = Path(f"/run/user/{getuid()}")
         yield DirCreate(str(self.xdg_runtime_dir), permissions=0o700)
 
         # Bind pseudo home
