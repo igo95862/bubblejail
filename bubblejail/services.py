@@ -84,10 +84,14 @@ ServiceOptionTypes = Union[str, List[str], bool]
 
 
 class ServiceOption:
-    def __init__(self, name: str, description: str, pretty_name: str):
+    def __init__(self, name: str,
+                 description: str,
+                 pretty_name: str,
+                 is_deprecated: bool = False):
         self.name = name
         self.description = description
         self.pretty_name = pretty_name
+        self.is_deprecated = is_deprecated
 
     def get_value(self) -> ServiceOptionTypes:
         raise NotImplementedError('Default option value getter called')
@@ -102,11 +106,13 @@ class ServiceOption:
 class OptionStrList(ServiceOption):
     def __init__(self, str_list: List[str],
                  description: str, name: str,
-                 pretty_name: str):
+                 pretty_name: str,
+                 is_deprecated: bool = False):
         super().__init__(
             description=description,
             name=name,
             pretty_name=pretty_name,
+            is_deprecated=is_deprecated,
         )
         self.str_list = str_list
 
@@ -123,7 +129,8 @@ class OptionStrList(ServiceOption):
 class OptionSpaceSeparatedStr(OptionStrList):
     def __init__(self, str_or_list_str: Union[str, List[str]],
                  description: str, name: str,
-                 pretty_name: str):
+                 pretty_name: str,
+                 is_deprecated: bool = False):
 
         if isinstance(str_or_list_str, str):
             str_list = str_or_list_str.split()
@@ -138,6 +145,7 @@ class OptionSpaceSeparatedStr(OptionStrList):
             name=name,
             pretty_name=pretty_name,
             str_list=str_list,
+            is_deprecated=is_deprecated,
         )
 
     def get_gui_value(self) -> str:
@@ -157,11 +165,13 @@ class OptionSpaceSeparatedStr(OptionStrList):
 class OptionStr(ServiceOption):
     def __init__(self, string: str,
                  description: str, name: str,
-                 pretty_name: str):
+                 pretty_name: str,
+                 is_deprecated: bool = False):
         super().__init__(
             description=description,
             name=name,
             pretty_name=pretty_name,
+            is_deprecated=is_deprecated,
         )
         self.string = string
 
@@ -178,11 +188,13 @@ class OptionStr(ServiceOption):
 class OptionBool(ServiceOption):
     def __init__(self, boolean: bool,
                  description: str, name: str,
-                 pretty_name: str):
+                 pretty_name: str,
+                 is_deprecated: bool = False):
         super().__init__(
             description=description,
             name=name,
             pretty_name=pretty_name,
+            is_deprecated=is_deprecated,
         )
         self.boolean = boolean
 

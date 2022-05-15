@@ -260,6 +260,9 @@ class ServiceWidget:
 
         def generator_option_widgets() -> Iterator[OptionToWidgetType]:
             for option in service.iter_options():
+                if option.is_deprecated:
+                    continue
+
                 if isinstance(option, OptionBool):
                     widget_class: Type[OptionWidgetBase] = OptionWidgetBool
                 elif isinstance(option, (OptionStr, OptionSpaceSeparatedStr)):
