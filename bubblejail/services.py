@@ -571,6 +571,7 @@ class DirectRendering(BubblejailService):
                 'compiler for AMD GPUs. No effect on Nvidia\n'
                 'or Intel.'
             ),
+            is_deprecated=True,
         )
         self.add_option(self.enable_aco)
 
