@@ -321,7 +321,9 @@ class BubblejailDefaults(BubblejailService):
         yield Bind(str(home_path), str(real_home))
         yield EnvrimentalVar('HOME', str(real_home))
         # Compatibilty symlink
-        yield Symlink(str(real_home), '/home/user')
+        if str(real_home) != '/home/user':
+            yield Symlink(str(real_home), '/home/user')
+
         yield ChangeDir(str(real_home))
 
         # Set environmental variables
