@@ -13,7 +13,7 @@ Maybe check Arch Linux stats for commonly used applications?
 
 # Services
 
-* Use libudev for device paths and attributes. Needs a new libudev ctype binds.
+* Use `sd-device` to search for device attributes. `libudev` is actually deprecated. `sd-device` can be added to my D-Bus library.
 
 ## GTK
 
@@ -34,8 +34,7 @@ Maybe check Arch Linux stats for commonly used applications?
 
 ## Network
 
-* Custom resolv.conf per instance? Can this be a solution for captive portals in cases when you use dnscrypt-proxy.
-* Custom gai.conf? Being able to prefer ipv4 or ipv6 per instance. Can you even prefer a specific route? (for VPNs)
+* Investigate `slirp4netns`. It can allow binding sandbox to a specific network device.
 
 # GUI
 
@@ -45,7 +44,8 @@ Maybe check Arch Linux stats for commonly used applications?
 
 # Docs
 
-* Replace long README with man pages and online docs?
+* Replace sphinx with either `rst2man` or `asciidoc`. Or improve sphinx utilization.
+* Generate the services man page during build.
 
 # New ideas
 
