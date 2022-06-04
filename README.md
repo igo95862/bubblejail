@@ -45,6 +45,7 @@ If your distro does not have a package you can try to manually install with meso
 * Bubblewrap (>= 0.5.0) - sandboxing command line utility
 * XDG D-Bus Proxy - filtering dbus proxy
 * Desktop File Utils - to manipulate default applications
+* Python udev - device detection
 * Python Qt5 - for GUI
 * Meson - build system
 * m4 - macro generator used during build
