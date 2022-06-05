@@ -1,0 +1,11 @@
+---
+name: Bug Report
+description: File a bug report
+
+body:
+  - type: input
+    attributes:
+      label: Output of `bubblejail --version`
+  - type: textarea
+    attributes:
+      label: Description
