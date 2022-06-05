@@ -16,9 +16,11 @@
 from __future__ import annotations
 
 from collections.abc import Generator
-from dataclasses import dataclass
 from os import environ
-from typing import List, Optional
+from pathlib import Path
+from typing import List, Optional, Union
+
+Pathlike = Union[str, Path]
 
 
 class BwrapConfigBase:
@@ -48,9 +50,9 @@ class BwrapOptionWithPermissions(BwrapConfigBase):
 class DirCreate(BwrapOptionWithPermissions):
     arg_word = '--dir'
 
-    def __init__(self, dest: str, permissions: Optional[int] = None):
+    def __init__(self, dest: Pathlike, permissions: Optional[int] = None):
         super().__init__(permissions)
-        self.dest = dest
+        self.dest = str(dest)
 
     def to_args(self) -> Generator[str, None, None]:
         yield from super().to_args()
@@ -60,10 +62,10 @@ class DirCreate(BwrapOptionWithPermissions):
 class Symlink(BwrapConfigBase):
     arg_word = '--symlink'
 
-    def __init__(self, source: str, dest: str):
+    def __init__(self, source: Pathlike, dest: Pathlike):
         super().__init__()
-        self.source = source
-        self.dest = dest
+        self.source = str(source)
+        self.dest = str(dest)
 
     def to_args(self) -> Generator[str, None, None]:
         yield from super().to_args()
@@ -90,16 +92,16 @@ class EnvrimentalVar(BwrapConfigBase):
 class ReadOnlyBind(BwrapConfigBase):
     arg_word = '--ro-bind'
 
-    def __init__(self, source: str, dest: Optional[str] = None):
+    def __init__(self, source: Pathlike, dest: Optional[Pathlike] = None):
         super().__init__()
-        self.source = source
-        self.dest = dest
+        self.source = str(source)
+        self.dest = str(dest) if dest is not None else str(source)
 
     def to_args(self) -> Generator[str, None, None]:
         yield from super().to_args()
 
         yield self.source
-        yield self.dest if self.dest is not None else self.source
+        yield self.dest
 
 
 class ReadOnlyBindTry(ReadOnlyBind):
@@ -125,19 +127,19 @@ class DevBindTry(ReadOnlyBind):
 class ChangeDir(BwrapConfigBase):
     arg_word = '--chdir'
 
-    def __init__(self, dest: str):
+    def __init__(self, dest: Pathlike):
         super().__init__()
-        self.dest = dest
+        self.dest = str(dest)
 
     def to_args(self) -> Generator[str, None, None]:
         yield from super().to_args()
         yield self.dest
 
 
-@dataclass
 class FileTransfer:
-    content: bytes
-    dest: str
+    def __init__(self, content: bytes, dest: Pathlike):
+        self.content = content
+        self.dest = str(dest)
 
 
 class DbusCommon:
