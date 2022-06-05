@@ -140,13 +140,19 @@ def run_bjail(args: Namespace) -> None:
             from subprocess import run as subprocess_run
             from traceback import format_exc
 
-            subprocess_run(
-                ('notify-send',
-                 '--urgency', 'critical',
-                 '--icon', 'bubblejail-config',
-                 f"Failed to run instance: {instance_name}",
-                 f"Exception: {format_exc(0)}")
-            )
+            try:
+                subprocess_run(
+                    (
+                        'notify-send',
+                        '--urgency', 'critical',
+                        '--icon', 'bubblejail-config',
+                        f"Failed to run instance: {instance_name}",
+                        f"Exception: {format_exc(0)}"
+                    )
+                )
+            except FileNotFoundError:
+                # Make notify-send optional
+                ...
         raise
 
 
