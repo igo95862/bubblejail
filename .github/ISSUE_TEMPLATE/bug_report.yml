@@ -6,6 +6,9 @@ body:
   - type: input
     attributes:
       label: Output of `bubblejail --version`
+  - type: input
+    attributes:
+      label: Your distro name and version
   - type: textarea
     attributes:
       label: Description
