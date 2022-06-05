@@ -38,21 +38,27 @@ If your distro does not have a package you can try to manually install with meso
 
 #### Requirements
 
+##### Build requirements
 * Python 3 (>= 3.9) - python interpreter
-* Python XDG - XDG standards for python
+* m4 - macro generator used during build
+* Meson - build system
+* Sphinx - documentation builder
+
+##### Runtime requirements
+* Python 3 (>= 3.9) - python interpreter
+* Python PyXDG - XDG standards for python
 * Python Tomli -  TOML file support for python, `tomli` version
-* Python Tomli-W - writter part of `tomli`
+* Python Tomli-W - writer part of `tomli`
 * Bubblewrap (>= 0.5.0) - sandboxing command line utility
 * XDG D-Bus Proxy - filtering dbus proxy
-* Desktop File Utils - to manipulate default applications
 * Python Qt5 - for GUI
-* Meson - build system
-* m4 - macro generator used during build
 * libseccomp - helper library for seccomp rules
+
+##### Runtime highly recommended dependencies
+* Desktop File Utils - allows new desktop entries to be registered
 * notify-send - command to send desktop notification (part of `libnotify`)
 
-Optional:
-
+##### Optional
 * bash-completion - auto-completions for bash shell
 * fish - auto-completions for fish shell
 
