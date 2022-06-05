@@ -299,15 +299,17 @@ class BubblejailDirectories:
         try:
             subprocess_run(
                 args=(
-                    '/usr/bin/update-desktop-database',
+                    'update-desktop-database',
                     str(cls.desktop_entries_dir_get())
                 )
             )
         except FileNotFoundError:
             from warnings import warn
             warn(
-                ('Could not find update-desktop-database binary.'
-                 'Do you have correct dependencies installed?')
+                (
+                    'Could not find update-desktop-database command. '
+                    'Desktop entry database has not been updated.'
+                )
             )
 
     @classmethod
