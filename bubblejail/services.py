@@ -233,7 +233,7 @@ def generate_toolkits() -> Generator[ServiceIterTypes, None, None]:
     config_home_path = Path(BaseDirectory.xdg_config_home)
     kde_globals_conf = config_home_path / 'kdeglobals'
     if kde_globals_conf.exists():
-        yield ReadOnlyBind(str(kde_globals_conf))
+        yield ReadOnlyBind(kde_globals_conf)
 
 # endregion HelperFunctions
 
@@ -287,6 +287,10 @@ class BubblejailService:
     description: str
 
 
+# Pre version 0.6.0 home bind path
+OLD_HOME_BIND = Path('/home/user')
+
+
 class BubblejailDefaults(BubblejailService):
 
     def __iter__(self) -> ServiceGeneratorType:
@@ -303,9 +307,9 @@ class BubblejailDefaults(BubblejailService):
                     or root_path.name == 'bin'
                     or root_path.name == 'sbin'):
                 if root_path.is_symlink():
-                    yield Symlink(str(readlink(root_path)), str(root_path))
+                    yield Symlink(readlink(root_path), root_path)
                 else:
-                    yield ReadOnlyBind(str(root_path))
+                    yield ReadOnlyBind(root_path)
 
         yield ReadOnlyBind('/etc')
 
@@ -313,18 +317,18 @@ class BubblejailDefaults(BubblejailService):
         yield DirCreate('/tmp')
         yield DirCreate('/var')
 
-        yield DirCreate(str(self.xdg_runtime_dir), permissions=0o700)
+        yield DirCreate(self.xdg_runtime_dir, permissions=0o700)
 
         # Bind pseudo home
         real_home = Path.home()
         home_path = yield ServiceWantsHomeBind()
-        yield Bind(str(home_path), str(real_home))
+        yield Bind(home_path, real_home)
         yield EnvrimentalVar('HOME', str(real_home))
         # Compatibilty symlink
-        if str(real_home) != '/home/user':
-            yield Symlink(str(real_home), '/home/user')
+        if real_home != OLD_HOME_BIND:
+            yield Symlink(real_home, OLD_HOME_BIND)
 
-        yield ChangeDir(str(real_home))
+        yield ChangeDir(real_home)
 
         # Set environmental variables
         from getpass import getuser
@@ -376,8 +380,9 @@ class BubblejailDefaults(BubblejailService):
             'DBUS_SESSION_BUS_ADDRESS',
             f"unix:path={dbus_session_inside_path}")
         yield Bind(
-            str(dbus_session_outside_path),
-            str(dbus_session_inside_path))
+            dbus_session_outside_path,
+            dbus_session_inside_path,
+        )
 
     def __repr__(self) -> str:
         return "Bubblejail defaults."
@@ -497,7 +502,7 @@ class Wayland(BubblejailService):
                                 / wayland_display_env)
 
         new_socket_path = self.xdg_runtime_dir / 'wayland-0'
-        yield Bind(str(original_socket_path), str(new_socket_path))
+        yield Bind(original_socket_path, new_socket_path)
         yield from generate_toolkits()
 
     name = 'wayland'
@@ -527,7 +532,7 @@ class PulseAudio(BubblejailService):
 
         yield Bind(
             f"{BaseDirectory.get_runtime_dir()}/pulse/native",
-            str(self.xdg_runtime_dir / 'pulse/native')
+            self.xdg_runtime_dir / 'pulse/native',
         )
 
     name = 'pulse_audio'
@@ -553,7 +558,7 @@ class HomeShare(BubblejailService):
         if self.home_paths is not None:
             for path_relative_to_home in self.home_paths.get_value():
                 yield Bind(
-                    str(Path.home() / path_relative_to_home),
+                    Path.home() / path_relative_to_home,
                 )
 
     name = 'home_share'
@@ -600,12 +605,12 @@ class DirectRendering(BubblejailService):
             if x_resolved.name in device_names:
                 # Found the dri device
                 # Add the /sys/dev/char/ path
-                yield Symlink(str(x_resolved), str(x))
+                yield Symlink(x_resolved, x)
                 # Add the two times parent (parents[1])
                 # Seems like the dri devices are stored as
                 # /sys/devices/..pcie_id../drm/dri
                 # We want to bind the /sys/devices/..pcie_id../
-                yield DevBind(str(x_resolved.parents[1]))
+                yield DevBind(x_resolved.parents[1])
 
         yield DevBind('/dev/dri')
 
@@ -615,7 +620,7 @@ class DirectRendering(BubblejailService):
         # Nvidia specifc binds
         for x in Path('/dev/').iterdir():
             if x.name.startswith('nvidia'):
-                yield DevBind(str(x))
+                yield DevBind(x)
 
     name = 'direct_rendering'
     pretty_name = 'Direct Rendering'
@@ -677,17 +682,17 @@ class Joystick(BubblejailService):
         # Find the *-joystick in /dev/input/by-path/
         for dev_name in look_for_names:
             # Add /dev/input/X device
-            yield DevBind(str(dev_input_path / dev_name))
+            yield DevBind(dev_input_path / dev_name)
 
             sys_class_path = sys_class_input_path / dev_name
 
             yield Symlink(
-                str(readlink(sys_class_path)),
-                str(sys_class_path)
+                readlink(sys_class_path),
+                sys_class_path,
             )
 
             pci_path = sys_class_path.resolve()
-            yield DevBind(str(pci_path.parents[2]))
+            yield DevBind(pci_path.parents[2])
 
     name = 'joystick'
     pretty_name = 'Joysticks and gamepads'
@@ -831,7 +836,7 @@ class Pipewire(BubblejailService):
 
         new_socket_path = self.xdg_runtime_dir / 'pipewire-0'
 
-        yield ReadOnlyBind(str(original_socket_path), str(new_socket_path))
+        yield ReadOnlyBind(original_socket_path, new_socket_path)
 
     name = 'pipewire'
     pretty_name = 'Pipewire'
@@ -854,9 +859,9 @@ class VideoForLinux(BubblejailService):
 
                 for char_path in Path('/sys/dev/char/').iterdir():
                     if char_path.resolve() == pcie_path:
-                        yield Symlink(str(readlink(char_path)), str(char_path))
+                        yield Symlink(readlink(char_path), char_path)
 
-                yield DevBind(str(pcie_path.parents[1]))
+                yield DevBind(pcie_path.parents[1])
         except FileNotFoundError:
             ...
 
@@ -870,7 +875,7 @@ class VideoForLinux(BubblejailService):
             if not name[5:].isnumeric():
                 continue
 
-            yield DevBind(str(dev_path))
+            yield DevBind(dev_path)
 
     name = 'v4l'
     pretty_name = 'Video4Linux'
