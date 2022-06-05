@@ -56,7 +56,7 @@ from .bwrap_config import (
     LaunchArguments,
     SeccompDirective,
 )
-from .exceptions import BubblejailException
+from .exceptions import BubblejailException, BubblewrapRunError
 from .services import ServiceContainer as BubblejailInstanceConfig
 from .services import (
     ServicesConfDictType,
@@ -352,6 +352,13 @@ class BubblejailInstance:
                 await task_bwrap_main
             except CancelledError:
                 print('Bwrap cancelled')
+
+            if bwrap_process.returncode != 0:
+                raise BubblewrapRunError((
+                    "Bubblewrap failed. "
+                    "Try running bubblejail in terminal to see the "
+                    "exact error."
+                ))
 
             if __debug__:
                 print("Bubblewrap terminated")

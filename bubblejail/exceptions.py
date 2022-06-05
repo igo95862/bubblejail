@@ -34,3 +34,7 @@ class MissingConfigurationError(BubblejailException):
 
 class BubblejailInstanceNotFoundError(BubblejailException):
     ...
+
+
+class BubblewrapRunError(BubblejailException):
+    ...
