@@ -333,6 +333,13 @@ class BubblejailDirectories:
             value=f"{instance_name} bubble",
         )
 
+        # Add type
+        new_dot_desktop.set(
+            key='Type',
+            group='Desktop Entry',
+            value='Application',
+        )
+
         new_dot_desktop_path_str = str(
             cls.desktop_entries_dir_get() /
             f"bubble_{instance_name}.desktop")
