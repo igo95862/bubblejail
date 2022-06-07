@@ -469,8 +469,12 @@ class X11(BubblejailService):
 
         yield EnvrimentalVar('DISPLAY')
         yield Bind(f"/tmp/.X11-unix/X{environ['DISPLAY'][1:]}")
-        yield ReadOnlyBind(environ['XAUTHORITY'], '/tmp/.Xauthority')
-        yield EnvrimentalVar('XAUTHORITY', '/tmp/.Xauthority')
+
+        x_authority_path_str = environ.get('XAUTHORITY')
+        if x_authority_path_str is not None:
+            yield ReadOnlyBind(x_authority_path_str, '/tmp/.Xauthority')
+            yield EnvrimentalVar('XAUTHORITY', '/tmp/.Xauthority')
+
         yield from generate_toolkits()
 
     name = 'x11'
