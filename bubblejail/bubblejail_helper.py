@@ -395,7 +395,9 @@ class BubblejailHelper(Awaitable[bool]):
             print('Started unix server', flush=True)
         self.termninator_watcher_task = create_task(self.termninator_watcher())
         if self.startup_args:
-            await self.run_command(self.startup_args)
+            await self.run_command(
+                self.startup_args,
+            )
 
     async def stop_async(self) -> None:
 

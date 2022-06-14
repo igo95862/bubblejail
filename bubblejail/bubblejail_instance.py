@@ -18,16 +18,11 @@ from __future__ import annotations
 from asyncio import (
     CancelledError,
     Future,
-    Task,
     create_subprocess_exec,
-    create_task,
     get_running_loop,
     open_unix_connection,
     wait_for,
 )
-from asyncio.subprocess import DEVNULL as asyncio_devnull
-from asyncio.subprocess import PIPE as asyncio_pipe
-from asyncio.subprocess import STDOUT as asyncio_stdout
 from asyncio.subprocess import Process
 from functools import cached_property
 from os import O_CLOEXEC, O_NONBLOCK, environ, kill, pipe2, stat
@@ -79,25 +74,6 @@ def copy_data_to_temp_file(data: bytes) -> IO[bytes]:
     temp_file.write(data)
     temp_file.seek(0)
     return temp_file
-
-
-async def process_watcher(process: Process) -> None:
-    """Reads stdout of process and prints"""
-    process_stdout = process.stdout
-
-    if __debug__:
-        print(f"Watching {repr(process)}")
-
-    if process_stdout is None:
-        return
-
-    while True:
-        new_line_data = await process_stdout.readline()
-
-        if new_line_data:
-            print(new_line_data)
-        else:
-            return
 
 
 class ConfDict(TypedDict, total=False):
@@ -324,25 +300,11 @@ class BubblejailInstance:
             bwrap_process = await create_subprocess_exec(
                 *bwrap_args,
                 pass_fds=init.file_descriptors_to_pass,
-                stdout=(asyncio_pipe
-                        if not debug_shell
-                        else None),
-                stderr=asyncio_stdout,
             )
             if __debug__:
                 print(f"Bubblewrap started. PID: {repr(bwrap_process)}")
 
-            if not debug_shell:
-                task_bwrap_main = create_task(
-                    process_watcher(bwrap_process), name='bwrap main')
-            else:
-                async def shell_task() -> None:
-                    await bwrap_process.wait()
-
-                task_bwrap_main = create_task(
-                    shell_task(),
-                    name='debug shell'
-                )
+            task_bwrap_main = bwrap_process.wait()
 
             loop = get_running_loop()
             loop.add_signal_handler(SIGTERM, sigterm_bubblejail_handler,
@@ -432,9 +394,6 @@ class BubblejailInit:
         self.is_log_dbus = is_log_dbus
         # Instance config
         self.instance_config = instance_config
-
-        # Tasks
-        self.watch_dbus_proxy_task: Optional[Task[None]] = None
 
         # Executable args
         self.executable_args: List[str] = []
@@ -608,20 +567,14 @@ class BubblejailInit:
         # pylint: disable=E1120
         self.dbus_proxy_process = await create_subprocess_exec(
             *self.dbus_proxy_args,
-            stdout=(asyncio_pipe
-                    if not self.is_shell_debug
-                    else asyncio_devnull),
-            stderr=asyncio_stdout,
-            stdin=asyncio_devnull,
             pass_fds=[self.dbus_proxy_pipe_write],
         )
 
-        self.watch_dbus_proxy_task = create_task(
-            process_watcher(self.dbus_proxy_process),
-            name='dbus proxy',
-        )
-
         await wait_for(dbus_proxy_ready_future, timeout=1)
+
+        if self.dbus_proxy_process.returncode is not None:
+            raise ValueError(
+                f"dbus proxy error code: {self.dbus_proxy_process.returncode}")
 
     async def __aexit__(
         self,
@@ -630,17 +583,6 @@ class BubblejailInit:
         traceback: Any,  # ???: What type is traceback
     ) -> None:
         # Cleanup
-        if (
-            self.watch_dbus_proxy_task is not None
-            and
-            not self.watch_dbus_proxy_task.done()
-        ):
-            self.watch_dbus_proxy_task.cancel()
-            try:
-                await self.watch_dbus_proxy_task
-            except CancelledError:
-                ...
-
         try:
             if self.dbus_proxy_process is not None:
                 self.dbus_proxy_process.terminate()
