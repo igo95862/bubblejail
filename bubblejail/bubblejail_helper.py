@@ -464,6 +464,8 @@ def bubblejail_helper_main() -> None:
         event_loop.run_until_complete(run_helper_task)
     except CancelledError:
         print('Termninated by CancelledError')
+    finally:
+        event_loop.close()
 
 
 if __name__ == '__main__':
