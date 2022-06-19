@@ -8,7 +8,9 @@ py_installation = pymod.find_installation('python3')
 bytecode_compiler = find_program('bytecode_compiler.build')
 m4_compiler = find_program('m4')
 
-subdir(meson.project_name())
+test_env = environment()
+
+subdir('src')
 subdir('m4')
 subdir('data')
 subdir('docs')
