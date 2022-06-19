@@ -5,6 +5,7 @@ source_files = [
    'bubblejail_directories.py',
    'bubblejail_gui_qt.py',
    'bubblejail_helper.py',
+   'bubblejail_home_plugins.py',
    'bubblejail_instance.py',
    'bubblejail_seccomp.py',
    'bubblejail_utils.py',

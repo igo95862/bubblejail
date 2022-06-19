@@ -300,6 +300,7 @@ def bjail_create(args: Namespace) -> None:
         profile_name=args.profile,
         create_dot_desktop=args.no_desktop_entry,
         print_import_tips=True,
+        plugins=args.home_plugin,
     )
 
 
@@ -368,6 +369,11 @@ def bubblejail_main(arg_list: Optional[List[str]] = None) -> None:
         CommandMetadata.add_option('--no-desktop-entry'),
         action='store_false',
     )
+    parser_create.add_argument(
+        CommandMetadata.add_option('--home-plugin'),
+        action='append',
+        nargs='+')
+
     parser_create.add_argument('new_instance_name')
     # list subcommand
     parser_list = subparsers.add_parser(

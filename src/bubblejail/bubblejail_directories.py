@@ -18,7 +18,7 @@ from __future__ import annotations
 from os import environ
 from pathlib import Path
 from subprocess import run as subprocess_run
-from typing import Any, Dict, Generator, Optional
+from typing import Any, Dict, Generator, Optional, List
 
 from tomli import load as toml_load
 from tomli_w import dump as toml_dump
@@ -27,6 +27,7 @@ from xdg.BaseDirectory import xdg_config_home, xdg_data_home
 
 from .bubblejail_instance import BubblejailInstance, BubblejailProfile
 from .bubblejail_utils import FILE_NAME_SERVICES, BubblejailSettings
+from .bubblejail_home_plugins import HOME_PLUGINS
 from .exceptions import BubblejailException, BubblejailInstanceNotFoundError
 
 PathGeneratorType = Generator[Path, None, None]
@@ -125,6 +126,7 @@ class BubblejailDirectories:
             profile_name: Optional[str] = None,
             create_dot_desktop: bool = False,
             print_import_tips: bool = False,
+            plugins: Optional[List[str]] = None,
     ) -> BubblejailInstance:
 
         instance_directory = next(cls.iter_instances_directories()) / new_name
@@ -133,6 +135,17 @@ class BubblejailDirectories:
         instance_directory.mkdir(mode=0o700, parents=True)
         # Make home directory
         (instance_directory / 'home').mkdir(mode=0o700)
+        # Make home plugins directory
+        plugins_directory = instance_directory / 'home_plugins'
+        plugins_directory.mkdir(mode=0o700)
+
+        if plugins is not None:
+            for plugin_args_list in plugins:
+                plugin_name = plugin_args_list[0]
+                plugin_class = HOME_PLUGINS[plugin_name]
+                plugin_directory = plugins_directory / plugin_name
+                plugin_directory.mkdir(mode=0o700)
+                plugin_class.create(plugin_directory)
 
         # Profile
         profile: BubblejailProfile = cls.profile_get(

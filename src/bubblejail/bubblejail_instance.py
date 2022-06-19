@@ -42,6 +42,7 @@ from .bubblejail_utils import (
     FILE_NAME_SERVICES,
     BubblejailSettings,
 )
+from .bubblejail_home_plugins import HOME_PLUGINS, HomeDirectoryPlugin
 from .bwrap_config import (
     Bind,
     BwrapConfigBase,
@@ -111,6 +112,10 @@ class BubblejailInstance:
     @cached_property
     def path_home_directory(self) -> Path:
         return self.instance_directory / 'home'
+
+    @cached_property
+    def path_home_plugins_directory(self) -> Path:
+        return self.instance_directory / 'home_plugins'
 
     @cached_property
     def path_runtime_helper_dir(self) -> Path:
@@ -398,6 +403,9 @@ class BubblejailInit:
         # Executable args
         self.executable_args: List[str] = []
 
+        self.plugins_dir = parent.path_home_plugins_directory
+        self.activated_home_plugins: List[HomeDirectoryPlugin] = []
+
     def genetate_args(self) -> None:
         # TODO: Reorganize the order to allow for
         # better binding multiple resources in same filesystem path
@@ -533,6 +541,20 @@ class BubblejailInit:
         return args_tempfile_fileno
 
     async def __aenter__(self) -> None:
+        try:
+            plugin_paths = tuple(self.plugins_dir.iterdir())
+        except FileNotFoundError:
+            ...
+        else:
+            for plugin_path in plugin_paths:
+                plugin_name = plugin_path.name
+                plugin = HOME_PLUGINS[plugin_name](
+                    self.home_bind_path, plugin_path)
+
+                plugin.enter()
+
+                self.activated_home_plugins.append(plugin)
+
         # Generate args
         self.genetate_args()
 
@@ -621,6 +643,9 @@ class BubblejailInit:
             ...
         except OSError:
             ...
+
+        for plugin in self.activated_home_plugins:
+            plugin.exit()
 
 
 class BubblejailProfile:
