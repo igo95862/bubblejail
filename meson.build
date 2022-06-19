@@ -14,6 +14,7 @@ subdir('src')
 subdir('m4')
 subdir('data')
 subdir('docs')
+subdir('tools')
 
 test('unittest', py_installation,
     args : ['-m', 'unittest'],

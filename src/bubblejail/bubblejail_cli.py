@@ -316,8 +316,10 @@ def bjail_create_desktop_entry(args: Namespace) -> None:
     )
 
 
-def bubblejail_main() -> None:
-    parser = ArgumentParser()
+def bubblejail_main(arg_list: Optional[List[str]] = None) -> None:
+    parser = ArgumentParser(
+        exit_on_error=arg_list is None,
+    )
     parser.add_argument(
         '--version',
         action='version',
@@ -405,6 +407,6 @@ def bubblejail_main() -> None:
     parser_desktop_entry.add_argument(CommandMetadata.instance_arg())
     parser_desktop_entry.set_defaults(func=bjail_create_desktop_entry)
 
-    args = parser.parse_args()
+    args = parser.parse_args(arg_list)
 
     args.func(args)
