@@ -1,0 +1,6 @@
+---
+
+extraction:
+  python:
+    python_setup:
+      version: 3.10
