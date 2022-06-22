@@ -1,6 +1,6 @@
 # SPDX-License-Identifier: GPL-3.0-or-later
 
-# Copyright 2019, 2020 igo95862
+# Copyright 2019-2022 igo95862
 
 # This file is part of bubblejail.
 # bubblejail is free software: you can redistribute it and/or modify
@@ -13,16 +13,26 @@
 # GNU General Public License for more details.
 # You should have received a copy of the GNU General Public License
 # along with bubblejail.  If not, see <https://www.gnu.org/licenses/>.
+from __future__ import annotations
 
-from asyncio import (StreamReader, StreamWriter, create_subprocess_exec,
-                     create_task, get_running_loop, open_unix_connection)
+from asyncio import (
+    StreamReader,
+    StreamWriter,
+    create_subprocess_exec,
+    create_task,
+    get_running_loop,
+    open_unix_connection,
+)
 from os import unlink
 from pathlib import Path
 from unittest import IsolatedAsyncioTestCase, TestCase
 from unittest import main as unittest_main
 
-from bubblejail.bubblejail_helper import (BubblejailHelper, RequestPing,
-                                          get_helper_argument_parser)
+from bubblejail.bubblejail_helper import (
+    BubblejailHelper,
+    RequestPing,
+    get_helper_argument_parser,
+)
 
 # Test socket needs to be cleaned up
 test_socket_path = Path('./test_socket')

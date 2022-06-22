@@ -1,6 +1,6 @@
 # SPDX-License-Identifier: GPL-3.0-or-later
 
-# Copyright 2019, 2020 igo95862
+# Copyright 2019-2022 igo95862
 
 # This file is part of bubblejail.
 # bubblejail is free software: you can redistribute it and/or modify
@@ -13,14 +13,17 @@
 # GNU General Public License for more details.
 # You should have received a copy of the GNU General Public License
 # along with bubblejail.  If not, see <https://www.gnu.org/licenses/>.
-
+from __future__ import annotations
 
 from typing import Dict, List, get_type_hints
 from unittest import TestCase
 from unittest import main as unittest_main
 
-from bubblejail.services import (SERVICES_CLASSES, BubblejailService,
-                                 ServiceOption)
+from bubblejail.services import (
+    SERVICES_CLASSES,
+    BubblejailService,
+    ServiceOption,
+)
 
 argless_dict = {'return': type(None)}
 
