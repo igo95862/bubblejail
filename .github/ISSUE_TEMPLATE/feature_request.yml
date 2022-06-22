@@ -1,0 +1,13 @@
+---
+name: Feature Request
+description: Describe a feature you would like to see in bubblejail
+
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Have you checked opened and closed issues to see
+        if similar feature was already proposed?
+  - type: textarea
+    attributes:
+      label: Description
