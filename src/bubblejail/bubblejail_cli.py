@@ -317,9 +317,7 @@ def bjail_create_desktop_entry(args: Namespace) -> None:
 
 
 def bubblejail_main(arg_list: Optional[List[str]] = None) -> None:
-    parser = ArgumentParser(
-        exit_on_error=arg_list is None,
-    )
+    parser = ArgumentParser()
     parser.add_argument(
         '--version',
         action='version',

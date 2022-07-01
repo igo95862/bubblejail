@@ -36,6 +36,8 @@ def shell_main() -> None:
             bubblejail_main(args)
         except Exception:
             print_exc()
+        except SystemExit:
+            ...
 
 
 if __name__ == '__main__':
