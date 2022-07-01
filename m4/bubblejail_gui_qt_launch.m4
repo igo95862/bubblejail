@@ -9,6 +9,7 @@ if __name__ == "__main__":
     from bubblejail.bubblejail_utils import BubblejailSettings
 
     BubblejailSettings.SHARE_PATH_STR = '_SHARE_PREFIX'
+    BubblejailSettings.SYSCONF_PATH_STR = '_SYSCONF_DIR'
 
     from bubblejail.bubblejail_gui_qt import run_gui
     run_gui()

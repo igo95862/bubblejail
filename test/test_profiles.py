@@ -28,7 +28,9 @@ from bubblejail.bubblejail_instance import BubblejailProfile
 class TestProfiles(TestCase):
     def test_profiles(self) -> None:
         meson_source_root = Path(environ['MESON_SOURCE_ROOT'])
-        profiles_str_path = meson_source_root / 'data/bubblejail/profiles'
+        profiles_str_path = (
+            meson_source_root / 'data/usr-share/bubblejail/profiles'
+        )
 
         for profile_path in profiles_str_path.iterdir():
             with self.subTest(profile_path.stem):

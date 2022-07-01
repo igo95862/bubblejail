@@ -32,9 +32,12 @@ from .exceptions import BubblejailException, BubblejailInstanceNotFoundError
 PathGeneratorType = Generator[Path, None, None]
 
 UsrSharePath = Path(BubblejailSettings.SHARE_PATH_STR)
-UsrShareApplicationsPath = UsrSharePath / 'applications'
-SystemConfigsPath = UsrSharePath / 'bubblejail'
+SysConfPath = Path(BubblejailSettings.SYSCONF_PATH_STR)
 
+UsrShareApplicationsPath = UsrSharePath / 'applications'
+
+PackageConfisgPath = UsrSharePath / 'bubblejail'
+SystemConfigsPath = SysConfPath / 'bubblejail'
 UserConfigDir = Path(xdg_config_home) / 'bubblejail'
 
 
@@ -114,6 +117,7 @@ class BubblejailDirectories:
             UserConfigDir.mkdir(parents=True, exist_ok=True)
             yield UserConfigDir
             yield SystemConfigsPath
+            yield PackageConfisgPath
             return
 
         yield from (Path(x) for x in conf_directories.split(':'))

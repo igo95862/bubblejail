@@ -1,5 +1,6 @@
 lib_prefix_path = get_option('prefix') / get_option('libdir')
 share_prefix_path = get_option('prefix') / get_option('datadir')
+sysconf_dir_path = get_option('sysconfdir')
 
 version_display = get_option('version_display')
 
@@ -12,6 +13,7 @@ m4_commands = [
     '--define', '_SHARE_PREFIX=' + share_prefix_path,
     '--define', '_LIB_PREFIX=' + lib_prefix_path,
     '--define', '_BUBBLEJAIL_VERSION=' + version_display,
+    '--define', '_SYSCONF_DIR=' + sysconf_dir_path,
 ]
 
 if not get_option('use_python_site_packages_dir')

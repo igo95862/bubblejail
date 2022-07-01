@@ -15,8 +15,14 @@ install_data(
 )
 
 install_subdir(
-    'bubblejail',
+    'usr-share/bubblejail',
     install_dir : get_option('datadir'),
+)
+
+install_subdir(
+    'etc/bubblejail',
+    install_dir : get_option('sysconfdir'),
+    exclude_files : ['profiles/.gitkeep'],
 )
 
 install_data(
