@@ -5,15 +5,7 @@ name: "Python (mypy, flake8)"
 on:
   workflow_dispatch:
   push:
-    paths:
-      - 'bubblejail/*.py'
-      - 'test/*.py'
-    branches: [master]
   pull_request:
-    # The branches below must be a subset of the branches above
-    branches: [master]
-  schedule:
-    - cron: '0 18 * * 6'
 
 jobs:
   analyze:
