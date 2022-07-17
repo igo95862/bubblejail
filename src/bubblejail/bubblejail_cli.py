@@ -16,7 +16,7 @@
 from __future__ import annotations
 
 from argparse import REMAINDER as ARG_REMAINDER
-from argparse import ArgumentParser, Namespace
+from argparse import ArgumentParser
 from asyncio import run as async_run
 from pathlib import Path
 from shlex import split as shlex_split
@@ -72,66 +72,47 @@ def _extra_args_converter(command_sequence: List[str]
     yield from command_iter
 
 
-def run_instace(instance_name: str,
-                args_to_instance: List[str],
-                wait: bool,
-                dry_run: bool,
-                debug_bwrap_args: List[List[str]],
-                debug_shell: bool,
-                debug_log_dbus: bool,
-                debug_helper_script: Optional[Path],
-                ) -> None:
-    instance = BubblejailDirectories.instance_get(instance_name)
-
-    if instance.is_running():
-        if dry_run:
-            print('Found helper socket.')
-            print('Args to be sent: ', args_to_instance)
-            return
-
-        command_return_text = async_run(
-            instance.send_run_rpc(
-                args_to_run=args_to_instance,
-                wait_for_response=wait,
-            )
-        )
-        if wait:
-            print(command_return_text)
-    else:
-        extra_args: Optional[List[str]]
-        if debug_bwrap_args is not None:
-            extra_args = []
-            for x in debug_bwrap_args:
-                extra_args.extend(_extra_args_converter(x))
-        else:
-            extra_args = None
-
-        async_run(
-            instance.async_run_init(
-                args_to_run=args_to_instance,
-                debug_shell=debug_shell,
-                debug_helper_script=debug_helper_script,
-                debug_log_dbus=debug_log_dbus,
-                dry_run=dry_run,
-                extra_bwrap_args=extra_args,
-            )
-        )
-
-
-def run_bjail(args: Namespace) -> None:
-    instance_name = args.instance_name
-
+def run_bjail(instance_name: str,
+              args_to_instance: List[str],
+              wait: bool, dry_run: bool, debug_bwrap_args: List[List[str]],
+              debug_shell: bool, debug_log_dbus: bool,
+              debug_helper_script: Optional[Path]) -> None:
     try:
-        run_instace(
-            instance_name,
-            args.args_to_instance,
-            args.wait,
-            args.dry_run,
-            args.debug_bwrap_args,
-            args.debug_shell,
-            args.debug_log_dbus,
-            args.debug_helper_script,
-        )
+        instance = BubblejailDirectories.instance_get(instance_name)
+
+        if instance.is_running():
+            if dry_run:
+                print('Found helper socket.')
+                print('Args to be sent: ', args_to_instance)
+                return
+
+            command_return_text = async_run(
+                instance.send_run_rpc(
+                    args_to_run=args_to_instance,
+                    wait_for_response=wait,
+                )
+            )
+            if wait:
+                print(command_return_text)
+        else:
+            extra_bwrap_args: Optional[List[str]]
+            if debug_bwrap_args is not None:
+                extra_bwrap_args = []
+                for x in debug_bwrap_args:
+                    extra_bwrap_args.extend(_extra_args_converter(x))
+            else:
+                extra_bwrap_args = None
+
+            async_run(
+                instance.async_run_init(
+                    args_to_run=args_to_instance,
+                    debug_shell=debug_shell,
+                    debug_helper_script=debug_helper_script,
+                    debug_log_dbus=debug_log_dbus,
+                    dry_run=dry_run,
+                    extra_bwrap_args=extra_bwrap_args,
+                )
+            )
     except Exception:
         from os import isatty
         from sys import stderr
@@ -180,10 +161,8 @@ def iter_subcommand_options(
 
 class AutoCompleteParser:
     def __init__(self,
-                 args: Namespace,
                  words: List[str]
                  ):
-        self.args = args
         self.words = words
         self.subcommands = CommandMetadata.cmd_map.keys()
         self.auto_complete_iterable: Iterable[str] = self.subcommands
@@ -268,51 +247,53 @@ class AutoCompleteParser:
         yield from self.auto_complete_iterable
 
 
-def bjail_list(args: Namespace) -> None:
+def bjail_list(list_what: str, command_line: str) -> None:
     str_iterator: Iterator[str]
 
-    if args.list_what == 'instances':
+    if list_what == 'instances':
         str_iterator = iter_instance_names()
-    elif args.list_what == 'profiles':
+    elif list_what == 'profiles':
         str_iterator = iter_profile_names()
-    elif args.list_what == 'services':
+    elif list_what == 'services':
         str_iterator = (x.name for x in SERVICES_CLASSES)
-    elif args.list_what == 'subcommands':
+    elif list_what == 'subcommands':
         str_iterator = iter_subcommands()
-    elif args.list_what == '_auto_complete':
-        command_line = args.command_line
-
+    elif list_what == '_auto_complete':
         words = shlex_split(command_line)
 
         if command_line[-1].isspace():
             words.append('')
 
-        a = AutoCompleteParser(args, words)
+        a = AutoCompleteParser(words)
         str_iterator = a.auto_complete()
 
     for string in str_iterator:
         print(string)
 
 
-def bjail_create(args: Namespace) -> None:
+def bjail_create(new_instance_name: str,
+                 profile: Optional[str],
+                 no_desktop_entry: bool) -> None:
     BubblejailDirectories.create_new_instance(
-        new_name=args.new_instance_name,
-        profile_name=args.profile,
-        create_dot_desktop=args.no_desktop_entry,
+        new_name=new_instance_name,
+        profile_name=profile,
+        create_dot_desktop=no_desktop_entry,
         print_import_tips=True,
     )
 
 
-def bjail_edit(args: Namespace) -> None:
-    instance = BubblejailDirectories.instance_get(args.instance_name)
+def bjail_edit(instance_name: str) -> None:
+    instance = BubblejailDirectories.instance_get(instance_name)
     async_run(instance.edit_config_in_editor())
 
 
-def bjail_create_desktop_entry(args: Namespace) -> None:
+def bjail_create_desktop_entry(instance_name: str,
+                               profile: Optional[str],
+                               desktop_entry: Optional[str]) -> None:
     BubblejailDirectories.overwrite_desktop_entry_for_profile(
-        instance_name=args.instance_name,
-        profile_name=args.profile,
-        desktop_entry_name=args.desktop_entry,
+        instance_name=instance_name,
+        profile_name=profile,
+        desktop_entry_name=desktop_entry,
     )
 
 
@@ -379,11 +360,7 @@ def bubblejail_main(arg_list: Optional[List[str]] = None) -> None:
         choices=CommandMetadata.cmd_list_options,
         default='instances',
     )
-
-    parser_list.set_defaults(
-        func=bjail_list,
-        parser=parser,
-    )
+    parser_list.set_defaults(func=bjail_list)
 
     # Edit subcommand
     parser_edit = subparsers.add_parser(
@@ -405,6 +382,8 @@ def bubblejail_main(arg_list: Optional[List[str]] = None) -> None:
     parser_desktop_entry.add_argument(CommandMetadata.instance_arg())
     parser_desktop_entry.set_defaults(func=bjail_create_desktop_entry)
 
-    args = parser.parse_args(arg_list)
+    args_dict = vars(parser.parse_args(arg_list))
 
-    args.func(args)
+    func = args_dict.pop('func')
+
+    func(**args_dict)
