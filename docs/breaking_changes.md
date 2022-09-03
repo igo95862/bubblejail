@@ -4,7 +4,7 @@
 
 `toml` is an abandoned.
 
-New TOML packages are `tomli` (reading) and `tomli-w` (writting).
+New TOML packages are `tomli` (reading) and `tomli-w` (writing).
 
 ## From 0.2
 
