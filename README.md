@@ -32,6 +32,10 @@ Each instance has a `services.toml` file which defines the configuration of the 
 
 [AUR stable](https://aur.archlinux.org/packages/bubblejail/)
 
+### Distro specific quirks
+
+[Void Linux](docs/distro_notes/void.md)
+
 ### Manual Installation
 
 If your distro does not have a package you can try to manually install with meson
