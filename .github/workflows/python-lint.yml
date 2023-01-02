@@ -14,7 +14,7 @@ jobs:
 
     steps:
       - name: Checkout repository
-        uses: actions/checkout@v2
+        uses: actions/checkout@755da8c3cf115ac066823e79a1e1788f8940201b
         with:
           # We must fetch at least the immediate parents so that if this is
           # a pull request then we can checkout the head.
@@ -26,10 +26,11 @@ jobs:
         if: ${{ github.event_name == 'pull_request' }}
 
       - name: Setup Python
-        uses: actions/setup-python@v2
+        uses: actions/setup-python@5ccb29d8773c3f3f653e1705f474dfaa8a06a912
         with:
           python-version: 3.9
-          # Use 3.9 since it is what Arch packages at the moment
+          # Use 3.9 since it was the Python version when bubblejail
+          # was released.
 
       - name: Display Python version
         run: python -c "import sys; print(sys.version)"
