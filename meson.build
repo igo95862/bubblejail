@@ -6,7 +6,10 @@ fs = import('fs')
 pymod = import('python')
 py_installation = pymod.find_installation('python3')
 
-bytecode_compiler = find_program('bytecode_compiler.build')
+bytecode_compiler = find_program(
+    'bytecode_compiler.py',
+    dirs : [ meson.project_source_root() / 'tools' ],
+)
 m4_compiler = find_program('m4')
 
 test_env = environment()
