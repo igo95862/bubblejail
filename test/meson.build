@@ -2,6 +2,7 @@ unittests = files(
     'test_helper.py',
     'test_profiles.py',
     'test_service_info.py',
+    'test_auto_completion.py',
 )
 
 foreach unittest : unittests
