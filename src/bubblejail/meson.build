@@ -28,9 +28,11 @@ bubblejail_lib_package = custom_target(
     output : source_files + ['__pycache__'],
     install : true,
     install_dir : bubblejail_package_dir,
-    command : [bytecode_compiler,
-               '--input-files', '@INPUT@',
-               '--output-dir', '@OUTDIR@',
-               '--lib-prefix', get_option('prefix') / bubblejail_package_dir,
-               ],
+    command : [
+        bytecode_compiler,
+        '--input-files', '@INPUT@',
+        '--output-dir', '@OUTDIR@',
+        '--lib-prefix', get_option('prefix') / bubblejail_package_dir,
+        '--optimize-level', get_option('bytecode-optimization').to_string(),
+    ],
 )
