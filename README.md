@@ -45,7 +45,7 @@ If your distro does not have a package you can try to manually install with meso
 
 ##### Build requirements
 * Python 3 (>= 3.9) - python interpreter
-* m4 - macro generator used during build
+* Jinja2 - Python template engine used during build
 * Meson - build system
 * Sphinx - documentation builder
 

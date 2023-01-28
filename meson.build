@@ -10,13 +10,11 @@ bytecode_compiler = find_program(
     'bytecode_compiler.py',
     dirs : [ meson.project_source_root() / 'tools' ],
 )
-m4_compiler = find_program('m4')
 
 test_env = environment()
 test_env.set('MESON_SOURCE_ROOT', meson.project_source_root())
 
 subdir('src')
-subdir('m4')
 subdir('data')
 subdir('docs')
 subdir('tools')

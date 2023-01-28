@@ -1,0 +1,6 @@
+{% if PYTHON_PACKAGES_DIR is defined -%}
+from sys import path
+
+
+path.append("{{ PYTHON_PACKAGES_DIR }}")
+{%- endif %}
