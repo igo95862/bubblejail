@@ -35,6 +35,8 @@ Each instance has a `services.toml` file which defines the configuration of the 
 
 [Void Linux](docs/distro_notes/void.md)
 
+[Alpine Linux](docs/distro_notes/alpine.md)
+
 ### Manual Installation
 
 If your distro does not have a package you can try to manually install with meson
