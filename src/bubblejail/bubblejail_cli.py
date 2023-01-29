@@ -191,6 +191,7 @@ if TYPE_CHECKING:
         add_argument: dict[str, dict[str, Any]]
         argument: str
         func: Callable[..., None]
+        description: 'str'
 
 BUBBLEJAIL_CMD: dict[str, CmdMetaDataDict] = {
     'run': {
@@ -325,12 +326,12 @@ def create_arg_parser() -> ArgumentParser:
         description='Available subcommands.'
     )
     for subcommand_name, subcommand_data in BUBBLEJAIL_CMD.items():
-        subfunction = subcommand_data.pop('func')
-        subcommand_data.pop('argument')
-        subcommand_add_argument = subcommand_data.pop('add_argument')
+        subfunction = subcommand_data['func']
+        description = subcommand_data['description']
+        subcommand_add_argument = subcommand_data['add_argument']
         subparser = subparsers.add_parser(
             subcommand_name,
-            **subcommand_data,
+            description=description,
         )
         subparser.set_defaults(
             func=subfunction,
