@@ -144,7 +144,7 @@ def run_bjail(instance_name: str,
         raise
 
 
-def bjail_list(list_what: str, command_line: str) -> None:
+def bjail_list(list_what: str) -> None:
     str_iterator: Iterator[str]
 
     if list_what == 'instances':
@@ -197,45 +197,75 @@ BUBBLEJAIL_CMD: dict[str, CmdMetaDataDict] = {
         'add_argument': {
             '--debug-shell': {
                 'action': 'store_true',
+                'help': (
+                    'Opens a shell inside the sandbox instead of '
+                    'running program. Useful for debugging.'
+                ),
             },
             '--dry-run': {
                 'action': 'store_true',
+                'help': (
+                    'Prints the bwrap and xdg-desktop-entry arguments '
+                    'instead of running.'
+                ),
             },
             '--debug-helper-script': {
                 'type': Path,
+                'help': (
+                    'Use the specified helper script. '
+                    'This is mainly development command.'
+                ),
             },
             '--debug-log-dbus': {
                 'action': 'store_true',
+                'help': 'Enables D-Bus proxy logging.',
             },
             '--wait': {
                 'action': 'store_true',
+                'help': (
+                    'Wait on the command inserted in to sandbox '
+                    'and get the output.'
+                ),
             },
             '--debug-bwrap-args': {
                 'action': 'append',
                 'nargs': '+',
+                'help': (
+                    'Add extra option to bwrap. '
+                    'First argument will be prefixed with `--`.'
+                ),
             },
-            'instance_name': {},
+            'instance_name': {
+                'help': 'Instance to run.',
+            },
             'args_to_instance': {
-                'nargs': ARG_REMAINDER
+                'nargs': ARG_REMAINDER,
+                'help': 'Command and its arguments to run inside instance.',
             },
         },
         'argument': 'instance',
         'func': run_bjail,
+        'description': 'Launch instance or run command inside.',
     },
     'create': {
         'add_argument': {
-            '--profile': {},
+            '--profile': {
+                'help': 'Bubblejail profile to use.',
+            },
             '--no-desktop-entry': {
                 'action': 'store_false',
+                'help': 'Do not create desktop entry.',
             },
-            'new_instance_name': {},
+            'new_instance_name': {
+                'help': 'New instance name.',
+            },
         },
         'argument': 'any',
         'func': bjail_create,
+        'description': 'Create new bubblejail instance.',
     },
     'list': {
         'add_argument': {
-            '--command-line': {},
             'list_what': {
                 'choices': {
                     'instances',
@@ -243,41 +273,64 @@ BUBBLEJAIL_CMD: dict[str, CmdMetaDataDict] = {
                     'services',
                 },
                 'default': 'instances',
+                'help': 'Type of entity to list.',
             },
         },
         'argument': 'any',
         'func': bjail_list,
+        'description': 'List certain bubblejail entities.',
     },
     'edit': {
         'add_argument': {
-            'instance_name': {},
+            'instance_name': {
+                'help': 'Instance to edit config.',
+            },
         },
         'argument': 'instance',
         'func': bjail_edit,
+        'description': 'Open instance config in $EDITOR.',
     },
     'generate-desktop-entry': {
         'add_argument': {
-            '--profile': {},
-            '--desktop-entry': {},
-            'instance_name': {},
+            '--profile': {
+                'help': 'Use desktop entry specified in profile.',
+            },
+            '--desktop-entry': {
+                'help': 'Desktop entry name or path to use.',
+            },
+            'instance_name': {
+                'help': 'Instance to generate desktop entry for',
+            },
         },
         'argument': 'instance',
         'func': bjail_create_desktop_entry,
+        'description': 'Generate XDG desktop entry for an instance.',
     },
 }
 
 
 def create_arg_parser() -> ArgumentParser:
-    parser = ArgumentParser()
+    parser = ArgumentParser(
+        description=(
+            'Bubblejail is a bubblewrap based sandboxing utility.'
+        )
+    )
     subparsers = parser.add_subparsers(
         required=True,
+        description='Available subcommands.'
     )
     for subcommand_name, subcommand_data in BUBBLEJAIL_CMD.items():
-        subparser = subparsers.add_parser(subcommand_name)
-        subparser.set_defaults(
-            func=subcommand_data['func'],
+        subfunction = subcommand_data.pop('func')
+        subcommand_data.pop('argument')
+        subcommand_add_argument = subcommand_data.pop('add_argument')
+        subparser = subparsers.add_parser(
+            subcommand_name,
+            **subcommand_data,
         )
-        for arg_name, arg_options in subcommand_data['add_argument'].items():
+        subparser.set_defaults(
+            func=subfunction,
+        )
+        for arg_name, arg_options in subcommand_add_argument.items():
             subparser.add_argument(
                 arg_name,
                 **arg_options,
