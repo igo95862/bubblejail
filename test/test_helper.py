@@ -139,7 +139,7 @@ class PidTrackerTest(IsolatedAsyncioTestCase):
 
         with self.subTest('PID tracking by command: right command'):
             # WARN: This will give false positive if you have
-            # sleep runing anywhere on the system
+            # sleep running anywhere on the system
             # Maybein the future we can setup quick pid namespace
             self.assertTrue(
                 BubblejailHelper.proc_has_process_command('sleep'))

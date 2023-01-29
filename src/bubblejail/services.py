@@ -324,7 +324,7 @@ class BubblejailDefaults(BubblejailService):
         home_path = yield ServiceWantsHomeBind()
         yield Bind(home_path, real_home)
         yield EnvrimentalVar('HOME', str(real_home))
-        # Compatibilty symlink
+        # Compatibility symlink
         if real_home != OLD_HOME_BIND:
             yield Symlink(real_home, OLD_HOME_BIND)
 
@@ -621,7 +621,7 @@ class DirectRendering(BubblejailService):
         if self.enable_aco.get_value():
             yield EnvrimentalVar('RADV_PERFTEST', 'aco')
 
-        # Nvidia specifc binds
+        # Nvidia specific binds
         for x in Path('/dev/').iterdir():
             if x.name.startswith('nvidia'):
                 yield DevBind(x)

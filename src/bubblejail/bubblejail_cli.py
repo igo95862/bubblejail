@@ -72,7 +72,7 @@ def _extra_args_converter(command_sequence: list[str]
     try:
         argword = next(command_iter)
     except StopIteration:
-        raise ValueError('Expected atleast one argument')
+        raise ValueError('Expected at least one argument')
 
     yield f"--{argword}"
 

@@ -17,7 +17,7 @@ Maybe check Arch Linux stats for commonly used applications?
 
 ## GTK
 
-* How does directory metadata is shared. If you sort a directory by size, it is somehow is remmebered when not sandboxed. Is it a Dbus API? a file?
+* How does directory metadata is shared. If you sort a directory by size, it is somehow is remembered when not sandboxed. Is it a Dbus API? a file?
 * Is sharing recent file metadata folder safe? (under `~/.local/share/recently-used.xbel`)
 * Accessibility bus.
 ..* Talk to `org.a11y.Bus` dbus.
