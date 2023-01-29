@@ -10,7 +10,7 @@ on:
 jobs:
   analyze:
     name: Analyze
-    runs-on: ubuntu-20.04
+    runs-on: ubuntu-latest
 
     steps:
       - name: Checkout repository
@@ -24,13 +24,6 @@ jobs:
       # the head of the pull request instead of the merge commit.
       - run: git checkout HEAD^2
         if: ${{ github.event_name == 'pull_request' }}
-
-      - name: Setup Python
-        uses: actions/setup-python@5ccb29d8773c3f3f653e1705f474dfaa8a06a912
-        with:
-          python-version: 3.9
-          # Use 3.9 since it was the Python version when bubblejail
-          # was released.
 
       - name: Display Python version
         run: python -c "import sys; print(sys.version)"
