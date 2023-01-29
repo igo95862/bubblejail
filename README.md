@@ -47,7 +47,7 @@ If your distro does not have a package you can try to manually install with meso
 * Python 3 (>= 3.9) - python interpreter
 * Jinja2 - Python template engine used during build
 * Meson - build system
-* Sphinx - documentation builder
+* scdoc - man page generator (optional)
 
 ##### Runtime requirements
 * Python 3 (>= 3.9) - python interpreter
@@ -92,12 +92,6 @@ Configuration utility
 1. Optionally change name
 1. Press 'Create'
 1. The new instance is created along with new desktop entry.
-
-## Command-line utility documentation
-
-See man page:
-
-[man 1 bubblejail](https://github.com/igo95862/bubblejail/blob/master/docs/man/bubblejail.rst)
 
 ### Usage examples
 

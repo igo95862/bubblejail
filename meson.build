@@ -14,6 +14,8 @@ bytecode_compiler = find_program(
 test_env = environment()
 test_env.set('MESON_SOURCE_ROOT', meson.project_source_root())
 
+python_package_env = environment()
+
 subdir('src')
 subdir('data')
 subdir('docs')

@@ -215,6 +215,7 @@ BUBBLEJAIL_CMD: dict[str, CmdMetaDataDict] = {
                     'Use the specified helper script. '
                     'This is mainly development command.'
                 ),
+                'metavar': 'script_path',
             },
             '--debug-log-dbus': {
                 'action': 'store_true',
@@ -234,6 +235,7 @@ BUBBLEJAIL_CMD: dict[str, CmdMetaDataDict] = {
                     'Add extra option to bwrap. '
                     'First argument will be prefixed with `--`.'
                 ),
+                'metavar': ('bwrap_option', 'bwrap_option_args'),
             },
             'instance_name': {
                 'help': 'Instance to run.',
@@ -251,6 +253,7 @@ BUBBLEJAIL_CMD: dict[str, CmdMetaDataDict] = {
         'add_argument': {
             '--profile': {
                 'help': 'Bubblejail profile to use.',
+                'metavar': 'profile',
             },
             '--no-desktop-entry': {
                 'action': 'store_false',
@@ -294,9 +297,11 @@ BUBBLEJAIL_CMD: dict[str, CmdMetaDataDict] = {
         'add_argument': {
             '--profile': {
                 'help': 'Use desktop entry specified in profile.',
+                'metavar': 'profile',
             },
             '--desktop-entry': {
                 'help': 'Desktop entry name or path to use.',
+                'metavar': 'name_or_path',
             },
             'instance_name': {
                 'help': 'Instance to generate desktop entry for',

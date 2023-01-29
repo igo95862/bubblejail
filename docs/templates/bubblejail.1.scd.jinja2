@@ -1,0 +1,64 @@
+bubblejail(1)
+
+# NAME
+
+bubblejail - bubblewrap based sandboxing utility
+
+# SYNOPSIS
+
+*bubblejail* <command> [--option] [args]
+
+# DESCRIPTION
+
+*Bubblejail's* design is based on observations of *Firejail's* faults.
+
+One of the biggest issues with Firejail is that you can accidentally run
+unsandboxed applications and not notice.
+
+*Bubblejail*, instead of trying to transparently overlay an existing
+home directory, creates a separate home directory.
+
+Every *Instance* represents a separate home directory.
+Typically, every sandboxed application has its own home directory.
+
+Each instance has a _services.toml_ file which defines the
+configuration of the instance such as system resources that the
+sandbox should have access to.
+
+*Service* represents some system resources that the sandbox
+can be given access to. For example, the Pulse Audio service gives
+access to the Pulse Audio socket so that the application can use sound.
+
+*Profile* is a predefined set of services that a particular
+application uses. For example, Firefox profiles gives access to
+network, pulse audio and _~/Downloads_ folder. Users can define
+their own profiles in _~/.config/bubblejail/profiles_ directory.
+
+Profiles also specify the desktop entry to copy and MIME types
+the application has.
+
+*Bubblejail* uses TOML configuration format.
+
+# SUBCOMMANDS
+
+{% for subcommand in subcommands %}
+## {{ subcommand }} {{ format_arg_names(subcommand) | join(' ') }}
+
+{{ get_subcommand_description(subcommand) }}
+
+{% if get_options(subcommand) %}*Options:*{% endif %}
+{% for option in get_options(subcommand) %}
+{{ format_option(subcommand, option) | join(' ') }}
+
+{{ get_option_description(subcommand, option) }}
+{% endfor %}
+
+{% endfor %}
+
+# SEE ALSO
+
+Bubblejail home page: https://github.com/igo95862/bubblejail
+
+# BUGS
+
+Report bugs to the bugtracker: https://github.com/igo95862/bubblejail/issues
