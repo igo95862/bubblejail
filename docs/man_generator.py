@@ -37,6 +37,10 @@ if TYPE_CHECKING:
     from collections.abc import Iterator
 
 
+def scdoc_paragraph(s: Iterator[str]) -> str:
+    return '\n\n'.join(s)
+
+
 def scdoc_indent(s: str, indent_level: int = 1) -> str:
     return indent(s, '\t'*indent_level)
 
@@ -123,7 +127,7 @@ def format_option(subcommand: str, option: str) -> Iterator[str]:
             raise TypeError
 
 
-def get_option_description(subcommand: str, option: str) -> str:
+def get_option_description(subcommand: str, option: str) -> tuple[str, ...]:
     option_data = BUBBLEJAIL_CMD[subcommand]['add_argument'][option]
     option_help = option_data['help']
     try:
@@ -131,14 +135,7 @@ def get_option_description(subcommand: str, option: str) -> str:
     except KeyError:
         option_extra_description = ''
 
-    option_text = '\n\n'.join(
-        (
-            option_help,
-            option_extra_description,
-        )
-    )
-
-    return indent(option_text, '\t')
+    return option_help, option_extra_description
 
 
 def get_options(subcommand: str) -> tuple[str, ...]:
@@ -165,12 +162,10 @@ def format_arg_names(subcommand: str) -> Iterator[str]:
             yield f"[{add_argument}]"
 
 
-def get_subcommand_description(subcommand: str) -> str:
-    return '\n\n'.join(
-        (
-            BUBBLEJAIL_CMD[subcommand]['description'],
-            SUBCOMMAND_HELP.get(subcommand, ''),
-        )
+def get_subcommand_description(subcommand: str) -> tuple[str, ...]:
+    return (
+        BUBBLEJAIL_CMD[subcommand]['description'],
+        SUBCOMMAND_HELP.get(subcommand, ''),
     )
 
 
@@ -179,6 +174,8 @@ def generate_cmd_man(template_dir: Path) -> None:
         loader=FileSystemLoader(template_dir),
         undefined=StrictUndefined,
     )
+    env.filters['scdoc_indent'] = scdoc_indent
+    env.filters['scdoc_paragraph'] = scdoc_paragraph
 
     template = env.get_template('bubblejail.1.scd.jinja2')
 

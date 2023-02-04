@@ -44,13 +44,13 @@ the application has.
 {% for subcommand in subcommands %}
 ## {{ subcommand }} {{ format_arg_names(subcommand) | join(' ') }}
 
-{{ get_subcommand_description(subcommand) }}
+{{ get_subcommand_description(subcommand) | scdoc_paragraph }}
 
 {% if get_options(subcommand) %}*Options:*{% endif %}
 {% for option in get_options(subcommand) %}
 {{ format_option(subcommand, option) | join(' ') }}
 
-{{ get_option_description(subcommand, option) }}
+{{ get_option_description(subcommand, option) | scdoc_paragraph | scdoc_indent }}
 {% endfor %}
 
 {% endfor %}
