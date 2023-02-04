@@ -1,7 +1,13 @@
 
-bubblejail_test_run = run_target(
-    'bubblejail_test_run',
-    command : [py_installation, files('run_test_bubblejail.py'), '--version'],
+bubblejail_test_cmd_run = run_target(
+    'bubblejail_test_cmd_run',
+    command : [py_installation, files('run_test_bubblejail.py'), 'shell'],
+    depends : bubblejail_lib_package,
+    env : test_env,
+)
+bubblejail_test_gui_run = run_target(
+    'bubblejail_test_gui_run',
+    command : [py_installation, files('run_test_bubblejail.py'), 'gui'],
     depends : bubblejail_lib_package,
     env : test_env,
 )
