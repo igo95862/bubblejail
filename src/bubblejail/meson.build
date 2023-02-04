@@ -12,6 +12,7 @@ source_files = [
    'bwrap_config.py',
    'exceptions.py',
    'services.py',
+   'py.typed',
 ]
 
 if get_option('use_python_site_packages_dir')
