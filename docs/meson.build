@@ -17,6 +17,7 @@ bubblejail_man_page_markdown = custom_target(
     command : [
         man_generator,
         '--template-dir', meson.current_source_dir() / 'templates',
+        'cmd',
     ],
     env : python_package_env,
 )

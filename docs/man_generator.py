@@ -182,6 +182,11 @@ def generate_cmd_man(template_dir: Path) -> None:
     )
 
 
+GENERATORS = {
+    'cmd': generate_cmd_man,
+}
+
+
 def main() -> None:
     arg_parse = ArgumentParser()
     arg_parse.add_argument(
@@ -189,9 +194,15 @@ def main() -> None:
         required=True,
         type=Path,
     )
-    args = arg_parse.parse_args()
+    arg_parse.add_argument(
+        'generator',
+        choices=GENERATORS.keys(),
+    )
+    args = vars(arg_parse.parse_args())
 
-    generate_cmd_man(**vars(args))
+    generator_func_name = args.pop('generator')
+
+    GENERATORS[generator_func_name](**args)
 
 
 if __name__ == "__main__":
