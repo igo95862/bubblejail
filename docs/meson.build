@@ -1,6 +1,7 @@
 scdoc = find_program(
     'scdoc',
     disabler : true,
+    required : false,
 )
 
 man_generator = find_program('man_generator.py')
