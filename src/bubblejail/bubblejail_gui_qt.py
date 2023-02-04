@@ -284,6 +284,21 @@ class ServiceWidget:
 
         self.option_to_widget_tuples = list(generator_option_widgets())
 
+    def disable(self, message: str) -> None:
+        self.group_widget.setChecked(False)
+        self.group_widget.setCheckable(False)
+        self.group_widget.setTitle(message)
+        self.group_widget.update()
+
+    def enable(self) -> None:
+        if self.group_widget.isCheckable():
+            return
+
+        self.group_widget.setTitle(self.service.pretty_name)
+        self.group_widget.setCheckable(True)
+        self.group_widget.setChecked(False)
+        self.group_widget.update()
+
     def save(self) -> None:
         for option, option_widget in self.option_to_widget_tuples:
             option.set_value(option_widget.get_data())
@@ -349,12 +364,46 @@ class InstanceEditWidget(CentralWidgets):
             self.scrolled_layout.addWidget(new_service_widget.group_widget)
             self.service_widgets.append(new_service_widget)
 
+            new_service_widget.group_widget.toggled.connect(
+                partial(
+                    InstanceEditWidget.refresh_conflicts, self,
+                )
+            )
+
+        self.refreshing_conflict = False
+        self.refresh_conflicts()
+
     def set_instance_data(self) -> None:
         for service_widget in self.service_widgets:
             service_widget.save()
 
         self.bubblejail_instance.save_config(self.instance_config)
         self.parent.switch_to_selector()
+
+    def refresh_conflicts(self) -> None:
+        if self.refreshing_conflict:
+            return
+
+        self.refreshing_conflict = True
+
+        enabled_conflicts: set[str] = set()
+
+        for service_widget in self.service_widgets:
+            if service_widget.group_widget.isChecked():
+
+                enabled_conflicts |= service_widget.service.conflicts
+
+        for service_widget in self.service_widgets:
+
+            if service_widget.service.name in enabled_conflicts:
+                service_widget.disable(
+                    f"⚠ Service {service_widget.service.name} conflicts with "
+                    f"{', '.join(service_widget.service.conflicts)}. ⚠"
+                )
+            else:
+                service_widget.enable()
+
+        self.refreshing_conflict = False
 
 
 class CreateInstanceWidget(CentralWidgets):

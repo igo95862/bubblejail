@@ -52,6 +52,7 @@ from .bwrap_config import (
     ShareNetwork,
     Symlink,
 )
+from .exceptions import ServiceConflictError
 
 # region Service Typing
 
@@ -285,6 +286,7 @@ class BubblejailService:
     name: str
     pretty_name: str
     description: str
+    conflicts: frozenset[str] = frozenset()
 
 
 # Pre version 0.6.0 home bind path
@@ -904,6 +906,7 @@ class IBus(BubblejailService):
         'Gives access to IBus input method.\n'
         'This is generally the default input method for multilingual input.'
     )
+    conflicts = frozenset(('fcitx', ))
 
 
 class Fcitx(BubblejailService):
@@ -925,6 +928,7 @@ class Fcitx(BubblejailService):
         'Gives access to Fcitx/Fcitx5 input method.\n'
         'This is another popular input method framework.'
     )
+    conflicts = frozenset(('ibus', ))
 
 
 SERVICES_CLASSES: Tuple[Type[BubblejailService], ...] = (
@@ -933,6 +937,10 @@ SERVICES_CLASSES: Tuple[Type[BubblejailService], ...] = (
     Systray, Joystick, RootShare, OpenJDK, Notifications,
     GnomeToolkit, Pipewire, VideoForLinux, IBus, Fcitx,
 )
+
+SERVICES_MAP: Dict[str, Type[BubblejailService]] = {
+    service.name: service for service in SERVICES_CLASSES
+}
 
 ServicesConfDictType = Dict[str, Dict[str, ServiceOptionTypes]]
 
@@ -951,6 +959,8 @@ class ServiceContainer:
             self,
             new_services_datas: ServicesConfDictType) -> None:
 
+        declared_services: set[str] = set()
+
         for service in self.services:
             try:
                 new_service_data = new_services_datas.pop(service.name)
@@ -963,6 +973,13 @@ class ServiceContainer:
 
             service.set_options(new_service_data)
             service.enabled = True
+            declared_services.add(service.name)
+
+            if conflicting_services := (declared_services & service.conflicts):
+                raise ServiceConflictError(
+                    f"Service conflict between {service.name} and "
+                    f"{', '.join(conflicting_services)}"
+                )
 
         if new_services_datas:
             raise TypeError('Unknown conf dict keys', new_services_datas)

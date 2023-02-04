@@ -20,15 +20,11 @@ class BubblejailException(Exception):
     ...
 
 
-class FailedInitializeServiceError(BubblejailException):
+class ServiceError(BubblejailException):
     ...
 
 
-class ServiceUnavailableError(BubblejailException):
-    ...
-
-
-class MissingConfigurationError(BubblejailException):
+class ServiceConflictError(ServiceError):
     ...
 
 
