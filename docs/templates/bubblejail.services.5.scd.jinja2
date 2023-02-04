@@ -1,0 +1,58 @@
+bubblejail.services(5)
+
+# NAME
+
+bubblejail.services - bubblejail instance service configuration.
+
+# SYNOPSIS
+
+_services.toml_
+
+# DESCRIPTION
+
+Bubblejail service is configuration is defined in the "services.toml"
+file located at _~/.local/share/bubblejail/instances/<instance_name>/services.toml_
+
+"services.toml" is a TOML formatted file.*[1]* Declaring a table will activate
+the service and key/values declared in the table will pass the settings to the
+service.
+
+For example:
+
+```
+{{ "[home_share]
+home_paths = [\"Downloads\"]" | scdoc_indent }}
+```
+
+Will activate _home_share_ service and share the _Downloads_
+folder from home directory with the sandbox.
+
+# AVAILABLE SERVICES
+
+{% for service in services %}
+## {{ service.name }}
+
+{{ service.pretty_name }}
+
+{{ service. description }}
+
+{% if service.option_list %}*Options:*
+{% endif %}
+{% for option in service.iter_options() %}
+_{{ option.name }}_: {{ service_option_to_type_str(option) }}
+
+{% if option.is_deprecated %}{{ "*Deprecated*" | scdoc_indent }}{% endif %}
+
+{{ option.description | scdoc_indent }}
+
+{% endfor %}
+{% endfor %}
+
+# SEE ALSO
+
+*bubblejail*(1)
+
+# NOTES
+
+. TOML configuration file format.
+  https://toml.io/

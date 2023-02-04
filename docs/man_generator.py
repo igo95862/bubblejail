@@ -24,9 +24,21 @@ from typing import TYPE_CHECKING
 from jinja2 import Environment, FileSystemLoader, StrictUndefined
 
 from bubblejail.bubblejail_cli import BUBBLEJAIL_CMD
+from bubblejail.services import (
+    SERVICES_CLASSES,
+    OptionBool,
+    OptionSpaceSeparatedStr,
+    OptionStr,
+    OptionStrList,
+    ServiceOption,
+)
 
 if TYPE_CHECKING:
     from collections.abc import Iterator
+
+
+def scdoc_indent(s: str, indent_level: int = 1) -> str:
+    return indent(s, '\t'*indent_level)
 
 
 SUBCOMMAND_HELP = {
@@ -182,8 +194,40 @@ def generate_cmd_man(template_dir: Path) -> None:
     )
 
 
+def service_option_to_type_str(option: ServiceOption) -> str:
+    match option:
+        case OptionSpaceSeparatedStr():
+            return 'list[str] | str'
+        case OptionStrList():
+            return 'list[str]'
+        case OptionStr():
+            return 'str'
+        case OptionBool():
+            return 'bool'
+        case _:
+            raise TypeError
+
+
+def generate_services_man(template_dir: Path) -> None:
+    env = Environment(
+        loader=FileSystemLoader(template_dir),
+        undefined=StrictUndefined,
+    )
+    env.filters['scdoc_indent'] = scdoc_indent
+
+    template = env.get_template('bubblejail.services.5.scd.jinja2')
+
+    print(
+        template.render(
+            services=tuple(x() for x in SERVICES_CLASSES),
+            service_option_to_type_str=service_option_to_type_str,
+        )
+    )
+
+
 GENERATORS = {
     'cmd': generate_cmd_man,
+    'services': generate_services_man,
 }
 
 
