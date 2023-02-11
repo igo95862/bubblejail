@@ -25,12 +25,12 @@ from asyncio import (
 )
 from asyncio.subprocess import Process
 from functools import cached_property
+from json import load as json_load
 from os import O_CLOEXEC, O_NONBLOCK, environ, kill, pipe2, stat
 from pathlib import Path
 from signal import SIGTERM
 from tempfile import TemporaryDirectory, TemporaryFile
 from typing import IO, Any, List, Optional, Set, Type, TypedDict, cast
-from json import load as json_load
 
 from tomli import loads as toml_loads
 from tomli_w import dump as toml_dump
@@ -322,6 +322,8 @@ class BubblejailInstance:
             if not post_init_hooks_task.done():
                 post_init_hooks_task.cancel()
 
+            await self._run_post_shutdown_hooks(init)
+
             if bwrap_process.returncode != 0:
                 raise BubblewrapRunError((
                     "Bubblewrap failed. "
@@ -336,6 +338,13 @@ class BubblejailInstance:
         sandboxed_pid = await init.sandboxed_pid
         if __debug__:
             print(f"Sandboxed PID: {sandboxed_pid}")
+
+        for service in init.instance_config.iter_services():
+            service.post_init_hook(sandboxed_pid)
+
+    async def _run_post_shutdown_hooks(self, init: BubblejailInit) -> None:
+        for service in init.instance_config.iter_services():
+            service.post_shutdown_hook()
 
     async def edit_config_in_editor(self) -> None:
         # Create temporary directory

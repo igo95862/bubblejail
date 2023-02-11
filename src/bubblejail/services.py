@@ -15,6 +15,7 @@
 # along with bubblejail.  If not, see <https://www.gnu.org/licenses/>.
 from __future__ import annotations
 
+from multiprocessing import Process
 from os import environ, getuid, readlink
 from pathlib import Path
 from typing import (
@@ -283,6 +284,12 @@ class BubblejailService:
 
         return new_dict
 
+    def post_init_hook(self, pid: int) -> None:
+        ...
+
+    def post_shutdown_hook(self) -> None:
+        ...
+
     name: str
     pretty_name: str
     description: str
@@ -529,6 +536,7 @@ class Network(BubblejailService):
     name = 'network'
     pretty_name = 'Network access'
     description = 'Gives access to network.'
+    conflicts = frozenset(('slirp4netns', ))
 
 
 class PulseAudio(BubblejailService):
@@ -931,11 +939,123 @@ class Fcitx(BubblejailService):
     conflicts = frozenset(('ibus', ))
 
 
+class Slirp4netns(BubblejailService):
+    def __init__(
+        self,
+        dns_servers: list[str] = EMPTY_LIST,
+        outbound_addr: str = '',
+        disable_host_loopback: bool = True,
+    ):
+        super().__init__()
+
+        self.dns_servers = OptionStrList(
+            str_list=dns_servers,
+            name='dns_servers',
+            pretty_name='DNS servers',
+            description=(
+                'DNS servers used. '
+                'Internal DNS server is always used.'
+            ),
+        )
+        self.outbound_addr = OptionStr(
+            string=outbound_addr,
+            name='outbound_addr',
+            pretty_name='Outbound address or deivce',
+            description=(
+                'Address or device to bind to. '
+                'If not set the default address would be used.'
+            ),
+        )
+        self.disable_host_loopback = OptionBool(
+            boolean=disable_host_loopback,
+            name='disable_host_loopback',
+            pretty_name='Disable host loopback access',
+            description='Prohibit connecting to host\'s loopback interface'
+        )
+
+        self.add_option(self.dns_servers)
+        self.add_option(self.outbound_addr)
+        self.add_option(self.disable_host_loopback)
+
+        self.slirp_process: Process | None = None
+
+    def __iter__(self) -> ServiceGeneratorType:
+        if not self.enabled:
+            return
+
+        dns_servers = self.dns_servers.get_value()
+        dns_servers.append("10.0.2.3")
+
+        yield FileTransfer(
+            b"\n".join(
+                f"nameserver {x}".encode()
+                for x in dns_servers
+            ),
+            '/etc/resolv.conf'
+        )
+
+    @staticmethod
+    def exec_slirp4netns(
+        outbound_addr: str,
+        disable_host_loopback: bool,
+        pid: int,
+    ) -> None:
+        from bubblejail.namespaces import UserNamespace
+        target_namespace = UserNamespace.from_pid(pid)
+        parent_ns = target_namespace.get_parent_ns()
+        parent_ns.setns()
+
+        slirp4netns_args = [
+            '/usr/bin/slirp4netns',
+            '--configure',
+            '--userns-path=/proc/self/ns/user',
+        ]
+        if outbound_addr:
+            slirp4netns_args.append(
+                (f"--outbound-addr={outbound_addr}")
+            )
+
+        if disable_host_loopback:
+            slirp4netns_args.append('--disable-host-loopback')
+
+        slirp4netns_args.append(str(pid))
+        slirp4netns_args.append('tap0')
+
+        from os import execv
+        execv('/usr/bin/slirp4netns', slirp4netns_args)
+
+    def post_init_hook(self, pid: int) -> None:
+        self.slirp_process = Process(
+            target=self.exec_slirp4netns,
+            args=(
+                self.outbound_addr.get_value(),
+                self.disable_host_loopback.get_value(),
+                pid,
+            ),
+        )
+        self.slirp_process.start()
+
+    def post_shutdown_hook(self) -> None:
+        if self.slirp_process is not None:
+            self.slirp_process.terminate()
+            self.slirp_process.join(3)
+            self.slirp_process.close()
+
+    name = 'slirp4netns'
+    pretty_name = 'Slirp4netns networking'
+    description = (
+        "Independent networking stack for sandbox. "
+        "Requires slirp4netns executable."
+    )
+    conflicts = frozenset(('network', ))
+
+
 SERVICES_CLASSES: Tuple[Type[BubblejailService], ...] = (
     CommonSettings, X11, Wayland,
     Network, PulseAudio, HomeShare, DirectRendering,
     Systray, Joystick, RootShare, OpenJDK, Notifications,
     GnomeToolkit, Pipewire, VideoForLinux, IBus, Fcitx,
+    Slirp4netns,
 )
 
 SERVICES_MAP: Dict[str, Type[BubblejailService]] = {

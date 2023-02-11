@@ -125,6 +125,7 @@ Configuration utility
 * openjdk: Access to Java libraries.
 * notify: Access to desktop notifications.
 * ibus: Multilingual input.
+* slirp4netns: Custom networking such as binding to a specific device
 
 ## Available profiles
 
