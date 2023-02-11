@@ -13,6 +13,7 @@ source_files = [
    'exceptions.py',
    'services.py',
    'py.typed',
+   'namespaces.py',
    'namespaces_constants.py',
 ]
 
