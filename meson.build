@@ -16,6 +16,8 @@ test_env.set('MESON_SOURCE_ROOT', meson.project_source_root())
 
 python_package_env = environment()
 
+templates_dir = meson.current_source_dir() / 'templates'
+
 subdir('src')
 subdir('data')
 subdir('docs')

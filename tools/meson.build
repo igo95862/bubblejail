@@ -37,7 +37,7 @@ jinja2_compiler = find_program('./jinja2_run.py')
 
 jinja2_commands = [
     jinja2_compiler,
-    '--template-dir', meson.current_source_dir() / 'templates',
+    '--template-dir', templates_dir,
     '--define', 'SHARE_PREFIX', share_prefix_path,
     '--define', 'LIB_PREFIX', lib_prefix_path,
     '--define', 'BUBBLEJAIL_VERSION', version_display,
@@ -54,10 +54,10 @@ jinja2_commands +=  '@PLAINNAME@'
 bubblejail_cli_launch = custom_target(
     'bubblejail_cli_launch',
     build_by_default : true,
-    input : files('./templates/bubblejail_cli_launch.py.jinja2'),
+    input : files( templates_dir / 'bubblejail_cli_launch.py.jinja2'),
     depend_files : files(
-        './templates/setup_python_path.py.jinja2',
-        './templates/setup_bubblejail_settings.py.jinja2',
+        templates_dir / 'setup_python_path.py.jinja2',
+        templates_dir / 'setup_bubblejail_settings.py.jinja2',
     ),
     output : 'bubblejail',
     capture : true,
@@ -70,10 +70,10 @@ bubblejail_cli_launch = custom_target(
 bubblejail_gui_qt_launch = custom_target(
     'bubblejail_gui_qt_launch',
     build_by_default : true,
-    input : files('./templates/bubblejail_gui_qt_launch.py.jinja2'),
+    input : files( templates_dir / 'bubblejail_gui_qt_launch.py.jinja2'),
     depend_files : files(
-        './templates/setup_python_path.py.jinja2',
-        './templates/setup_bubblejail_settings.py.jinja2',
+        templates_dir / 'setup_python_path.py.jinja2',
+        templates_dir / 'setup_bubblejail_settings.py.jinja2',
     ),
     output : 'bubblejail-config',
     capture : true,
@@ -86,10 +86,10 @@ bubblejail_gui_qt_launch = custom_target(
 bubblejail_helper_launch = custom_target(
     'bubblejail_helper_launch',
     build_by_default : true,
-    input : files('./templates/bubblejail_helper_launch.py.jinja2'),
+    input : files( templates_dir / 'bubblejail_helper_launch.py.jinja2'),
     depend_files : files(
-        './templates/setup_python_path.py.jinja2',
-        './templates/setup_bubblejail_settings.py.jinja2',
+        templates_dir / 'setup_python_path.py.jinja2',
+        templates_dir / 'setup_bubblejail_settings.py.jinja2',
     ),
     output : 'bubblejail-helper',
     capture : true,
