@@ -467,7 +467,12 @@ class BubblejailInit:
                     self.file_descriptors_to_pass.append(
                         temp_file_descriptor)
                     self.bwrap_options_args.extend(
-                        ('--file', str(temp_file_descriptor), config.dest))
+                        (
+                            '--ro-bind-data',
+                            str(temp_file_descriptor),
+                            config.dest,
+                        )
+                    )
                 elif isinstance(config, DbusSessionArgs):
                     dbus_session_opts.add(config.to_args())
                 elif isinstance(config, DbusSystemArgs):
