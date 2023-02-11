@@ -13,6 +13,7 @@ source_files = [
    'exceptions.py',
    'services.py',
    'py.typed',
+   'namespaces_constants.py',
 ]
 
 if get_option('use_python_site_packages_dir')
