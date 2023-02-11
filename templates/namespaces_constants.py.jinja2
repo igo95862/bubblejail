@@ -18,4 +18,4 @@ from __future__ import annotations
 
 class NamespacesConstants:
 {%- for name, value in constants_data.items() %}
-    {{ name }}: {{ type(value) }} = {{ value }}{% endfor %}
+    {{ name | convert_constant_name }}: {{ type(value) }} = {{ value }}{% endfor %}

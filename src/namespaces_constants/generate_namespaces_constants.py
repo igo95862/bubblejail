@@ -24,6 +24,13 @@ from typing import Any
 from jinja2 import Environment, FileSystemLoader
 
 
+def convert_constant_name(constant_name: str) -> str:
+    if constant_name.startswith('__NR'):
+        return constant_name.replace('__NR', 'syscall').upper()
+
+    return constant_name
+
+
 def get_constant_type(constant: Any) -> str:
     match constant:
         case int():
@@ -44,6 +51,7 @@ def generate_constants_file(
     env = Environment(
         loader=FileSystemLoader(template_dir),
     )
+    env.filters['convert_constant_name'] = convert_constant_name
 
     template = env.get_template("namespaces_constants.py.jinja2")
     print(template.render(
