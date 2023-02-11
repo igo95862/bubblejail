@@ -30,6 +30,7 @@ from pathlib import Path
 from signal import SIGTERM
 from tempfile import TemporaryDirectory, TemporaryFile
 from typing import IO, Any, List, Optional, Set, Type, TypedDict, cast
+from json import load as json_load
 
 from tomli import loads as toml_loads
 from tomli_w import dump as toml_dump
@@ -310,10 +311,16 @@ class BubblejailInstance:
             loop.add_signal_handler(SIGTERM, sigterm_bubblejail_handler,
                                     bwrap_process.pid)
 
+            post_init_hooks_task = loop.create_task(
+                self._run_post_init_hooks(init))
+
             try:
                 await task_bwrap_main
             except CancelledError:
                 print('Bwrap cancelled')
+
+            if not post_init_hooks_task.done():
+                post_init_hooks_task.cancel()
 
             if bwrap_process.returncode != 0:
                 raise BubblewrapRunError((
@@ -324,6 +331,11 @@ class BubblejailInstance:
 
             if __debug__:
                 print("Bubblewrap terminated")
+
+    async def _run_post_init_hooks(self, init: BubblejailInit) -> None:
+        sandboxed_pid = await init.sandboxed_pid
+        if __debug__:
+            print(f"Sandboxed PID: {sandboxed_pid}")
 
     async def edit_config_in_editor(self) -> None:
         # Create temporary directory
@@ -397,6 +409,11 @@ class BubblejailInit:
 
         # Executable args
         self.executable_args: List[str] = []
+
+        # Info fd
+        self.info_fd_pipe_read: int = -1
+        self.info_fd_pipe_write: int = -1
+        self.sandboxed_pid: Future[int] = Future()
 
     def genetate_args(self) -> None:
         # TODO: Reorganize the order to allow for
@@ -521,6 +538,24 @@ class BubblejailInit:
         # Bind helper directory
         self.bwrap_options_args.extend(
             Bind(str(self.helper_runtime_dir), '/run/bubblehelp').to_args())
+
+        # Info fd pipe
+        self.info_fd_pipe_read, self.info_fd_pipe_write = (
+            pipe2(O_NONBLOCK | O_CLOEXEC)
+        )
+        self.file_descriptors_to_pass.append(self.info_fd_pipe_write)
+        self.bwrap_options_args.extend(
+            ("--info-fd", f"{self.info_fd_pipe_write}"))
+        running_loop = get_running_loop()
+        running_loop.add_reader(
+            self.info_fd_pipe_read,
+            self.read_info_fd,
+        )
+
+    def read_info_fd(self) -> None:
+        with open(self.info_fd_pipe_read, closefd=False) as f:
+            info_dict = json_load(f)
+            self.sandboxed_pid.set_result(info_dict["child-pid"])
 
     def get_args_file_descriptor(self) -> int:
         options_null = '\0'.join(self.bwrap_options_args)
