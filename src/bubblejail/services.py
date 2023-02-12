@@ -983,6 +983,10 @@ class Slirp4netns(BubblejailService):
         if not self.enabled:
             return
 
+        from platform import machine
+        if machine() != 'x86_64':
+            raise NotImplementedError('Slirp4netns only available on x86_64')
+
         dns_servers = self.dns_servers.get_value()
         dns_servers.append("10.0.2.3")
 
