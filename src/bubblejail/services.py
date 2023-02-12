@@ -1008,6 +1008,7 @@ class Slirp4netns(BubblejailService):
         slirp4netns_args = [
             '/usr/bin/slirp4netns',
             '--configure',
+            '--enable-sandbox',
             '--userns-path=/proc/self/ns/user',
         ]
         if outbound_addr:
