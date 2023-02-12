@@ -66,6 +66,7 @@ If your distro does not have a package you can try to manually install with meso
 ##### Optional
 * bash-completion - auto-completions for bash shell
 * fish - auto-completions for fish shell
+* slirp4netns - for alternative networking stack
 
 #### Using meson to install
 
