@@ -1,3 +1,25 @@
+# 0.7.0
+
+* **m4 macro processor removed as build dependency**
+* **jinja2 template engine is now a build requirement**
+* **Sphinx removed as build dependency**
+* **scdoc is now used to build man pages.** This is optional build dependency.
+  If scdoc is not present the man pages will not be built.
+* Added `bubblejail.services` man page that contains information about all
+  services and their options.
+* **Added build option to specify bytecode optimization level.**
+  Optimization level should match your distro optimization level or there
+  will be start-up penalty. Option is named `bytecode-optimization` and takes
+  an integer from 0 to 2.
+* Added `slirp4netns` service. It is a custom networking stack for the sandbox.
+  Allows to disconnect sandbox from loopback interface or bind it to a specific
+  device or address. Currently only available on x86_64 platforms.
+  Requires `slirp4netns` binary be installed.
+* Added service conflicts. Conflicting services can't be activated together.
+  Currently `ibus` conflicts `fcitx` and `network` conflicts with `slirp4netns`.
+* Profiles can now be defined in `/etc/bubblejail/profiles` folder and will be
+  available to any user on the system.
+
 # 0.6.2
 
 ## Fixes
