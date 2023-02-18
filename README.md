@@ -56,7 +56,7 @@ If your distro does not have a package you can try to manually install with meso
 * Python Tomli-W - writer part of `tomli`
 * Bubblewrap (>= 0.5.0) - sandboxing command line utility
 * XDG D-Bus Proxy - filtering dbus proxy
-* Python Qt5 - for GUI
+* Python Qt6 - for GUI
 * libseccomp - helper library for seccomp rules
 
 ##### Runtime highly recommended dependencies

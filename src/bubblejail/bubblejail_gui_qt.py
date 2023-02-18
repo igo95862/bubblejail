@@ -19,8 +19,8 @@ from functools import partial
 from sys import argv
 from typing import Any, Iterator, List, Optional, Tuple, Type
 
-from PyQt5.QtCore import QModelIndex
-from PyQt5.QtWidgets import (
+from PyQt6.QtCore import QModelIndex
+from PyQt6.QtWidgets import (
     QApplication,
     QCheckBox,
     QComboBox,
@@ -176,6 +176,7 @@ class OptionWidgetBool(OptionWidgetBase):
         self.widget.setChecked(data)
 
     def get_data(self) -> bool:
+        assert isinstance(self.widget, QCheckBox)
         return bool(self.widget.isChecked())
 
 
