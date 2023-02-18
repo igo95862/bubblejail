@@ -3,7 +3,7 @@
 * Need Dbus support for stuff like systemd integration. Waiting on my new dbus library. https://github.com/igo95862/py-sd-bus
 * Maybe port GUIs to Dbus integration. Less spagthetti, GTK and Qt will be written in native languages. (C and C++)
 * Some kind of dependency system for services? For example, both wayland and x11 want toolkits settings so they both can depend on toolkit settings service.
-* Passing file outside of sandbox to be opened by another application or sandbox. For example, being able to download a torrent from browser sandbox and pass it to torrent client sandbox. Flatpak has something like this with a dialogue.
+* Passing file outside of sandbox to be opened by another application or sandbox. For example, being able to download a torrent from browser sandbox and pass it to torrent client sandbox. Use xdg-desktop-portal for this.
 * Free up temp files after the communication with helper has been established.
 
 # Applications
@@ -32,20 +32,11 @@ Maybe check Arch Linux stats for commonly used applications?
 
 * Being able to select which DRI device to pass. (not sure how I can test without having access to PC with two graphics cards)
 
-## Network
-
-* Investigate `slirp4netns`. It can allow binding sandbox to a specific network device.
-
 # GUI
 
 * Error message screens
 * Options window becoming too large as more and more options are being added
 * Same with profiles drop down
-
-# Docs
-
-* Replace sphinx with either `rst2man` or `asciidoc`. Or improve sphinx utilization.
-* Generate the services man page during build.
 
 # New ideas
 
