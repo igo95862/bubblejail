@@ -451,7 +451,7 @@ class BubblejailInit:
         self.bwrap_options_args.append('--clearenv')
 
         for service in self.instance_config.iter_services():
-            config_iterator = service.__iter__()
+            config_iterator = service.iter_bwrap_options()
 
             while True:
                 try:

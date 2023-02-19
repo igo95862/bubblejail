@@ -15,9 +15,11 @@
 # along with bubblejail.  If not, see <https://www.gnu.org/licenses/>.
 from __future__ import annotations
 
+from dataclasses import MISSING
 from functools import partial
+from shlex import split as shlex_split
 from sys import argv
-from typing import Any, Iterator, List, Optional, Tuple, Type
+from typing import Any, List, Optional, Tuple, Type, cast
 
 from PyQt6.QtCore import QModelIndex
 from PyQt6.QtWidgets import (
@@ -42,12 +44,12 @@ from .bubblejail_directories import BubblejailDirectories
 from .bubblejail_instance import BubblejailProfile
 from .exceptions import BubblejailInstanceNotFoundError
 from .services import (
+    SERVICES_CLASSES,
     BubblejailService,
-    OptionBool,
-    OptionSpaceSeparatedStr,
-    OptionStr,
-    OptionStrList,
-    ServiceOptionTypes,
+    ServicesConfDictType,
+    ServiceSettingsDict,
+    ServiceSettingsTypes,
+    SettingFieldMetadata,
 )
 
 
@@ -63,16 +65,13 @@ class OptionWidgetBase(BubblejailGuiWidget):
         self,
         name: str,
         description: str,
-        data: ServiceOptionTypes,
-        bubblejail_service_name: str,
+        data: ServiceSettingsTypes,
+        bubblejail_setting_name: str,
     ):
         super().__init__()
         self.description = description
         self.name = name
-        self.bubblejail_service_name = bubblejail_service_name
-
-    def get_data(self) -> ServiceOptionTypes:
-        raise NotImplementedError
+        self.bubblejail_setting_name = bubblejail_setting_name
 
 
 class OptionWidgetStrList(OptionWidgetBase):
@@ -81,13 +80,13 @@ class OptionWidgetStrList(OptionWidgetBase):
         name: str,
         description: str,
         data: List[str],
-        bubblejail_service_name: str,
+        bubblejail_setting_name: str,
     ):
         super().__init__(
             name=name,
             description=description,
             data=data,
-            bubblejail_service_name=bubblejail_service_name,
+            bubblejail_setting_name=bubblejail_setting_name,
         )
         self.vertical_layout = QVBoxLayout()
         self.widget.setLayout(self.vertical_layout)
@@ -156,7 +155,7 @@ class OptionWidgetStrList(OptionWidgetBase):
             )
         )
 
-    def get_data(self) -> List[str]:
+    def get_string_list(self) -> list[str]:
         text_list = [x.text() for x in self.line_edit_widgets]
         return [maybe_empty for maybe_empty in text_list if maybe_empty]
 
@@ -167,20 +166,20 @@ class OptionWidgetBool(OptionWidgetBase):
         name: str,
         description: str,
         data: bool,
-        bubblejail_service_name: str,
+        bubblejail_setting_name: str,
     ):
         super().__init__(
             name=name,
             description=description,
             data=data,
-            bubblejail_service_name=bubblejail_service_name,
+            bubblejail_setting_name=bubblejail_setting_name,
         )
         self.widget = QCheckBox(name)
         self.widget.setToolTip(description)
 
         self.widget.setChecked(data)
 
-    def get_data(self) -> bool:
+    def get_boolean(self) -> bool:
         assert isinstance(self.widget, QCheckBox)
         return bool(self.widget.isChecked())
 
@@ -191,13 +190,13 @@ class OptionWidgetStr(OptionWidgetBase):
         name: str,
         description: str,
         data: str,
-        bubblejail_service_name: str,
+        bubblejail_setting_name: str,
     ):
         super().__init__(
             name=name,
             description=description,
             data=data,
-            bubblejail_service_name=bubblejail_service_name,
+            bubblejail_setting_name=bubblejail_setting_name,
         )
 
         self.horizontal_layout = QHBoxLayout()
@@ -211,8 +210,38 @@ class OptionWidgetStr(OptionWidgetBase):
         self.line_edit.setToolTip(description)
         self.horizontal_layout.addWidget(self.line_edit)
 
-    def get_data(self) -> str:
-        return str(self.line_edit.text())
+    def get_str(self) -> str:
+        return self.line_edit.text()
+
+
+class OptionWidgetSpaceSeparatedStr(OptionWidgetStr):
+    def __init__(
+        self,
+        name: str,
+        description: str,
+        data: str | list[str],
+        bubblejail_setting_name: str,
+    ):
+        if isinstance(data, list):
+            data = ' '.join(data)
+
+        super().__init__(
+            name=name,
+            description=description,
+            data=data,
+            bubblejail_setting_name=bubblejail_setting_name,
+        )
+
+    def get_str_or_list(self) -> str | list[str]:
+        split_args = shlex_split(self.line_edit.text())
+
+        match len(split_args):
+            case 0:
+                return ""
+            case 1:
+                return split_args[0]
+            case _:
+                return split_args
 
 
 class OptionWidgetCombobox(OptionWidgetBase):
@@ -220,13 +249,13 @@ class OptionWidgetCombobox(OptionWidgetBase):
         self,
         name: str,
         description: str,
-        bubblejail_service_name: str,
+        bubblejail_setting_name: str,
     ):
         super().__init__(
             name=name,
             description=description,
             data='None',
-            bubblejail_service_name=bubblejail_service_name,
+            bubblejail_setting_name=bubblejail_setting_name,
         )
         self.horizontal_layout = QHBoxLayout()
         self.widget.setLayout(self.horizontal_layout)
@@ -243,22 +272,21 @@ class OptionWidgetCombobox(OptionWidgetBase):
     def add_item(self, new_item: str) -> None:
         self.combobox.addItem(new_item)
 
-    def get_data(self) -> str:
-        return str(self.combobox.currentText())
+    def get_selected(self) -> str:
+        return self.combobox.currentText()
 
 
 class ServiceWidget:
-    def __init__(self,
-                 service: BubblejailService,
-                 ):
+    def __init__(
+        self,
+        service: Type[BubblejailService],
+        service_settings: None | ServiceSettingsDict,
+    ):
         self.service = service
 
         self.group_widget = QGroupBox(service.pretty_name)
         self.group_widget.setToolTip(service.description)
         self.group_widget.setCheckable(True)
-        self.group_widget.setChecked(service.enabled)
-
-        # self.group_widget.setFlat(not is_options)
 
         self.group_layout = QVBoxLayout()
         self.group_widget.setLayout(self.group_layout)
@@ -267,24 +295,47 @@ class ServiceWidget:
 
         self.option_widgets: list[OptionWidgetBase] = []
 
-        for option in service.iter_options():
-            if option.is_deprecated:
+        if service_settings is None:
+            service_settings = {}
+
+        for setting_field in service.iter_settings_fields():
+            setting_metadata = cast(
+                SettingFieldMetadata,
+                setting_field.metadata,
+            )
+            if setting_metadata['is_deprecated']:
                 continue
 
-            if isinstance(option, OptionBool):
-                widget_class: Type[OptionWidgetBase] = OptionWidgetBool
-            elif isinstance(option, (OptionStr, OptionSpaceSeparatedStr)):
-                widget_class = OptionWidgetStr
-            elif isinstance(option, OptionStrList):
-                widget_class = OptionWidgetStrList
-            else:
-                raise TypeError
+            match str(setting_field.type):
+                case 'bool':
+                    widget_class: Type[OptionWidgetBase] = OptionWidgetBool
+                case 'str':
+                    widget_class = OptionWidgetStr
+                case "str | list[str]":
+                    widget_class = OptionWidgetSpaceSeparatedStr
+                case "list[str]":
+                    widget_class = OptionWidgetStrList
+                case unknown_type:
+                    raise TypeError(
+                        f"Unknown field type {unknown_type} "
+                        f"of setting {setting_field.name}"
+                    )
+
+            setting_value = service_settings.get(setting_field.name, None)
+
+            if setting_value is None:
+                default_value = setting_field.default
+                if default_value is MISSING:
+                    assert setting_field.default_factory is not MISSING
+                    default_value = setting_field.default_factory()
+
+                setting_value = default_value
 
             new_widget = widget_class(
-                name=option.pretty_name,
-                description=option.description,
-                data=option.get_gui_value(),
-                bubblejail_service_name=option.name,
+                name=setting_metadata['pretty_name'],
+                description=setting_metadata['description'],
+                data=setting_value,
+                bubblejail_setting_name=setting_field.name,
             )
 
             self.group_layout.addWidget(new_widget.widget)
@@ -307,11 +358,22 @@ class ServiceWidget:
         self.group_widget.update()
 
     def bubblejail_read_service_dict(self) -> dict[str, Any]:
-        return {
-            widget.bubblejail_service_name: widget.get_data()
-            for widget
-            in self.option_widgets
-        }
+        new_dict: dict[str, Any] = {}
+
+        for widget in self.option_widgets:
+            match widget:
+                case OptionWidgetBool(bubblejail_setting_name=k):
+                    new_dict[k] = widget.get_boolean()
+                case OptionWidgetStrList(bubblejail_setting_name=k):
+                    new_dict[k] = widget.get_string_list()
+                case OptionWidgetSpaceSeparatedStr(bubblejail_setting_name=k):
+                    new_dict[k] = widget.get_str_or_list()
+                case OptionWidgetStr(bubblejail_setting_name=k):
+                    new_dict[k] = widget.get_str()
+                case _:
+                    raise TypeError(f"Unknown widget type {widget}")
+
+        return new_dict
 
 # endregion Config edit classes
 
@@ -361,15 +423,20 @@ class InstanceEditWidget(CentralWidgets):
         # Instance
         self.bubblejail_instance = BubblejailDirectories.instance_get(
             instance_name)
-        self.instance_config = self.bubblejail_instance. \
-            _read_config()
+        self.instance_config = self.bubblejail_instance._read_config()
+        services_settings_dicts: ServicesConfDictType = (
+            self.instance_config.get_service_conf_dict())
 
         self.service_widgets: List[ServiceWidget] = []
-        for service in self.instance_config.iter_services(
-            iter_disabled=True,
-            iter_default=False,
-        ):
-            new_service_widget = ServiceWidget(service)
+        for service in SERVICES_CLASSES:
+
+            try:
+                service_settings_dict: None | ServiceSettingsDict = (
+                    services_settings_dicts[service.name])
+            except KeyError:
+                service_settings_dict = None
+
+            new_service_widget = ServiceWidget(service, service_settings_dict)
             self.scrolled_layout.addWidget(new_service_widget.group_widget)
             self.service_widgets.append(new_service_widget)
 
@@ -377,6 +444,10 @@ class InstanceEditWidget(CentralWidgets):
                 partial(
                     InstanceEditWidget.refresh_conflicts, self,
                 )
+            )
+
+            new_service_widget.group_widget.setChecked(
+                service_settings_dict is not None
             )
 
         self.refresh_conflicts(True)
@@ -438,14 +509,14 @@ class CreateInstanceWidget(CentralWidgets):
             name='Instance name',
             description='Name with which the instance will be created',
             data='',
-            bubblejail_service_name='',
+            bubblejail_setting_name='',
         )
         self.main_layout.addWidget(self.name_widget.widget)
 
         self.profile_select_widget = OptionWidgetCombobox(
             name='Select profile:',
             description='Select profile to create instance with.',
-            bubblejail_service_name='',
+            bubblejail_setting_name='',
         )
         self.main_layout.addWidget(self.profile_select_widget.widget)
         self.profile_select_widget.combobox.textActivated.connect(
@@ -472,7 +543,7 @@ class CreateInstanceWidget(CentralWidgets):
         self.refresh_create_button()
 
     def can_be_created(self) -> Tuple[bool, str]:
-        current_name = self.name_widget.get_data()
+        current_name = self.name_widget.get_str()
         if not current_name:
             return False, '⚠ Name is empty'
         else:
@@ -519,10 +590,10 @@ class CreateInstanceWidget(CentralWidgets):
         self.refresh_create_button()
 
     def create_instance(self) -> None:
-        new_instance_name = self.name_widget.get_data()
+        new_instance_name = self.name_widget.get_str()
         if not new_instance_name:
             raise RuntimeError('No instance name given')
-        profile_name: Optional[str] = self.profile_select_widget.get_data()
+        profile_name: Optional[str] = self.profile_select_widget.get_selected()
         if profile_name == 'None':
             profile_name = None
 

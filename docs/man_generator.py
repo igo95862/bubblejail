@@ -26,11 +26,6 @@ from jinja2 import Environment, FileSystemLoader, StrictUndefined
 from bubblejail.bubblejail_cli import BUBBLEJAIL_CMD
 from bubblejail.services import (
     SERVICES_CLASSES,
-    OptionBool,
-    OptionSpaceSeparatedStr,
-    OptionStr,
-    OptionStrList,
-    ServiceOption,
 )
 
 if TYPE_CHECKING:
@@ -191,20 +186,6 @@ def generate_cmd_man(template_dir: Path) -> None:
     )
 
 
-def service_option_to_type_str(option: ServiceOption) -> str:
-    match option:
-        case OptionSpaceSeparatedStr():
-            return 'list[str] | str'
-        case OptionStrList():
-            return 'list[str]'
-        case OptionStr():
-            return 'str'
-        case OptionBool():
-            return 'bool'
-        case _:
-            raise TypeError
-
-
 def generate_services_man(template_dir: Path) -> None:
     env = Environment(
         loader=FileSystemLoader(template_dir),
@@ -216,8 +197,7 @@ def generate_services_man(template_dir: Path) -> None:
 
     print(
         template.render(
-            services=tuple(x() for x in SERVICES_CLASSES),
-            service_option_to_type_str=service_option_to_type_str,
+            services=SERVICES_CLASSES,
         )
     )
 

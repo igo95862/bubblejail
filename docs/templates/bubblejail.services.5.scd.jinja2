@@ -36,14 +36,14 @@ folder from home directory with the sandbox.
 
 {{ service. description }}
 
-{% if service.option_list %}*Options:*
+{% if service.has_settings() %}*Options:*
 {% endif %}
-{% for option in service.iter_options() %}
-_{{ option.name }}_: {{ service_option_to_type_str(option) }}
+{% for setting_field in service.iter_settings_fields() %}
+_{{ setting_field.name }}_: {{ setting_field.type }}
 
-{% if option.is_deprecated %}{{ "*Deprecated*" | scdoc_indent }}{% endif %}
+{% if setting_field.metadata['is_deprecated'] %}{{ "*Deprecated*" | scdoc_indent }}{% endif %}
 
-{{ option.description | scdoc_indent }}
+{{ setting_field.metadata['description'] | scdoc_indent }}
 
 {% endfor %}
 {% endfor %}
