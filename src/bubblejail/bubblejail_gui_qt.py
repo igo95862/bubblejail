@@ -311,14 +311,14 @@ class ServiceWidget:
 
 
 class CentralWidgets:
-    def __init__(self, parent: 'BubblejailConfigApp'):
+    def __init__(self, parent: BubblejailConfigApp):
         self.parent = parent
         self.widget = QWidget()
 
 
 class InstanceEditWidget(CentralWidgets):
     def __init__(self,
-                 parent: 'BubblejailConfigApp',
+                 parent: BubblejailConfigApp,
                  instance_name: str):
         super().__init__(parent=parent)
 
@@ -409,7 +409,7 @@ class InstanceEditWidget(CentralWidgets):
 
 class CreateInstanceWidget(CentralWidgets):
     def __init__(self,
-                 parent: 'BubblejailConfigApp',
+                 parent: BubblejailConfigApp,
                  ):
         super().__init__(parent=parent)
 
@@ -529,7 +529,7 @@ class CreateInstanceWidget(CentralWidgets):
 
 
 class SelectInstanceWidget:
-    def __init__(self, parent: 'BubblejailConfigApp'):
+    def __init__(self, parent: BubblejailConfigApp):
         self.parent = parent
         self.widget = QWidget()
 
