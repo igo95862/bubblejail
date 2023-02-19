@@ -373,14 +373,13 @@ class InstanceEditWidget(CentralWidgets):
             self.scrolled_layout.addWidget(new_service_widget.group_widget)
             self.service_widgets.append(new_service_widget)
 
-            new_service_widget.group_widget.toggled.connect(
+            new_service_widget.group_widget.clicked.connect(
                 partial(
                     InstanceEditWidget.refresh_conflicts, self,
                 )
             )
 
-        self.refreshing_conflict = False
-        self.refresh_conflicts()
+        self.refresh_conflicts(True)
 
     def set_instance_data(self) -> None:
         new_config = {
@@ -393,12 +392,7 @@ class InstanceEditWidget(CentralWidgets):
         self.bubblejail_instance.save_config(self.instance_config)
         self.parent.switch_to_selector()
 
-    def refresh_conflicts(self) -> None:
-        if self.refreshing_conflict:
-            return
-
-        self.refreshing_conflict = True
-
+    def refresh_conflicts(self, new_state: bool) -> None:
         enabled_conflicts: set[str] = set()
 
         for service_widget in self.service_widgets:
@@ -415,8 +409,6 @@ class InstanceEditWidget(CentralWidgets):
                 )
             else:
                 service_widget.enable()
-
-        self.refreshing_conflict = False
 
 
 class CreateInstanceWidget(CentralWidgets):
