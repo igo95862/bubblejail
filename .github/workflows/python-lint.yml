@@ -31,7 +31,7 @@ jobs:
       - name: Install flake8 and mypy
         run: |
           python -m pip install --upgrade pip
-          pip install flake8 mypy tomli tomli-w
+          pip install flake8 mypy tomli tomli-w PyQt6
 
       - name: Lint with flake8
         run: |
