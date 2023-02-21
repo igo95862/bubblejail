@@ -23,10 +23,8 @@ from typing import TYPE_CHECKING
 
 from jinja2 import Environment, FileSystemLoader, StrictUndefined
 
-from bubblejail.bubblejail_cli import BUBBLEJAIL_CMD
-from bubblejail.services import (
-    SERVICES_CLASSES,
-)
+from bubblejail.bubblejail_cli_metadata import BUBBLEJAIL_CMD
+from bubblejail.services import SERVICES_CLASSES
 
 if TYPE_CHECKING:
     from collections.abc import Iterator

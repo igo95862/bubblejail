@@ -17,8 +17,9 @@ from __future__ import annotations
 
 from unittest import TestCase, main
 
-from bubblejail.bubblejail_cli import BUBBLEJAIL_CMD, iter_list_choices
+from bubblejail.bubblejail_cli import iter_list_choices
 from bubblejail.bubblejail_cli_autocomplete import AutoCompleteParser
+from bubblejail.bubblejail_cli_metadata import BUBBLEJAIL_CMD
 
 
 class TestAutocomplete(TestCase):
