@@ -18,13 +18,14 @@ from __future__ import annotations
 
 from argparse import ArgumentParser
 from pathlib import Path
+from sys import modules
 from textwrap import indent
 from typing import TYPE_CHECKING
+from unittest.mock import MagicMock
 
 from jinja2 import Environment, FileSystemLoader, StrictUndefined
 
 from bubblejail.bubblejail_cli_metadata import BUBBLEJAIL_CMD
-from bubblejail.services import SERVICES_CLASSES
 
 if TYPE_CHECKING:
     from collections.abc import Iterator
@@ -185,6 +186,10 @@ def generate_cmd_man(template_dir: Path) -> None:
 
 
 def generate_services_man(template_dir: Path) -> None:
+    modules['xdg'] = MagicMock()
+
+    from bubblejail.services import SERVICES_CLASSES
+
     env = Environment(
         loader=FileSystemLoader(template_dir),
         undefined=StrictUndefined,
