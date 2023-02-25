@@ -5,3 +5,4 @@ __pycache__
 build
 dev*
 strace*.txt
+.git
