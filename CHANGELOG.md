@@ -38,7 +38,7 @@
 # 0.6.0
 
 * **`/etc` is now shared with sandbox. This is potentially breaking change**
-* **Home directory is now in same position from the prespective of sandbox**
+* **Home directory is now in same position from the perspective of sandbox**
 * **Removed support for old `toml` python package**
 * Desktop notification is now sent if sandbox fails to start. (new dependency on `notify-send`)
 * Added Fcitx service (thanks @h0cheung)
