@@ -1,6 +1,6 @@
 # Modified from CodeQL file
 ---
-name: "Python (mypy, flake8)"
+name: "CI: build, mypy, pyflakes, codespell"
 
 on:
   workflow_dispatch:
@@ -25,18 +25,28 @@ jobs:
       - run: git checkout HEAD^2
         if: ${{ github.event_name == 'pull_request' }}
 
-      - name: Display Python version
-        run: python -c "import sys; print(sys.version)"
-
-      - name: Install flake8 and mypy
+      - name: Build CI containers
+        id: containerBuild
         run: |
-          python -m pip install --upgrade pip
-          pip install flake8 mypy tomli tomli-w PyQt6
+          python3 ./tools/containers/build_ci_images.py
 
-      - name: Lint with flake8
+      - name: Test build
+        if: always() && (steps.containerBuild.outcome == 'success')
         run: |
-          flake8 .
+          podman run --rm bubblejail-ci-build-archlinux \
+            sh -ceu 'meson setup build && meson compile -C build'
+
+      - name: Lint with pyflakes
+        if: always() && (steps.containerBuild.outcome == 'success')
+        run: |
+          podman run --rm bubblejail-ci-analysis-archlinux:latest pyflakes .
 
       - name: Lint with mypy
+        if: always() && (steps.containerBuild.outcome == 'success')
         run: |
-          mypy --strict --ignore-missing-imports .
+          podman run --rm bubblejail-ci-analysis-archlinux:latest \
+            mypy --strict --ignore-missing-imports .
+      - name: Lint with codespell
+        if: always() && (steps.containerBuild.outcome == 'success')
+        run: |
+          podman run --rm bubblejail-ci-analysis-archlinux:latest codespell .
