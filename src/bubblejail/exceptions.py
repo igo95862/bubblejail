@@ -34,3 +34,11 @@ class BubblejailInstanceNotFoundError(BubblejailException):
 
 class BubblewrapRunError(BubblejailException):
     ...
+
+
+class BubblejailLibseccompError(BubblejailException):
+    ...
+
+
+class LibseccompSyscallResolutionError(BubblejailLibseccompError):
+    ...

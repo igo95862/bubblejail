@@ -173,9 +173,15 @@ class SeccompDirective:
 
 
 class SeccompSyscallErrno(SeccompDirective):
-    def __init__(self, syscall_name: str, errno: int):
+    def __init__(
+        self,
+        syscall_name: str,
+        errno: int,
+        skip_on_not_exists: bool = False,
+    ):
         self.syscall_name = syscall_name
         self.errno = errno
+        self.skip_on_not_exists = skip_on_not_exists
 
 
 class LaunchArguments:

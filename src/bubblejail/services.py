@@ -242,7 +242,11 @@ class BubblejailDefaults(BubblejailService):
                 "vhangup",
 
             ):
-                yield SeccompSyscallErrno(blocked_syscal, 1)
+                yield SeccompSyscallErrno(
+                    blocked_syscal,
+                    1,
+                    skip_on_not_exists=True,
+                )
 
         # Bind session socket inside the sandbox
         dbus_session_inside_path = self.xdg_runtime_dir / 'bus'
