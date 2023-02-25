@@ -19,38 +19,9 @@ from ctypes import CDLL, c_char_p, c_int, c_uint, c_uint32, c_void_p
 from ctypes.util import find_library
 from platform import machine
 from tempfile import TemporaryFile
-from typing import IO, Callable, Tuple, Type, TypeVar, cast
+from typing import IO, Callable
 
 from .bwrap_config import SeccompDirective, SeccompSyscallErrno
-
-libseccomp = CDLL(find_library('seccomp'))
-
-T = TypeVar('T')
-T2 = TypeVar('T2')
-
-
-def import_from_cdll(
-    func_name: str,
-        arg_list: Tuple[Type[T2], ...],
-        return_type: Type[T]) -> Callable[..., T]:
-    c_function = getattr(libseccomp, func_name)
-    c_function.argtypes = arg_list
-    c_function.restype = return_type
-    return cast(Callable[[T2], T], c_function)
-
-
-seccomp_init = import_from_cdll('seccomp_init', (c_uint, ), c_void_p)
-seccomp_load = import_from_cdll('seccomp_load', (c_void_p, ), c_int)
-seccomp_syscall_resolve_name = import_from_cdll(
-    'seccomp_syscall_resolve_name', (c_char_p, ), c_int)
-seccomp_rule_add = import_from_cdll(
-    'seccomp_rule_add', (c_void_p, c_uint32, c_int, c_uint), c_int)
-seccomp_export_pfc = import_from_cdll(
-    'seccomp_export_pfc', (c_void_p, c_int), c_int)
-seccomp_export_bpf = import_from_cdll(
-    'seccomp_export_bpf', (c_void_p, c_int), c_int)
-seccomp_arch_add = import_from_cdll(
-    'seccomp_arch_add', (c_void_p, c_uint32), c_int)
 
 SCMP_ACT_ALLOW = c_uint(0x7fff0000)
 
@@ -61,22 +32,79 @@ def get_scmp_act_errno(error_code: int) -> c_uint32:
     return c_uint32(0x00050000 | (error_code & 0x0000ffff))
 
 
+class Libseccomp:
+    def __init__(self) -> None:
+        libseccomp = CDLL(find_library('seccomp'))
+        self.libseccomp = libseccomp
+
+        seccomp_init = libseccomp.seccomp_init
+        seccomp_init.argtypes = (c_uint, )
+        seccomp_init.restype = c_void_p
+        self.init: Callable[[c_uint], c_void_p] = (
+            seccomp_init
+        )
+
+        seccomp_load = libseccomp.seccomp_load
+        seccomp_load.argtypes = (c_void_p, )
+        seccomp_load.restype = c_int
+        self.load: Callable[[c_void_p], c_int] = (
+            seccomp_load
+        )
+
+        seccomp_syscall_resolve_name = libseccomp.seccomp_syscall_resolve_name
+        seccomp_syscall_resolve_name.argtypes = (c_char_p, )
+        seccomp_syscall_resolve_name.restype = c_int
+        self.syscall_resolve_name: Callable[[c_char_p], c_int] = (
+            seccomp_syscall_resolve_name
+        )
+
+        seccomp_rule_add = libseccomp.seccomp_rule_add
+        seccomp_rule_add.argtypes = (c_void_p, c_uint32, c_int, c_uint)
+        seccomp_rule_add.restype = c_int
+        self.rule_add: Callable[[c_void_p, c_uint32, c_int, c_uint], c_int] = (
+            seccomp_rule_add
+        )
+
+        seccomp_export_pfc = libseccomp.seccomp_export_pfc
+        seccomp_export_pfc.argtypes = (c_void_p, c_int)
+        seccomp_export_pfc.restype = c_int
+        self.export_pfc: Callable[[c_void_p, c_int], c_int] = (
+            seccomp_export_pfc
+        )
+
+        seccomp_export_bpf = libseccomp.seccomp_export_bpf
+        seccomp_export_bpf.argtypes = (c_void_p, c_int)
+        seccomp_export_bpf.restype = c_int
+        self.export_bpf: Callable[[c_void_p, c_int], c_int] = (
+            seccomp_export_bpf
+        )
+
+        seccomp_arch_add = libseccomp.seccomp_arch_add
+        seccomp_arch_add.argtypes = (c_void_p, c_uint32)
+        seccomp_arch_add.restype = c_int
+        self.arch_add: Callable[[c_void_p, c_uint32], c_int] = (
+            seccomp_arch_add
+        )
+
+
 class SeccompState:
 
     def __init__(self) -> None:
-        self._seccomp_ruleset_ptr: c_void_p = seccomp_init(SCMP_ACT_ALLOW)
+        self.libseccomp = Libseccomp()
+
+        self._seccomp_ruleset_ptr = self.libseccomp.init(SCMP_ACT_ALLOW)
 
         if machine() == 'x86_64':
-            seccomp_arch_add(self._seccomp_ruleset_ptr, ARCH_X86)
+            self.libseccomp.arch_add(self._seccomp_ruleset_ptr, ARCH_X86)
 
         # TODO: Add armv7 on aarch64 systems
 
     def filter_syscall(self, syscall_name: str, error_number: int) -> None:
-        resolved_syscall_int = seccomp_syscall_resolve_name(
+        resolved_syscall_int = self.libseccomp.syscall_resolve_name(
             c_char_p(syscall_name.encode())
         )
 
-        seccomp_rule_add(
+        self.libseccomp.rule_add(
             self._seccomp_ruleset_ptr,
             get_scmp_act_errno(error_number),
             resolved_syscall_int,
@@ -90,13 +118,19 @@ class SeccompState:
             raise TypeError('Unknown seccomp directive.')
 
     def load(self) -> None:
-        seccomp_load(self._seccomp_ruleset_ptr)
+        self.libseccomp.load(self._seccomp_ruleset_ptr)
 
     def export_to_temp_file(self) -> IO[bytes]:
         t = TemporaryFile()
-        seccomp_export_bpf(self._seccomp_ruleset_ptr, t.fileno())
+        self.libseccomp.export_bpf(
+            self._seccomp_ruleset_ptr,
+            c_int(t.fileno()),
+        )
         t.seek(0)
         return t
 
     def print(self) -> None:
-        seccomp_export_pfc(self._seccomp_ruleset_ptr, 0)
+        self.libseccomp.export_pfc(
+            self._seccomp_ruleset_ptr,
+            c_int(0),
+        )
