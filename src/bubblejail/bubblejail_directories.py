@@ -300,6 +300,10 @@ class BubblejailDirectories:
         # Requires `update-desktop-database` binary
         # Arch package desktop-file-utils
         print('Updating desktop MIME database')
+        cls.update_mime_database()
+
+    @classmethod
+    def update_mime_database(cls) -> None:
         try:
             subprocess_run(
                 args=(
