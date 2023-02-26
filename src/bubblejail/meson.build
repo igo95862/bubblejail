@@ -8,6 +8,7 @@ source_files = [
    'bubblejail_gui_qt.py',
    'bubblejail_helper.py',
    'bubblejail_instance.py',
+   'bubblejail_runner.py',
    'bubblejail_seccomp.py',
    'bubblejail_utils.py',
    'bwrap_config.py',

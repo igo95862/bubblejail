@@ -1,0 +1,344 @@
+# SPDX-License-Identifier: GPL-3.0-or-later
+
+# Copyright 2023 igo95862
+
+# This file is part of bubblejail.
+# bubblejail is free software: you can redistribute it and/or modify
+# it under the terms of the GNU General Public License as published by
+# the Free Software Foundation, either version 3 of the License, or
+# (at your option) any later version.
+# bubblejail is distributed in the hope that it will be useful,
+# but WITHOUT ANY WARRANTY; without even the implied warranty of
+# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+# GNU General Public License for more details.
+# You should have received a copy of the GNU General Public License
+# along with bubblejail.  If not, see <https://www.gnu.org/licenses/>.
+from __future__ import annotations
+
+from asyncio import Future, create_subprocess_exec, get_running_loop, wait_for
+from asyncio.subprocess import Process
+from json import load as json_load
+from os import O_CLOEXEC, O_NONBLOCK, environ, pipe2
+from tempfile import TemporaryFile
+from typing import TYPE_CHECKING
+
+from .bubblejail_seccomp import SeccompState
+from .bwrap_config import (
+    Bind,
+    BwrapConfigBase,
+    DbusSessionArgs,
+    DbusSystemArgs,
+    FileTransfer,
+    LaunchArguments,
+    SeccompDirective,
+)
+from .services import ServiceWantsDbusSessionBind, ServiceWantsHomeBind
+
+if TYPE_CHECKING:
+    from typing import IO, Any, Type
+
+    from .bubblejail_instance import BubblejailInstance
+    from .services import ServiceContainer as BubblejailInstanceConfig
+
+
+def copy_data_to_temp_file(data: bytes) -> IO[bytes]:
+    temp_file = TemporaryFile()
+    temp_file.write(data)
+    temp_file.seek(0)
+    return temp_file
+
+
+class BubblejailRunner:
+    def __init__(
+        self,
+        parent: BubblejailInstance,
+        instance_config: BubblejailInstanceConfig,
+        is_shell_debug: bool = False,
+        is_helper_debug: bool = False,
+        is_log_dbus: bool = False,
+    ) -> None:
+        self.home_bind_path = parent.path_home_directory
+        self.runtime_dir = parent.runtime_dir
+        # Prevent our temporary file from being garbage collected
+        self.temp_files: list[IO[bytes]] = []
+        self.file_descriptors_to_pass: list[int] = []
+        # Helper
+        self.helper_runtime_dir = parent.path_runtime_helper_dir
+        self.helper_socket_path = parent.path_runtime_helper_socket
+
+        # Args to dbus proxy
+        self.dbus_proxy_args: list[str] = []
+        self.dbus_proxy_process: Process | None = None
+
+        self.dbus_proxy_pipe_read: int = -1
+        self.dbus_proxy_pipe_write: int = -1
+
+        # Dbus session socket
+        self.dbus_session_socket_path = parent.path_runtime_dbus_session_socket
+
+        # Dbus system socket
+        self.dbus_system_socket_path = parent.path_runtime_dbus_system_socket
+
+        # Args to bwrap
+        self.bwrap_options_args: list[str] = []
+        # Debug mode
+        self.is_helper_debug = is_helper_debug
+        self.is_shell_debug = is_shell_debug
+        self.is_log_dbus = is_log_dbus
+        # Instance config
+        self.instance_config = instance_config
+
+        # Executable args
+        self.executable_args: list[str] = []
+
+        # Info fd
+        self.info_fd_pipe_read: int = -1
+        self.info_fd_pipe_write: int = -1
+        self.sandboxed_pid: Future[int] = Future()
+
+    def genetate_args(self) -> None:
+        # TODO: Reorganize the order to allow for
+        # better binding multiple resources in same filesystem path
+
+        dbus_session_opts: set[str] = set()
+        dbus_system_opts: set[str] = set()
+        seccomp_state: SeccompState | None = None
+        # Unshare all
+        self.bwrap_options_args.append('--unshare-all')
+        # Die with parent
+        self.bwrap_options_args.append('--die-with-parent')
+        # We have our own reaper
+        self.bwrap_options_args.append('--as-pid-1')
+
+        if not self.is_shell_debug:
+            # Set new session
+            self.bwrap_options_args.append('--new-session')
+
+        # Proc
+        self.bwrap_options_args.extend(('--proc', '/proc'))
+        # Devtmpfs
+        self.bwrap_options_args.extend(('--dev', '/dev'))
+
+        # Unset all variables
+        self.bwrap_options_args.append('--clearenv')
+
+        for service in self.instance_config.iter_services():
+            config_iterator = service.iter_bwrap_options()
+
+            while True:
+                try:
+                    config = next(config_iterator)
+                except StopIteration:
+                    break
+
+                # When we need to send something to generator
+                if isinstance(config, ServiceWantsHomeBind):
+                    config = config_iterator.send(self.home_bind_path)
+                elif isinstance(config, ServiceWantsDbusSessionBind):
+                    config = config_iterator.send(
+                        self.dbus_session_socket_path)
+
+                if isinstance(config, BwrapConfigBase):
+                    self.bwrap_options_args.extend(config.to_args())
+                elif isinstance(config, FileTransfer):
+                    # Copy files
+                    temp_f = copy_data_to_temp_file(config.content)
+                    self.temp_files.append(temp_f)
+                    temp_file_descriptor = temp_f.fileno()
+                    self.file_descriptors_to_pass.append(
+                        temp_file_descriptor)
+                    self.bwrap_options_args.extend(
+                        (
+                            '--ro-bind-data',
+                            str(temp_file_descriptor),
+                            config.dest,
+                        )
+                    )
+                elif isinstance(config, DbusSessionArgs):
+                    dbus_session_opts.add(config.to_args())
+                elif isinstance(config, DbusSystemArgs):
+                    dbus_system_opts.add(config.to_args())
+                elif isinstance(config, SeccompDirective):
+                    if seccomp_state is None:
+                        seccomp_state = SeccompState()
+
+                    seccomp_state.add_directive(config)
+                elif isinstance(config, LaunchArguments):
+                    # TODO: implement priority
+                    self.executable_args.extend(config.launch_args)
+                else:
+                    raise TypeError('Unknown bwrap config.')
+
+        if seccomp_state is not None:
+            if __debug__:
+                seccomp_state.print()
+
+            seccomp_temp_file = seccomp_state.export_to_temp_file()
+            seccomp_fd = seccomp_temp_file.fileno()
+            self.file_descriptors_to_pass.append(seccomp_fd)
+            self.temp_files.append(seccomp_temp_file)
+            self.bwrap_options_args.extend(('--seccomp', str(seccomp_fd)))
+
+        # region dbus
+        # Session dbus
+        self.dbus_proxy_args.extend((
+            'xdg-dbus-proxy',
+            environ['DBUS_SESSION_BUS_ADDRESS'],
+            str(self.dbus_session_socket_path),
+        ))
+
+        self.dbus_proxy_pipe_read, self.dbus_proxy_pipe_write \
+            = pipe2(O_NONBLOCK | O_CLOEXEC)
+
+        self.dbus_proxy_args.append(f"--fd={self.dbus_proxy_pipe_write}")
+
+        self.dbus_proxy_args.extend(dbus_session_opts)
+        self.dbus_proxy_args.append('--filter')
+        if self.is_log_dbus:
+            self.dbus_proxy_args.append('--log')
+
+        # System dbus
+        self.dbus_proxy_args.extend((
+            'unix:path=/run/dbus/system_bus_socket',
+            str(self.dbus_system_socket_path),
+        ))
+
+        self.dbus_proxy_args.append('--filter')
+        if self.is_log_dbus:
+            self.dbus_proxy_args.append('--log')
+
+        # Bind twice, in /var and /run
+        self.bwrap_options_args.extend(
+            Bind(
+                str(self.dbus_system_socket_path),
+                '/var/run/dbus/system_bus_socket').to_args()
+        )
+
+        self.bwrap_options_args.extend(
+            Bind(
+                str(self.dbus_system_socket_path),
+                '/run/dbus/system_bus_socket').to_args()
+        )
+        # endregion dbus
+
+        # Bind helper directory
+        self.bwrap_options_args.extend(
+            Bind(str(self.helper_runtime_dir), '/run/bubblehelp').to_args())
+
+        # Info fd pipe
+        self.info_fd_pipe_read, self.info_fd_pipe_write = (
+            pipe2(O_NONBLOCK | O_CLOEXEC)
+        )
+        self.file_descriptors_to_pass.append(self.info_fd_pipe_write)
+        self.bwrap_options_args.extend(
+            ("--info-fd", f"{self.info_fd_pipe_write}"))
+        running_loop = get_running_loop()
+        running_loop.add_reader(
+            self.info_fd_pipe_read,
+            self.read_info_fd,
+        )
+
+    def read_info_fd(self) -> None:
+        with open(self.info_fd_pipe_read, closefd=False) as f:
+            info_dict = json_load(f)
+            self.sandboxed_pid.set_result(info_dict["child-pid"])
+
+    def get_args_file_descriptor(self) -> int:
+        options_null = '\0'.join(self.bwrap_options_args)
+
+        args_tempfile = copy_data_to_temp_file(options_null.encode())
+        args_tempfile_fileno = args_tempfile.fileno()
+        self.file_descriptors_to_pass.append(args_tempfile_fileno)
+        self.temp_files.append(args_tempfile)
+
+        return args_tempfile_fileno
+
+    async def __aenter__(self) -> None:
+        # Generate args
+        self.genetate_args()
+
+        # Create runtime dir
+        # If the dir exists exception will be raised indicating that
+        # instance is already running or did not clean-up properly.
+        self.runtime_dir.mkdir(mode=0o700, parents=True, exist_ok=False)
+        # Create helper directory
+        self.helper_runtime_dir.mkdir(mode=0o700)
+
+        # Dbus session proxy
+        running_loop = get_running_loop()
+        dbus_proxy_ready_future: Future[bool] = Future()
+
+        def proxy_ready_callback() -> None:
+            try:
+                with open(self.dbus_proxy_pipe_read, closefd=False) as f:
+                    f.read()
+            except Exception as e:
+                dbus_proxy_ready_future.set_exception(e)
+            else:
+                dbus_proxy_ready_future.set_result(True)
+
+            running_loop.remove_reader(self.dbus_proxy_pipe_read)
+
+        running_loop.add_reader(
+            self.dbus_proxy_pipe_read,
+            proxy_ready_callback,
+        )
+
+        # Pylint does not recognize *args for some reason
+        # pylint: disable=E1120
+        self.dbus_proxy_process = await create_subprocess_exec(
+            *self.dbus_proxy_args,
+            pass_fds=[self.dbus_proxy_pipe_write],
+        )
+
+        await wait_for(dbus_proxy_ready_future, timeout=1)
+
+        if self.dbus_proxy_process.returncode is not None:
+            raise ValueError(
+                f"dbus proxy error code: {self.dbus_proxy_process.returncode}")
+
+    async def __aexit__(
+        self,
+        exc_type: Type[BaseException],
+        exc: BaseException,
+        traceback: Any,  # ???: What type is traceback
+    ) -> None:
+        # Cleanup
+        try:
+            if self.dbus_proxy_process is not None:
+                self.dbus_proxy_process.terminate()
+                await self.dbus_proxy_process.wait()
+        except ProcessLookupError:
+            ...
+
+        for t in self.temp_files:
+            t.close()
+
+        try:
+            self.helper_socket_path.unlink()
+        except FileNotFoundError:
+            ...
+
+        try:
+            self.helper_runtime_dir.rmdir()
+        except FileNotFoundError:
+            ...
+        except OSError:
+            ...
+
+        try:
+            self.dbus_session_socket_path.unlink()
+        except FileNotFoundError:
+            ...
+
+        try:
+            self.dbus_system_socket_path.unlink()
+        except FileNotFoundError:
+            ...
+
+        try:
+            self.runtime_dir.rmdir()
+        except FileNotFoundError:
+            ...
+        except OSError:
+            ...
