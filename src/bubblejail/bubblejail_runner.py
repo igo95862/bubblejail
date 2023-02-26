@@ -253,18 +253,7 @@ class BubblejailRunner:
 
         return args_tempfile_fileno
 
-    async def __aenter__(self) -> None:
-        # Generate args
-        self.genetate_args()
-
-        # Create runtime dir
-        # If the dir exists exception will be raised indicating that
-        # instance is already running or did not clean-up properly.
-        self.runtime_dir.mkdir(mode=0o700, parents=True, exist_ok=False)
-        # Create helper directory
-        self.helper_runtime_dir.mkdir(mode=0o700)
-
-        # Dbus session proxy
+    async def setup_dbus_proxy(self) -> None:
         running_loop = get_running_loop()
         dbus_proxy_ready_future: Future[bool] = Future()
 
@@ -284,8 +273,6 @@ class BubblejailRunner:
             proxy_ready_callback,
         )
 
-        # Pylint does not recognize *args for some reason
-        # pylint: disable=E1120
         self.dbus_proxy_process = await create_subprocess_exec(
             *self.dbus_proxy_args,
             pass_fds=[self.dbus_proxy_pipe_write],
@@ -296,6 +283,19 @@ class BubblejailRunner:
         if self.dbus_proxy_process.returncode is not None:
             raise ValueError(
                 f"dbus proxy error code: {self.dbus_proxy_process.returncode}")
+
+    async def __aenter__(self) -> None:
+        # Generate args
+        self.genetate_args()
+
+        # Create runtime dir
+        # If the dir exists exception will be raised indicating that
+        # instance is already running or did not clean-up properly.
+        self.runtime_dir.mkdir(mode=0o700, parents=True, exist_ok=False)
+        # Create helper directory
+        self.helper_runtime_dir.mkdir(mode=0o700)
+
+        await self.setup_dbus_proxy()
 
     async def __aexit__(
         self,
