@@ -1,6 +1,6 @@
 # Modified from CodeQL file
 ---
-name: "CI: build, mypy, pyflakes, codespell"
+name: "CI: build, mypy, pyflakes, codespell, test"
 
 on:
   workflow_dispatch:
@@ -50,3 +50,8 @@ jobs:
         if: always() && (steps.containerBuild.outcome == 'success')
         run: |
           podman run --rm bubblejail-ci-analysis-archlinux:latest codespell .
+      - name: Run tests
+        if: always() && (steps.containerBuild.outcome == 'success')
+        run: |
+          podman run --rm bubblejail-ci-test-archlinux:latest \
+            sh -ceu 'meson setup build && meson test --verbose -C build'
