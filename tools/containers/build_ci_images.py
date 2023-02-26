@@ -51,9 +51,19 @@ DISTRO_CODE_ANALYSIS_TOOLS: dict[str, tuple[str, ...]] = {
     "archlinux": ("python-pyflakes", "codespell", "mypy"),
 }
 
+DISTRO_TEST_DEPS: dict[str, tuple[str, ...]] = {
+    "archlinux": (
+        "desktop-file-utils",
+        "xdg-dbus-proxy",
+        "bubblewrap",
+        "libseccomp",
+    )
+}
+
 IMAGE_BASE_NAME = "bubblejail-ci-base-{distro}"
 IMAGE_BUILD_NAME = "bubblejail-ci-build-{distro}"
 IMAGE_CODE_ANALYSIS_NAME = "bubblejail-ci-analysis-{distro}"
+IMAGE_TEST_NAME = "bubblejail-ci-test-{distro}"
 
 
 def install_packages_for_distro(
@@ -79,9 +89,9 @@ def install_packages_for_distro(
 
 @contextmanager
 def buildah_from(
-        from_image: str,
-        new_image: str,
-        do_pull: bool = False,
+    from_image: str,
+    new_image: str,
+    do_pull: bool = False,
 ) -> Generator[str, None, None]:
     buildah_args = ["buildah", "from"]
 
@@ -122,9 +132,9 @@ def build_base_image(distro: str) -> None:
     base_image_name = DISTRO_IMAGE[distro]
 
     with buildah_from(
-            base_image_name,
-            IMAGE_BASE_NAME.format(distro=distro),
-            do_pull=True,
+        base_image_name,
+        IMAGE_BASE_NAME.format(distro=distro),
+        do_pull=True,
     ) as container_name:
         run(
             (
@@ -154,8 +164,8 @@ def build_base_image(distro: str) -> None:
 
 def build_build_image(distro: str) -> None:
     with buildah_from(
-            IMAGE_BASE_NAME.format(distro=distro),
-            IMAGE_BUILD_NAME.format(distro=distro),
+        IMAGE_BASE_NAME.format(distro=distro),
+        IMAGE_BUILD_NAME.format(distro=distro),
     ) as container_name:
         install_packages_for_distro(
             container_name,
@@ -166,8 +176,8 @@ def build_build_image(distro: str) -> None:
 
 def build_analysis_image(distro: str) -> None:
     with buildah_from(
-            IMAGE_BUILD_NAME.format(distro=distro),
-            IMAGE_CODE_ANALYSIS_NAME.format(distro=distro),
+        IMAGE_BUILD_NAME.format(distro=distro),
+        IMAGE_CODE_ANALYSIS_NAME.format(distro=distro),
     ) as container_name:
         install_packages_for_distro(
             container_name,
@@ -177,10 +187,23 @@ def build_analysis_image(distro: str) -> None:
         )
 
 
+def build_test_image(distro: str) -> None:
+    with buildah_from(
+        IMAGE_BUILD_NAME.format(distro=distro),
+        IMAGE_TEST_NAME.format(distro=distro),
+    ) as container_name:
+        install_packages_for_distro(
+            container_name,
+            distro,
+            DISTRO_TEST_DEPS[distro] + DISTRO_PYTHON_RUNTIME_DEPS[distro],
+        )
+
+
 def build_images(distro: str) -> None:
     build_base_image(distro)
     build_build_image(distro)
     build_analysis_image(distro)
+    build_test_image(distro)
 
 
 def main() -> None:
