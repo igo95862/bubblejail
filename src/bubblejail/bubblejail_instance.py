@@ -18,14 +18,12 @@ from __future__ import annotations
 from asyncio import (
     CancelledError,
     create_subprocess_exec,
-    get_running_loop,
     open_unix_connection,
     wait_for,
 )
 from functools import cached_property
-from os import environ, kill, stat
+from os import environ, stat
 from pathlib import Path
-from signal import SIGTERM
 from tempfile import TemporaryDirectory
 from typing import Any, cast
 
@@ -39,15 +37,6 @@ from .bubblejail_utils import FILE_NAME_METADATA, FILE_NAME_SERVICES
 from .exceptions import BubblejailException, BubblewrapRunError
 from .services import ServiceContainer as BubblejailInstanceConfig
 from .services import ServicesConfDictType
-
-
-def sigterm_bubblejail_handler(bwrap_pid: int) -> None:
-    with open(f"/proc/{bwrap_pid}/task/{bwrap_pid}/children") as child_file:
-        # HACK: assuming first child of the first task is the bubblejail-helper
-        helper_pid = int(child_file.read().split()[0])
-
-    kill(helper_pid, SIGTERM)
-    # No need to wait as the bwrap should terminate when helper exits
 
 
 class BubblejailInstance:
@@ -252,22 +241,10 @@ class BubblejailInstance:
 
             task_bwrap_main = bwrap_process.wait()
 
-            loop = get_running_loop()
-            loop.add_signal_handler(SIGTERM, sigterm_bubblejail_handler,
-                                    bwrap_process.pid)
-
-            post_init_hooks_task = loop.create_task(
-                self._run_post_init_hooks(runner))
-
             try:
                 await task_bwrap_main
             except CancelledError:
                 print('Bwrap cancelled')
-
-            if not post_init_hooks_task.done():
-                post_init_hooks_task.cancel()
-
-            await self._run_post_shutdown_hooks(runner)
 
             if bwrap_process.returncode != 0:
                 raise BubblewrapRunError((
@@ -278,18 +255,6 @@ class BubblejailInstance:
 
             if __debug__:
                 print("Bubblewrap terminated")
-
-    async def _run_post_init_hooks(self, init: BubblejailRunner) -> None:
-        sandboxed_pid = await init.sandboxed_pid
-        if __debug__:
-            print(f"Sandboxed PID: {sandboxed_pid}")
-
-        for service in init.instance_config.iter_services():
-            service.post_init_hook(sandboxed_pid)
-
-    async def _run_post_shutdown_hooks(self, init: BubblejailRunner) -> None:
-        for service in init.instance_config.iter_services():
-            service.post_shutdown_hook()
 
     async def edit_config_in_editor(self) -> None:
         # Create temporary directory

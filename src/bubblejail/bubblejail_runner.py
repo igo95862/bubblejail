@@ -15,10 +15,17 @@
 # along with bubblejail.  If not, see <https://www.gnu.org/licenses/>.
 from __future__ import annotations
 
-from asyncio import Future, create_subprocess_exec, get_running_loop, wait_for
+from asyncio import (
+    Future,
+    InvalidStateError,
+    create_subprocess_exec,
+    get_running_loop,
+    wait_for,
+)
 from asyncio.subprocess import Process
 from json import load as json_load
-from os import O_CLOEXEC, O_NONBLOCK, environ, pipe2
+from os import O_CLOEXEC, O_NONBLOCK, environ, kill, pipe2
+from signal import SIGTERM
 from tempfile import TemporaryFile
 from typing import TYPE_CHECKING
 
@@ -36,6 +43,7 @@ from .bwrap_config import (
 from .services import ServiceWantsDbusSessionBind, ServiceWantsHomeBind
 
 if TYPE_CHECKING:
+    from asyncio import Task
     from collections.abc import Iterable
     from typing import IO, Any, Type
 
@@ -97,6 +105,12 @@ class BubblejailRunner:
         self.info_fd_pipe_read: int = -1
         self.info_fd_pipe_write: int = -1
         self.sandboxed_pid: Future[int] = Future()
+
+        # Tasks
+        self.task_post_init: Task[None] | None = None
+
+        # Bubblewrap
+        self.bubblewrap_pid: int | None = None
 
     def genetate_args(self) -> None:
         # TODO: Reorganize the order to allow for
@@ -313,10 +327,44 @@ class BubblejailRunner:
         else:
             bwrap_args.extend(run_args)
 
-        return await create_subprocess_exec(
+        bubblewrap_subprocess = await create_subprocess_exec(
             *bwrap_args,
             pass_fds=self.file_descriptors_to_pass,
         )
+
+        self.bubblewrap_pid = bubblewrap_subprocess.pid
+
+        loop = get_running_loop()
+
+        loop.add_signal_handler(SIGTERM, self.sigterm_handler)
+        self.task_post_init = loop.create_task(self._run_post_init_hooks())
+
+        return bubblewrap_subprocess
+
+    async def _run_post_init_hooks(self) -> None:
+        sandboxed_pid = await self.sandboxed_pid
+        if __debug__:
+            print(f"Sandboxed PID: {sandboxed_pid}")
+
+        for service in self.instance_config.iter_services():
+            service.post_init_hook(sandboxed_pid)
+
+    async def _run_post_shutdown_hooks(self) -> None:
+        for service in self.instance_config.iter_services():
+            service.post_shutdown_hook()
+
+    def sigterm_handler(self) -> None:
+        try:
+            pid_to_kill = self.sandboxed_pid.result()
+        except InvalidStateError:
+            # Bubblewrap did not finish initializing
+            if self.bubblewrap_pid is None:
+                return
+
+            pid_to_kill = self.bubblewrap_pid
+
+        kill(pid_to_kill, SIGTERM)
+        # No need to wait as the bwrap should terminate when helper exits
 
     async def __aenter__(self) -> None:
         # Generate args
@@ -338,6 +386,11 @@ class BubblejailRunner:
         traceback: Any,  # ???: What type is traceback
     ) -> None:
         # Cleanup
+        try:
+            await self._run_post_shutdown_hooks()
+        except Exception as e:
+            print("Failed to run post shutdown hook: ", e)
+
         try:
             if self.dbus_proxy_process is not None:
                 self.dbus_proxy_process.terminate()
