@@ -35,11 +35,7 @@ from xdg.BaseDirectory import get_runtime_dir
 
 from .bubblejail_helper import RequestRun
 from .bubblejail_runner import BubblejailRunner
-from .bubblejail_utils import (
-    FILE_NAME_METADATA,
-    FILE_NAME_SERVICES,
-    BubblejailSettings,
-)
+from .bubblejail_utils import FILE_NAME_METADATA, FILE_NAME_SERVICES
 from .exceptions import BubblejailException, BubblewrapRunError
 from .services import ServiceContainer as BubblejailInstanceConfig
 from .services import ServicesConfDictType
@@ -217,8 +213,7 @@ class BubblejailInstance:
 
         instance_config = self._read_config()
 
-        # Create init
-        init = BubblejailRunner(
+        runner = BubblejailRunner(
             parent=self,
             instance_config=instance_config,
             is_shell_debug=debug_shell,
@@ -226,49 +221,31 @@ class BubblejailInstance:
             is_log_dbus=debug_log_dbus,
         )
 
-        async with init:
-            bwrap_args = ['/usr/bin/bwrap']
-            # Pass option args file descriptor
-            bwrap_args.append('--args')
-            bwrap_args.append(str(init.get_args_file_descriptor()))
-
-            # Append extra args
-            if extra_bwrap_args is not None:
-                bwrap_args.extend(extra_bwrap_args)
-
-            # Append command to bwrap depending on debug helper
-            if debug_helper_script is not None:
-                bwrap_args.extend(('python', '-X', 'dev', '-c'))
-                with open(debug_helper_script) as f:
-                    script_text = f.read()
-
-                bwrap_args.append(script_text)
-            else:
-                bwrap_args.append(BubblejailSettings.HELPER_PATH_STR)
-
-            if debug_shell:
-                bwrap_args.append('--shell')
-
-            if not args_to_run:
-                bwrap_args.extend(init.executable_args)
-            else:
-                bwrap_args.extend(args_to_run)
-
+        async with runner:
             if dry_run:
                 print('Bwrap options: ')
-                print(' '.join(init.bwrap_options_args))
+                print(' '.join(runner.bwrap_options_args))
 
-                print('Bwrap args: ')
-                print(' '.join(bwrap_args))
+                print('Run args: ')
+                print(' '.join(args_to_run))
 
                 print('Dbus session args')
-                print(' '.join(init.dbus_proxy_args))
-
+                print(' '.join(runner.dbus_proxy_args))
                 return
 
-            bwrap_process = await create_subprocess_exec(
-                *bwrap_args,
-                pass_fds=init.file_descriptors_to_pass,
+            helper_script_override: list[str] = []
+            # Append command to bwrap depending on debug helper
+            if debug_helper_script is not None:
+                with open(debug_helper_script) as f:
+                    helper_script_override.extend((
+                        'python', '-X', 'dev',
+                        '-c', f.read(),
+                    ))
+
+            bwrap_process = await runner.create_bubblewrap_subprocess(
+                run_args=args_to_run,
+                bubllewrap_extra_args=extra_bwrap_args,
+                override_pid_one=helper_script_override or None,
             )
             if __debug__:
                 print(f"Bubblewrap started. PID: {repr(bwrap_process)}")
@@ -280,7 +257,7 @@ class BubblejailInstance:
                                     bwrap_process.pid)
 
             post_init_hooks_task = loop.create_task(
-                self._run_post_init_hooks(init))
+                self._run_post_init_hooks(runner))
 
             try:
                 await task_bwrap_main
@@ -290,7 +267,7 @@ class BubblejailInstance:
             if not post_init_hooks_task.done():
                 post_init_hooks_task.cancel()
 
-            await self._run_post_shutdown_hooks(init)
+            await self._run_post_shutdown_hooks(runner)
 
             if bwrap_process.returncode != 0:
                 raise BubblewrapRunError((

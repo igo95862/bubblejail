@@ -23,6 +23,7 @@ from tempfile import TemporaryFile
 from typing import TYPE_CHECKING
 
 from .bubblejail_seccomp import SeccompState
+from .bubblejail_utils import BubblejailSettings
 from .bwrap_config import (
     Bind,
     BwrapConfigBase,
@@ -35,6 +36,7 @@ from .bwrap_config import (
 from .services import ServiceWantsDbusSessionBind, ServiceWantsHomeBind
 
 if TYPE_CHECKING:
+    from collections.abc import Iterable
     from typing import IO, Any, Type
 
     from .bubblejail_instance import BubblejailInstance
@@ -283,6 +285,38 @@ class BubblejailRunner:
         if self.dbus_proxy_process.returncode is not None:
             raise ValueError(
                 f"dbus proxy error code: {self.dbus_proxy_process.returncode}")
+
+    async def create_bubblewrap_subprocess(
+        self,
+        run_args: Iterable[str] | None = None,
+        bubllewrap_extra_args: Iterable[str] | None = None,
+        override_pid_one: Iterable[str] | None = None,
+    ) -> Process:
+        bwrap_args = ['/usr/bin/bwrap']
+        # Pass option args file descriptor
+        bwrap_args.append('--args')
+        bwrap_args.append(str(self.get_args_file_descriptor()))
+
+        if bubllewrap_extra_args:
+            bwrap_args.extend(bubllewrap_extra_args)
+
+        if override_pid_one is None:
+            bwrap_args.append(BubblejailSettings.HELPER_PATH_STR)
+        else:
+            bwrap_args.extend(override_pid_one)
+
+        if self.is_shell_debug:
+            bwrap_args.append("--shell")
+
+        if run_args is None:
+            bwrap_args.extend(self.executable_args)
+        else:
+            bwrap_args.extend(run_args)
+
+        return await create_subprocess_exec(
+            *bwrap_args,
+            pass_fds=self.file_descriptors_to_pass,
+        )
 
     async def __aenter__(self) -> None:
         # Generate args
