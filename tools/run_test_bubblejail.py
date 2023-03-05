@@ -1,14 +1,17 @@
 #!/usr/bin/env python3
+from __future__ import annotations
+
 from argparse import ArgumentParser
 from os import environ
 from pathlib import Path
 from shlex import split as shelx_split
 from traceback import print_exc
-from typing import Generator
+from typing import Any, Generator
 
 from bubblejail.bubblejail_cli import bubblejail_main
 from bubblejail.bubblejail_directories import BubblejailDirectories
 from bubblejail.bubblejail_gui_qt import run_gui
+from bubblejail.bubblejail_instance import BubblejailInstance
 
 
 def setup_test_env() -> None:
@@ -23,6 +26,27 @@ def setup_test_env() -> None:
         BubblejailDirectories,
         'iter_bubblejail_data_directories',
         custom_datadirs,
+    )
+
+    helper_path = build_dir / 'src/bubblejail/bubblejail_helper.py'
+    original_run = BubblejailInstance.async_run_init
+
+    async def run_with_helper_script(
+        self: BubblejailInstance,
+        *args: Any,
+        **kwargs: Any,
+    ) -> None:
+        kwargs["debug_helper_script"] = helper_path
+        await original_run(
+            self,
+            *args,
+            **kwargs,
+        )
+
+    setattr(
+        BubblejailInstance,
+        'async_run_init',
+        run_with_helper_script,
     )
 
 
