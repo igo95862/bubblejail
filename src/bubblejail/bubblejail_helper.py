@@ -18,12 +18,8 @@ from __future__ import annotations
 from argparse import REMAINDER as ARG_REMAINDER
 from argparse import ArgumentParser
 from asyncio import (
-    AbstractServer,
     CancelledError,
     Event,
-    StreamReader,
-    StreamWriter,
-    Task,
     create_subprocess_exec,
     create_task,
     new_event_loop,
@@ -31,39 +27,34 @@ from asyncio import (
     start_unix_server,
 )
 from asyncio.subprocess import DEVNULL, PIPE, STDOUT
+from collections.abc import Awaitable
 from json import dumps as json_dumps
 from json import loads as json_loads
 from os import WNOHANG, kill, wait3, waitpid
 from pathlib import Path
 from signal import SIGCHLD, SIGKILL, SIGTERM
 from time import sleep as sync_sleep
-from typing import (
-    Any,
-    Awaitable,
-    Dict,
-    Generator,
-    List,
-    Literal,
-    Optional,
-    Tuple,
-    Union,
-)
+from typing import TYPE_CHECKING
 
-# region Rpc
-RpcMethods = Literal['ping', 'run']
-RpcData = Union[Dict[str, Union[bool, str, List[str]]], List[str]]
-RpcType = Dict[str, Optional[Union[str, RpcData, RpcMethods]]]
+if TYPE_CHECKING:
+    from asyncio import AbstractServer, StreamReader, StreamWriter, Task
+    from collections.abc import Generator
+    from typing import Any, Literal
+
+    RpcMethods = Literal['ping', 'run']
+    RpcData = dict[str, bool | str | list[str]] | list[str]
+    RpcType = dict[str, str | RpcData | RpcMethods | None]
 
 
 class JsonRpcRequest:
     @staticmethod
-    def _dict_to_json_byte_line(rpc_dict: Dict[Any, Any]) -> bytes:
+    def _dict_to_json_byte_line(rpc_dict: dict[Any, Any]) -> bytes:
         string_form = json_dumps(rpc_dict) + '\n'
         return string_form.encode()
 
     @staticmethod
-    def _json_byte_line_to_dict(data: bytes) -> Dict[Any, Any]:
-        decoded_dict: Dict[Any, Any] = json_loads(data)
+    def _json_byte_line_to_dict(data: bytes) -> dict[Any, Any]:
+        decoded_dict: dict[Any, Any] = json_loads(data)
         # Replace 'id' with 'request_id'
         decoded_dict['request_id'] = decoded_dict['id']
         decoded_dict.pop('id')
@@ -72,8 +63,8 @@ class JsonRpcRequest:
 
     def __init__(self,
                  method: RpcMethods,
-                 request_id: Optional[str] = None,
-                 params: Optional[RpcData] = None,
+                 request_id: str | None = None,
+                 params: RpcData | None = None,
                  ):
         self.request_id = request_id
         self.method = method
@@ -96,7 +87,7 @@ class JsonRpcRequest:
 
 
 class RequestPing(JsonRpcRequest):
-    def __init__(self, request_id: Optional[str] = None) -> None:
+    def __init__(self, request_id: str | None = None) -> None:
         super().__init__(
             method='ping',
             request_id=request_id,
@@ -109,9 +100,9 @@ class RequestPing(JsonRpcRequest):
 class RequestRun(JsonRpcRequest):
     def __init__(
         self,
-        args_to_run: List[str],
+        args_to_run: list[str],
         wait_response: bool = False,
-        request_id: Optional[str] = None
+        request_id: str | None = None
     ) -> None:
         super().__init__(
             method='run',
@@ -136,7 +127,8 @@ class RequestRun(JsonRpcRequest):
             raise TypeError('Expected str in response.')
 
 
-RpcRequests = Union[RequestPing, RequestRun]
+if TYPE_CHECKING:
+    RpcRequests = RequestPing | RequestRun
 
 
 def request_selector(data: bytes) -> RpcRequests:
@@ -155,7 +147,6 @@ def request_selector(data: bytes) -> RpcRequests:
         )
     else:
         raise TypeError('Unknown rpc method.')
-# endregion Rpc
 
 
 def handle_children() -> None:
@@ -163,7 +154,7 @@ def handle_children() -> None:
     # Needs to be in exception
     # Seems like the sometimes python raises ChildProcessError
     # Most often however (0, 0)
-    wait_pid_tuple: Tuple[int, int] = (0, 0)
+    wait_pid_tuple: tuple[int, int] = (0, 0)
     try:
         # Walrus in action
         while (wait_pid_tuple := waitpid(-1, WNOHANG)) != (0, 0):
@@ -224,9 +215,9 @@ def terminate_children(run_helper_task: Task[None]) -> None:
 class BubblejailHelper(Awaitable[bool]):
     def __init__(
         self,
-            startup_args: List[str],
+            startup_args: list[str],
             helper_socket_path: Path = Path('/run/bubblehelp/helper.socket'),
-            no_child_timeout: Optional[int] = 3,
+            no_child_timeout: int | None = 3,
             reaper_pool_timer: int = 5,
             use_fixups: bool = True,
     ):
@@ -234,16 +225,16 @@ class BubblejailHelper(Awaitable[bool]):
         self.helper_socket_path = helper_socket_path
 
         # Server
-        self.server: Optional[AbstractServer] = None
+        self.server: AbstractServer | None = None
 
         # Event terminated
         self.terminated = Event()
 
         # Terminator variables
-        self.terminator_look_for_command: Optional[str] = None
+        self.terminator_look_for_command: str | None = None
 
         self.terminator_pool_timer = reaper_pool_timer
-        self.termninator_watcher_task: Optional[Task[None]] = None
+        self.termninator_watcher_task: Task[None] | None = None
 
         # Fix-ups
         if not use_fixups:
@@ -319,9 +310,9 @@ class BubblejailHelper(Awaitable[bool]):
 
     async def run_command(
         self,
-        args_to_run: List[str],
-        std_in_out_mode: Optional[int] = None,
-    ) -> Optional[str]:
+        args_to_run: list[str],
+        std_in_out_mode: int | None = None,
+    ) -> str | None:
 
         if std_in_out_mode == DEVNULL:
             p = await create_subprocess_exec(
