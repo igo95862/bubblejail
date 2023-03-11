@@ -26,9 +26,9 @@ from asyncio.subprocess import Process
 from json import load as json_load
 from os import O_CLOEXEC, O_NONBLOCK, environ, kill, pipe2
 from signal import SIGTERM
+from socket import AF_UNIX, socket
 from tempfile import TemporaryFile
 from typing import TYPE_CHECKING
-from socket import socket, AF_UNIX
 
 from .bubblejail_seccomp import SeccompState
 from .bubblejail_utils import BubblejailSettings
@@ -45,7 +45,7 @@ from .services import ServiceWantsDbusSessionBind, ServiceWantsHomeBind
 
 if TYPE_CHECKING:
     from asyncio import Task
-    from collections.abc import Iterable
+    from collections.abc import Iterable, Iterator
     from typing import IO, Any, Type
 
     from .bubblejail_instance import BubblejailInstance
@@ -74,6 +74,7 @@ class BubblejailRunner:
         self.temp_files: list[IO[bytes]] = []
         self.file_descriptors_to_pass: list[int] = []
         # Helper
+        self.helper_arguments: list[str] = [BubblejailSettings.HELPER_PATH_STR]
         self.helper_runtime_dir = parent.path_runtime_helper_dir
         self.helper_socket_path = parent.path_runtime_helper_socket
         self.helper_socket = socket(AF_UNIX)
@@ -258,6 +259,13 @@ class BubblejailRunner:
 
         self.bwrap_options_args.extend(self.bwrap_extra_options)
 
+    def helper_options(self) -> Iterator[str]:
+        yield "--helper-socket"
+        yield str(self.helper_socket_fd)
+
+        if self.is_shell_debug:
+            yield "--shell"
+
     def read_info_fd(self) -> None:
         with open(self.info_fd_pipe_read, closefd=False) as f:
             info_dict = json_load(f)
@@ -307,22 +315,15 @@ class BubblejailRunner:
     async def create_bubblewrap_subprocess(
         self,
         run_args: Iterable[str] | None = None,
-        override_pid_one: Iterable[str] | None = None,
     ) -> Process:
         bwrap_args = ['/usr/bin/bwrap']
         # Pass option args file descriptor
         bwrap_args.append('--args')
         bwrap_args.append(str(self.get_args_file_descriptor()))
+        bwrap_args.append("--")
 
-        if override_pid_one is None:
-            bwrap_args.append(BubblejailSettings.HELPER_PATH_STR)
-        else:
-            bwrap_args.extend(override_pid_one)
-
-        bwrap_args.extend(('--helper-socket', str(self.helper_socket_fd)))
-
-        if self.is_shell_debug:
-            bwrap_args.append("--shell")
+        bwrap_args.extend(self.helper_arguments)
+        bwrap_args.extend(self.helper_options())
 
         if run_args is None:
             bwrap_args.extend(self.executable_args)

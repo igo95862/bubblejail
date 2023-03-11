@@ -212,6 +212,13 @@ class BubblejailInstance:
         if extra_bwrap_args:
             runner.bwrap_extra_options.extend(extra_bwrap_args)
 
+        if debug_helper_script is not None:
+            with open(debug_helper_script) as f:
+                runner.helper_arguments = [
+                    'python', '-X', 'dev',
+                    '-c', f.read(),
+                ]
+
         async with runner:
             if dry_run:
                 print('Bwrap options: ')
@@ -224,18 +231,8 @@ class BubblejailInstance:
                 print(' '.join(runner.dbus_proxy_args))
                 return
 
-            helper_script_override: list[str] = []
-            # Append command to bwrap depending on debug helper
-            if debug_helper_script is not None:
-                with open(debug_helper_script) as f:
-                    helper_script_override.extend((
-                        'python', '-X', 'dev',
-                        '-c', f.read(),
-                    ))
-
-            bwrap_process = await runner.create_bubblewrap_subprocess(
-                run_args=args_to_run,
-                override_pid_one=helper_script_override or None,
+            bwrap_process = (
+                await runner.create_bubblewrap_subprocess(args_to_run)
             )
             if __debug__:
                 print(f"Bubblewrap started. PID: {repr(bwrap_process)}")
