@@ -402,14 +402,6 @@ class BubblejailRunner:
         except ProcessLookupError:
             ...
 
-        for t in self.temp_files:
-            t.close()
-
-        try:
-            self.helper_socket.close()
-        except OSError:
-            ...
-
         try:
             self.helper_socket_path.unlink()
         except FileNotFoundError:
@@ -438,3 +430,12 @@ class BubblejailRunner:
             ...
         except OSError:
             ...
+
+    def __del__(self) -> None:
+        try:
+            self.helper_socket.close()
+        except OSError:
+            ...
+
+        for t in self.temp_files:
+            t.close()
