@@ -74,7 +74,8 @@ class BubblejailRunner:
         self.temp_files: list[IO[bytes]] = []
         self.file_descriptors_to_pass: list[int] = []
         # Helper
-        self.helper_arguments: list[str] = [BubblejailSettings.HELPER_PATH_STR]
+        self.helper_executable: list[str] = [
+            BubblejailSettings.HELPER_PATH_STR]
         self.helper_runtime_dir = parent.path_runtime_helper_dir
         self.helper_socket_path = parent.path_runtime_helper_socket
         self.helper_socket = socket(AF_UNIX)
@@ -99,7 +100,6 @@ class BubblejailRunner:
         self.bwrap_options_args: list[str] = []
         self.bwrap_extra_options: list[str] = []
         # Debug mode
-        self.is_helper_debug = is_helper_debug
         self.is_shell_debug = is_shell_debug
         self.is_log_dbus = is_log_dbus
         # Instance config
@@ -259,7 +259,8 @@ class BubblejailRunner:
 
         self.bwrap_options_args.extend(self.bwrap_extra_options)
 
-    def helper_options(self) -> Iterator[str]:
+    def helper_arguments(self) -> Iterator[str]:
+        yield from self.helper_executable
         yield "--helper-socket"
         yield str(self.helper_socket_fd)
 
@@ -322,8 +323,7 @@ class BubblejailRunner:
         bwrap_args.append(str(self.get_args_file_descriptor()))
         bwrap_args.append("--")
 
-        bwrap_args.extend(self.helper_arguments)
-        bwrap_args.extend(self.helper_options())
+        bwrap_args.extend(self.helper_arguments())
 
         if run_args is None:
             bwrap_args.extend(self.executable_args)

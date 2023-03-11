@@ -214,23 +214,27 @@ class BubblejailInstance:
 
         if debug_helper_script is not None:
             with open(debug_helper_script) as f:
-                runner.helper_arguments = [
+                runner.helper_executable = [
                     'python', '-X', 'dev',
                     '-c', f.read(),
                 ]
 
+        if dry_run:
+            runner.genetate_args()
+            print('Bwrap options:')
+            print(' '.join(runner.bwrap_options_args))
+
+            print('Helper options:')
+            print(' '.join(runner.helper_arguments()))
+
+            print('Run args:')
+            print(' '.join(args_to_run))
+
+            print('Dbus session args:')
+            print(' '.join(runner.dbus_proxy_args))
+            return
+
         async with runner:
-            if dry_run:
-                print('Bwrap options: ')
-                print(' '.join(runner.bwrap_options_args))
-
-                print('Run args: ')
-                print(' '.join(args_to_run))
-
-                print('Dbus session args')
-                print(' '.join(runner.dbus_proxy_args))
-                return
-
             bwrap_process = (
                 await runner.create_bubblewrap_subprocess(args_to_run)
             )
