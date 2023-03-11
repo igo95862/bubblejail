@@ -28,6 +28,7 @@ from os import O_CLOEXEC, O_NONBLOCK, environ, kill, pipe2
 from signal import SIGTERM
 from tempfile import TemporaryFile
 from typing import TYPE_CHECKING
+from socket import socket, AF_UNIX
 
 from .bubblejail_seccomp import SeccompState
 from .bubblejail_utils import BubblejailSettings
@@ -75,6 +76,10 @@ class BubblejailRunner:
         # Helper
         self.helper_runtime_dir = parent.path_runtime_helper_dir
         self.helper_socket_path = parent.path_runtime_helper_socket
+        self.helper_socket = socket(AF_UNIX)
+        self.helper_socket.set_inheritable(True)
+        self.helper_socket_fd = self.helper_socket.fileno()
+        self.file_descriptors_to_pass.append(self.helper_socket_fd)
 
         # Args to dbus proxy
         self.dbus_proxy_args: list[str] = []
@@ -237,10 +242,6 @@ class BubblejailRunner:
         )
         # endregion dbus
 
-        # Bind helper directory
-        self.bwrap_options_args.extend(
-            Bind(str(self.helper_runtime_dir), '/run/bubblehelp').to_args())
-
         # Info fd pipe
         self.info_fd_pipe_read, self.info_fd_pipe_write = (
             pipe2(O_NONBLOCK | O_CLOEXEC)
@@ -319,6 +320,8 @@ class BubblejailRunner:
         else:
             bwrap_args.extend(override_pid_one)
 
+        bwrap_args.extend(('--helper-socket', str(self.helper_socket_fd)))
+
         if self.is_shell_debug:
             bwrap_args.append("--shell")
 
@@ -376,6 +379,7 @@ class BubblejailRunner:
         self.runtime_dir.mkdir(mode=0o700, parents=True, exist_ok=False)
         # Create helper directory
         self.helper_runtime_dir.mkdir(mode=0o700)
+        self.helper_socket.bind(bytes(self.helper_socket_path))
 
         await self.setup_dbus_proxy()
 
@@ -400,6 +404,11 @@ class BubblejailRunner:
 
         for t in self.temp_files:
             t.close()
+
+        try:
+            self.helper_socket.close()
+        except OSError:
+            ...
 
         try:
             self.helper_socket_path.unlink()

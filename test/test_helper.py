@@ -23,8 +23,9 @@ from asyncio import (
     get_running_loop,
     open_unix_connection,
 )
-from os import unlink
 from pathlib import Path
+from socket import AF_UNIX, socket
+from tempfile import TemporaryDirectory
 from unittest import IsolatedAsyncioTestCase, TestCase
 from unittest import main as unittest_main
 
@@ -34,17 +35,21 @@ from bubblejail.bubblejail_helper import (
     get_helper_argument_parser,
 )
 
-# Test socket needs to be cleaned up
-test_socket_path = Path('./test_socket')
-
 
 class HelperTests(IsolatedAsyncioTestCase):
 
     def setUp(self) -> None:
         # Create helper
+        self.temp_dir = TemporaryDirectory()
+        self.addCleanup(self.temp_dir.cleanup)
+        self.temp_dir_path = Path(self.temp_dir.name)
+        self.test_socket_path = self.temp_dir_path / 'test_socket'
+
+        self.test_socket = socket(AF_UNIX)
+        self.test_socket.bind(bytes(self.test_socket_path))
         self.helper = BubblejailHelper(
+            self.test_socket,
             startup_args=[],
-            helper_socket_path=test_socket_path,
             no_child_timeout=None,
             use_fixups=False,
         )
@@ -56,7 +61,7 @@ class HelperTests(IsolatedAsyncioTestCase):
         await self.helper.start_async()
         # Get stream reader and writer
         (reader, writer) = await open_unix_connection(
-            path=test_socket_path,
+            path=self.test_socket_path,
         )
         self.reader: StreamReader = reader
         self.writer: StreamWriter = writer
@@ -75,8 +80,6 @@ class HelperTests(IsolatedAsyncioTestCase):
     async def asyncTearDown(self) -> None:
         create_task(self.helper.stop_async())
         await self.helper
-        # Cleanup socket
-        unlink(test_socket_path)
         # Close the reader and writer
         self.writer.close()
         await self.writer.wait_closed()
@@ -88,13 +91,17 @@ class HelperParserTests(TestCase):
 
     def test_parser(self) -> None:
         """Test how helper argument parser works"""
+        required_args = ['--helper-socket', '0']
+
         with self.subTest('No shell'):
             no_shell_example_args = [
                 '/bin/true',
                 '--long-opt', '-e', '-test',
                 '/bin/false', '--shell'
             ]
-            parsed_args = self.parser.parse_args(no_shell_example_args)
+            parsed_args = self.parser.parse_args(
+                required_args + no_shell_example_args
+            )
 
             self.assertFalse(parsed_args.shell)
             self.assertEqual(parsed_args.args_to_run, no_shell_example_args)
@@ -104,7 +111,9 @@ class HelperParserTests(TestCase):
                 '--shell', '/bin/ls', '-l'
             ]
 
-            parsed_args = self.parser.parse_args(with_shell_example_args)
+            parsed_args = self.parser.parse_args(
+                required_args + with_shell_example_args
+            )
 
             self.assertTrue(parsed_args.shell)
             self.assertEqual(
@@ -115,7 +124,9 @@ class HelperParserTests(TestCase):
                 '--shell'
             ]
 
-            parsed_args = self.parser.parse_args(just_shell_example)
+            parsed_args = self.parser.parse_args(
+                required_args + just_shell_example
+            )
 
             self.assertTrue(parsed_args.shell)
             self.assertEqual(parsed_args.args_to_run, [])

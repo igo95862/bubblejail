@@ -33,6 +33,7 @@ from json import loads as json_loads
 from os import WNOHANG, kill, wait3, waitpid
 from pathlib import Path
 from signal import SIGCHLD, SIGKILL, SIGTERM
+from socket import AF_UNIX, socket
 from time import sleep as sync_sleep
 from typing import TYPE_CHECKING
 
@@ -215,14 +216,14 @@ def terminate_children(run_helper_task: Task[None]) -> None:
 class BubblejailHelper(Awaitable[bool]):
     def __init__(
         self,
-            startup_args: list[str],
-            helper_socket_path: Path = Path('/run/bubblehelp/helper.socket'),
-            no_child_timeout: int | None = 3,
-            reaper_pool_timer: int = 5,
-            use_fixups: bool = True,
+        socket: socket,
+        startup_args: list[str],
+        no_child_timeout: int | None = 3,
+        reaper_pool_timer: int = 5,
+        use_fixups: bool = True,
     ):
         self.startup_args = startup_args
-        self.helper_socket_path = helper_socket_path
+        self.socket = socket
 
         # Server
         self.server: AbstractServer | None = None
@@ -380,7 +381,7 @@ class BubblejailHelper(Awaitable[bool]):
     async def start_async(self) -> None:
         self.server = await start_unix_server(
             self.client_handler,
-            path=self.helper_socket_path,
+            sock=self.socket,
         )
         if __debug__:
             print('Started unix server', flush=True)
@@ -418,6 +419,11 @@ def get_helper_argument_parser() -> ArgumentParser:
     parser = ArgumentParser()
 
     parser.add_argument(
+        '--helper-socket',
+        type=int,
+        required=True,
+    )
+    parser.add_argument(
         '--shell',
         action='store_true',
     )
@@ -442,7 +448,8 @@ def bubblejail_helper_main() -> None:
             startup_args = ['/bin/sh']
 
         helper = BubblejailHelper(
-            startup_args=startup_args
+            socket(AF_UNIX, fileno=parsed_args.helper_socket),
+            startup_args=startup_args,
         )
         await helper.start_async()
         await helper
