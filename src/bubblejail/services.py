@@ -15,25 +15,18 @@
 # along with bubblejail.  If not, see <https://www.gnu.org/licenses/>.
 from __future__ import annotations
 
-from dataclasses import Field, asdict, dataclass, field, fields, is_dataclass
+from dataclasses import (
+    asdict,
+    dataclass,
+    field,
+    fields,
+    is_dataclass,
+    make_dataclass,
+)
 from multiprocessing import Process
 from os import environ, getuid, readlink
 from pathlib import Path
-from typing import (
-    Any,
-    ClassVar,
-    Dict,
-    FrozenSet,
-    Generator,
-    Iterator,
-    Optional,
-    Set,
-    Tuple,
-    Type,
-    TypedDict,
-    TypeVar,
-    Union,
-)
+from typing import TYPE_CHECKING, TypedDict
 
 from xdg import BaseDirectory
 
@@ -58,6 +51,13 @@ from .bwrap_config import (
 )
 from .exceptions import ServiceConflictError
 
+if TYPE_CHECKING:
+    from collections.abc import Generator, Iterator
+    from dataclasses import Field
+    from typing import Any, ClassVar, Type, TypeVar
+
+    from _typeshed import DataclassInstance
+
 # region Service Typing
 
 
@@ -73,13 +73,16 @@ class ServiceWantsDbusSessionBind(ServiceWantsSend):
     ...
 
 
-ServiceIterTypes = Union[BwrapConfigBase, FileTransfer,
-                         SeccompDirective,
-                         LaunchArguments, ServiceWantsSend, DbusCommon]
+if TYPE_CHECKING:
+    ServiceIterTypes = (
+        BwrapConfigBase | FileTransfer |
+        SeccompDirective | LaunchArguments |
+        ServiceWantsSend | DbusCommon
+    )
 
-ServiceSendType = Union[Path]
+    ServiceSendType = Path
 
-ServiceGeneratorType = Generator[ServiceIterTypes, ServiceSendType, None]
+    ServiceGeneratorType = Generator[ServiceIterTypes, ServiceSendType, None]
 
 # endregion Service Typing
 
@@ -99,7 +102,7 @@ class SettingFieldMetadata(TypedDict):
 
 
 # region HelperFunctions
-XDG_DESKTOP_VARS: FrozenSet[str] = frozenset({
+XDG_DESKTOP_VARS: frozenset[str] = frozenset({
     'XDG_CURRENT_DESKTOP', 'DESKTOP_SESSION',
     'XDG_SESSION_TYPE', 'XDG_SESSION_DESKTOP'})
 
@@ -129,7 +132,7 @@ def generate_toolkits() -> Generator[ServiceIterTypes, None, None]:
 class BubblejailService:
     xdg_runtime_dir: ClassVar[Path] = Path(f"/run/user/{getuid()}")
 
-    Settings: Type[object] = object
+    Settings: Type[DataclassInstance] = make_dataclass("EmptySettings", ())
 
     def __init__(self, context: BubblejailRunContext):
         self.context = context
@@ -511,11 +514,11 @@ class Systray(BubblejailService):
 
 class Joystick(BubblejailService):
     def iter_bwrap_options(self) -> ServiceGeneratorType:
-        look_for_names: Set[str] = set()
+        look_for_names: set[str] = set()
 
         dev_input_path = Path('/dev/input')
         sys_class_input_path = Path('/sys/class/input')
-        js_names: Set[str] = set()
+        js_names: set[str] = set()
         for input_dev in dev_input_path.iterdir():
             if not input_dev.is_char_device():
                 continue
@@ -886,7 +889,7 @@ class Slirp4netns(BubblejailService):
     conflicts = frozenset(('network', ))
 
 
-SERVICES_CLASSES: Tuple[Type[BubblejailService], ...] = (
+SERVICES_CLASSES: tuple[Type[BubblejailService], ...] = (
     CommonSettings, X11, Wayland,
     Network, PulseAudio, HomeShare, DirectRendering,
     Systray, Joystick, RootShare, OpenJDK, Notifications,
@@ -894,12 +897,13 @@ SERVICES_CLASSES: Tuple[Type[BubblejailService], ...] = (
     Slirp4netns,
 )
 
-SERVICES_MAP: Dict[str, Type[BubblejailService]] = {
+SERVICES_MAP: dict[str, Type[BubblejailService]] = {
     service.name: service for service in SERVICES_CLASSES
 }
 
 
-T = TypeVar('T', bound="object")
+if TYPE_CHECKING:
+    T = TypeVar('T', bound="object")
 
 
 class BubblejailRunContext:
@@ -911,9 +915,9 @@ class BubblejailRunContext:
 
 
 class ServiceContainer:
-    def __init__(self, conf_dict: Optional[ServicesConfDictType] = None):
+    def __init__(self, conf_dict: ServicesConfDictType | None = None):
         self.service_settings_to_type: dict[Type[Any], Any] = {}
-        self.service_settings: dict[str, object] = {}
+        self.service_settings: dict[str, DataclassInstance] = {}
         self.services: dict[str, BubblejailService] = {}
         self.context = BubblejailRunContext(self.service_settings_to_type)
         self.default_service = BubblejailDefaults(self.context)
