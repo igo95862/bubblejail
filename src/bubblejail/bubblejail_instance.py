@@ -209,6 +209,8 @@ class BubblejailInstance:
             is_helper_debug=debug_helper_script is not None,
             is_log_dbus=debug_log_dbus,
         )
+        if extra_bwrap_args:
+            runner.bwrap_extra_options.extend(extra_bwrap_args)
 
         async with runner:
             if dry_run:
@@ -233,7 +235,6 @@ class BubblejailInstance:
 
             bwrap_process = await runner.create_bubblewrap_subprocess(
                 run_args=args_to_run,
-                bubllewrap_extra_args=extra_bwrap_args,
                 override_pid_one=helper_script_override or None,
             )
             if __debug__:

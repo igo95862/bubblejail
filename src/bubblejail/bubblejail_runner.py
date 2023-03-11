@@ -96,6 +96,7 @@ class BubblejailRunner:
 
         # Args to bwrap
         self.bwrap_options_args: list[str] = []
+        self.bwrap_extra_options: list[str] = []
         # Debug mode
         self.is_helper_debug = is_helper_debug
         self.is_shell_debug = is_shell_debug
@@ -255,6 +256,8 @@ class BubblejailRunner:
             self.read_info_fd,
         )
 
+        self.bwrap_options_args.extend(self.bwrap_extra_options)
+
     def read_info_fd(self) -> None:
         with open(self.info_fd_pipe_read, closefd=False) as f:
             info_dict = json_load(f)
@@ -304,16 +307,12 @@ class BubblejailRunner:
     async def create_bubblewrap_subprocess(
         self,
         run_args: Iterable[str] | None = None,
-        bubllewrap_extra_args: Iterable[str] | None = None,
         override_pid_one: Iterable[str] | None = None,
     ) -> Process:
         bwrap_args = ['/usr/bin/bwrap']
         # Pass option args file descriptor
         bwrap_args.append('--args')
         bwrap_args.append(str(self.get_args_file_descriptor()))
-
-        if bubllewrap_extra_args:
-            bwrap_args.extend(bubllewrap_extra_args)
 
         if override_pid_one is None:
             bwrap_args.append(BubblejailSettings.HELPER_PATH_STR)
