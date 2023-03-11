@@ -4,6 +4,7 @@ from __future__ import annotations
 from argparse import ArgumentParser
 from os import environ
 from pathlib import Path
+from readline import read_history_file, set_history_length, write_history_file
 from shlex import split as shelx_split
 from traceback import print_exc
 from typing import Any, Generator
@@ -51,12 +52,20 @@ def setup_test_env() -> None:
 
 
 def shell_main() -> None:
+    build_dir = Path(environ['MESON_BUILD_ROOT'])
+    history_file = build_dir / 'bubblejail_cmd_history'
+    history_file.touch(exist_ok=True)
+    read_history_file(history_file)
+    set_history_length(1000)
+
     while True:
         try:
             input_line = input('bubblejail>> ')
         except EOFError:
             print()
             return
+        finally:
+            write_history_file(history_file)
 
         args = shelx_split(input_line)
 
