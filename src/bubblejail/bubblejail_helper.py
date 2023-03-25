@@ -25,6 +25,7 @@ from asyncio import (
     new_event_loop,
     sleep,
     start_unix_server,
+    wait_for,
 )
 from asyncio.subprocess import DEVNULL, PIPE, STDOUT
 from collections.abc import Awaitable
@@ -139,15 +140,16 @@ def request_selector(data: bytes) -> RpcRequests:
     request_id = decoded_dict['request_id']
     params = decoded_dict['params']
 
-    if method == 'ping':
-        return RequestPing(request_id=request_id)
-    elif method == 'run':
-        return RequestRun(
-            request_id=request_id,
-            **params
-        )
-    else:
-        raise TypeError('Unknown rpc method.')
+    match method:
+        case 'ping':
+            return RequestPing(request_id=request_id)
+        case 'run':
+            return RequestRun(
+                request_id=request_id,
+                **params
+            )
+        case _:
+            raise TypeError('Unknown rpc method.')
 
 
 def handle_children() -> None:
@@ -236,6 +238,8 @@ class BubblejailHelper(Awaitable[bool]):
 
         self.terminator_pool_timer = reaper_pool_timer
         self.termninator_watcher_task: Task[None] | None = None
+
+        self.ready_event = Event()
 
         # Fix-ups
         if not use_fixups:
@@ -361,19 +365,24 @@ class BubblejailHelper(Awaitable[bool]):
 
             request = request_selector(line)
 
-            if isinstance(request, RequestPing):
-                response = request.response_ping()
-            elif isinstance(request, RequestRun):
-                run_stdout = await self.run_command(
-                    args_to_run=request.args_to_run,
-                    std_in_out_mode=PIPE if request.wait_response else None,
-                )
-                if run_stdout is None:
-                    continue
-                else:
+            match request:
+                case RequestPing():
+                    response = request.response_ping()
+                case RequestRun(args_to_run=args_to_run,
+                                wait_response=wait_response):
+                    run_stdout = await self.run_command(
+                        args_to_run=args_to_run,
+                        std_in_out_mode=PIPE if wait_response else None,
+                    )
+                    if run_stdout is None:
+                        continue
+
                     response = request.response_run(
                         text=run_stdout,
                     )
+                case _:
+                    print("Unknown request")
+                    continue
 
             writer.write(response)
             await writer.drain()
@@ -386,6 +395,9 @@ class BubblejailHelper(Awaitable[bool]):
         if __debug__:
             print('Started unix server', flush=True)
         self.termninator_watcher_task = create_task(self.termninator_watcher())
+
+        await wait_for(self.ready_event.wait(), timeout=3)
+
         if self.startup_args:
             await self.run_command(
                 self.startup_args,
@@ -427,6 +439,10 @@ def get_helper_argument_parser() -> ArgumentParser:
         '--shell',
         action='store_true',
     )
+    parser.add_argument(
+        "--ready-fd",
+        type=int,
+    )
 
     parser.add_argument(
         'args_to_run',
@@ -441,16 +457,17 @@ def bubblejail_helper_main() -> None:
 
     parsed_args = parser.parse_args()
 
-    async def run_helper() -> None:
-        if not parsed_args.shell:
-            startup_args = parsed_args.args_to_run
-        else:
-            startup_args = ['/bin/sh']
+    if not parsed_args.shell:
+        startup_args = parsed_args.args_to_run
+    else:
+        startup_args = ['/bin/sh']
 
-        helper = BubblejailHelper(
-            socket(AF_UNIX, fileno=parsed_args.helper_socket),
-            startup_args=startup_args,
-        )
+    helper = BubblejailHelper(
+        socket(AF_UNIX, fileno=parsed_args.helper_socket),
+        startup_args=startup_args,
+    )
+
+    async def run_helper() -> None:
         await helper.start_async()
         await helper
 
@@ -458,6 +475,23 @@ def bubblejail_helper_main() -> None:
     run_helper_task = event_loop.create_task(run_helper(), name='Run helper')
     event_loop.add_signal_handler(SIGCHLD, handle_children)
     event_loop.add_signal_handler(SIGTERM, terminate_children, run_helper_task)
+
+    if parsed_args.ready_fd is None:
+        helper.ready_event.set()
+    else:
+        def read_ready() -> None:
+            try:
+                with open(parsed_args.ready_fd) as f:
+                    f.read()
+
+                helper.ready_event.set()
+            finally:
+                event_loop.remove_reader(parsed_args.ready_fd)
+
+        event_loop.add_reader(
+            parsed_args.ready_fd,
+            read_ready,
+        )
     try:
         event_loop.run_until_complete(run_helper_task)
     except CancelledError:

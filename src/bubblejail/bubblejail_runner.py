@@ -122,6 +122,9 @@ class BubblejailRunner:
         self.post_init_hooks: list[Callable[[int], None]] = []
         self.post_shutdown_hooks: list[Callable[[], None]] = []
 
+        self.ready_fd_pipe_read: int = -1
+        self.ready_fd_pipe_write: int = -1
+
     def genetate_args(self) -> None:
         # TODO: Reorganize the order to allow for
         # better binding multiple resources in same filesystem path
@@ -267,12 +270,22 @@ class BubblejailRunner:
             self.read_info_fd,
         )
 
+        if self.post_init_hooks:
+            self.ready_fd_pipe_read, self.ready_fd_pipe_write = (
+                pipe2(O_NONBLOCK | O_CLOEXEC)
+            )
+            self.file_descriptors_to_pass.append(self.ready_fd_pipe_read)
+
         self.bwrap_options_args.extend(self.bwrap_extra_options)
 
     def helper_arguments(self) -> Iterator[str]:
         yield from self.helper_executable
         yield "--helper-socket"
         yield str(self.helper_socket_fd)
+
+        if self.ready_fd_pipe_read > 0:
+            yield "--ready-fd"
+            yield str(self.ready_fd_pipe_read)
 
         if self.is_shell_debug:
             yield "--shell"
@@ -361,6 +374,9 @@ class BubblejailRunner:
 
         for hook in self.post_init_hooks:
             hook(sandboxed_pid)
+
+        with open(self.ready_fd_pipe_write, mode="w") as f:
+            f.write("ready")
 
     async def _run_post_shutdown_hooks(self) -> None:
         for hook in self.post_shutdown_hooks:

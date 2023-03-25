@@ -53,6 +53,7 @@ class HelperTests(IsolatedAsyncioTestCase):
             no_child_timeout=None,
             use_fixups=False,
         )
+        self.helper.ready_event.set()
 
     async def asyncSetUp(self) -> None:
         # Set asyncio debug mode
