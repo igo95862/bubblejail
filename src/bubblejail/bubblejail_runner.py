@@ -45,7 +45,7 @@ from .services import ServiceWantsDbusSessionBind, ServiceWantsHomeBind
 
 if TYPE_CHECKING:
     from asyncio import Task
-    from collections.abc import Iterable, Iterator
+    from collections.abc import Callable, Iterable, Iterator
     from typing import IO, Any, Type
 
     from .bubblejail_instance import BubblejailInstance
@@ -118,6 +118,9 @@ class BubblejailRunner:
 
         # Bubblewrap
         self.bubblewrap_pid: int | None = None
+
+        self.post_init_hooks: list[Callable[[int], None]] = []
+        self.post_shutdown_hooks: list[Callable[[], None]] = []
 
     def genetate_args(self) -> None:
         # TODO: Reorganize the order to allow for
@@ -201,6 +204,13 @@ class BubblejailRunner:
             self.file_descriptors_to_pass.append(seccomp_fd)
             self.temp_files.append(seccomp_temp_file)
             self.bwrap_options_args.extend(('--seccomp', str(seccomp_fd)))
+
+        self.post_init_hooks.extend(
+            self.instance_config.iter_post_init_hooks()
+        )
+        self.post_shutdown_hooks.extend(
+            self.instance_config.iter_post_shutdown_hooks()
+        )
 
         # region dbus
         # Session dbus
@@ -349,12 +359,12 @@ class BubblejailRunner:
         if __debug__:
             print(f"Sandboxed PID: {sandboxed_pid}")
 
-        for service in self.instance_config.iter_services():
-            service.post_init_hook(sandboxed_pid)
+        for hook in self.post_init_hooks:
+            hook(sandboxed_pid)
 
     async def _run_post_shutdown_hooks(self) -> None:
-        for service in self.instance_config.iter_services():
-            service.post_shutdown_hook()
+        for hook in self.post_shutdown_hooks:
+            hook()
 
     def sigterm_handler(self) -> None:
         try:

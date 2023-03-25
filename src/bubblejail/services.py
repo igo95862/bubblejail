@@ -52,7 +52,7 @@ from .bwrap_config import (
 from .exceptions import ServiceConflictError
 
 if TYPE_CHECKING:
-    from collections.abc import Generator, Iterator
+    from collections.abc import Callable, Generator, Iterator
     from dataclasses import Field
     from typing import Any, ClassVar, Type, TypeVar
 
@@ -976,3 +976,19 @@ class ServiceContainer:
             yield self.default_service
 
         yield from self.services.values()
+
+    def iter_post_init_hooks(self) -> Iterator[Callable[[int], None]]:
+        for service in self.services.values():
+            if (service.__class__.post_init_hook
+               is BubblejailService.post_init_hook):
+                continue
+
+            yield service.post_init_hook
+
+    def iter_post_shutdown_hooks(self) -> Iterator[Callable[[], None]]:
+        for service in self.services.values():
+            if (service.__class__.post_shutdown_hook
+               is BubblejailService.post_shutdown_hook):
+                continue
+
+            yield service.post_shutdown_hook

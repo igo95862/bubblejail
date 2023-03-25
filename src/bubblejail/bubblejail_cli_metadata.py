@@ -15,9 +15,8 @@
 # along with bubblejail.  If not, see <https://www.gnu.org/licenses/>.
 from __future__ import annotations
 
-from pathlib import Path
 from argparse import REMAINDER as ARG_REMAINDER
-
+from pathlib import Path
 from typing import TYPE_CHECKING
 
 if TYPE_CHECKING:
