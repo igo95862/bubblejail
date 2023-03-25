@@ -480,13 +480,12 @@ def bubblejail_helper_main() -> None:
         helper.ready_event.set()
     else:
         def read_ready() -> None:
-            try:
-                with open(parsed_args.ready_fd) as f:
-                    f.read()
+            event_loop.remove_reader(parsed_args.ready_fd)
 
-                helper.ready_event.set()
-            finally:
-                event_loop.remove_reader(parsed_args.ready_fd)
+            with open(parsed_args.ready_fd) as f:
+                f.read()
+
+            helper.ready_event.set()
 
         event_loop.add_reader(
             parsed_args.ready_fd,
