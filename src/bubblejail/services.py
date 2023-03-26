@@ -227,7 +227,7 @@ class BubblejailDefaults(BubblejailService):
 
                 "bpf", "fanotify_init", "lookup_dcookie",
                 "perf_event_open", "quotactl", "setdomainname",
-                "sethostname", "setns",
+                "sethostname",
 
                 # "chroot",
                 # Firefox and Chromium fails if chroot is not available
