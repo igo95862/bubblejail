@@ -23,6 +23,7 @@ from asyncio import (
     wait_for,
 )
 from asyncio.subprocess import Process
+from contextlib import suppress as exc_suppress
 from json import load as json_load
 from os import O_CLOEXEC, O_NONBLOCK, environ, kill, pipe2
 from signal import SIGTERM
@@ -375,7 +376,10 @@ class BubblejailRunner:
         for hook in self.post_init_hooks:
             hook(sandboxed_pid)
 
-        with open(self.ready_fd_pipe_write, mode="w") as f:
+        with (
+            exc_suppress(ValueError),
+            open(self.ready_fd_pipe_write, mode="w") as f
+        ):
             f.write("ready")
 
     async def _run_post_shutdown_hooks(self) -> None:
