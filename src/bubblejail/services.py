@@ -889,12 +889,163 @@ class Slirp4netns(BubblejailService):
     conflicts = frozenset(('network', ))
 
 
+class NamespacesLimits(BubblejailService):
+
+    @dataclass
+    class Settings:
+        max_user_namespaces: int = field(
+            default=0,
+            metadata=SettingFieldMetadata(
+                pretty_name='Max number of user namespaces',
+                description=(
+                    'Limiting user namespaces blocks acquiring new '
+                    'capabilities and privileges inside namespaces.'
+                ),
+                is_deprecated=False,
+            )
+        )
+        max_mnt_namespaces: int = field(
+            default=0,
+            metadata=SettingFieldMetadata(
+                pretty_name='Max number of mount namespaces',
+                description=(
+                    'Limits number mount namespaces.'
+                ),
+                is_deprecated=False,
+            )
+        )
+        max_pid_namespaces: int = field(
+            default=0,
+            metadata=SettingFieldMetadata(
+                pretty_name='Max number of PID namespaces',
+                description=(
+                    'Limits number PID namespaces.'
+                ),
+                is_deprecated=False,
+            )
+        )
+        max_ipc_namespaces: int = field(
+            default=0,
+            metadata=SettingFieldMetadata(
+                pretty_name='Max number of IPC namespaces',
+                description=(
+                    'Limits number IPC namespaces.'
+                ),
+                is_deprecated=False,
+            )
+        )
+        max_net_namespaces: int = field(
+            default=0,
+            metadata=SettingFieldMetadata(
+                pretty_name='Max number of net namespaces',
+                description=(
+                    'Limits number net namespaces.'
+                ),
+                is_deprecated=False,
+            )
+        )
+        max_time_namespaces: int = field(
+            default=0,
+            metadata=SettingFieldMetadata(
+                pretty_name='Max number of time namespaces',
+                description=(
+                    'Limits number time namespaces.'
+                ),
+                is_deprecated=False,
+            )
+        )
+        max_uts_namespaces: int = field(
+            default=0,
+            metadata=SettingFieldMetadata(
+                pretty_name='Max number of UTS namespaces',
+                description=(
+                    'Limits number UTS namespaces.'
+                ),
+                is_deprecated=False,
+            )
+        )
+        max_cgroup_namespaces: int = field(
+            default=0,
+            metadata=SettingFieldMetadata(
+                pretty_name='Max number of cgroups namespaces',
+                description=(
+                    'Limits number cgroups namespaces.'
+                ),
+                is_deprecated=False,
+            )
+        )
+
+    def iter_bwrap_options(self) -> ServiceGeneratorType:
+        settings = self.context.get_settings(NamespacesLimits.Settings)
+
+        if any(
+            x > 0 for x in (
+                settings.max_cgroup_namespaces,
+                settings.max_ipc_namespaces,
+                settings.max_mnt_namespaces,
+                settings.max_net_namespaces,
+                settings.max_pid_namespaces,
+                settings.max_time_namespaces,
+                settings.max_user_namespaces,
+                settings.max_uts_namespaces,
+            )
+        ):
+            raise NotImplementedError("Namespace limits over 0 not supported.")
+
+        yield from ()
+
+    @staticmethod
+    def set_namespaces_limits(
+        pid: int,
+        settings: NamespacesLimits.Settings,
+    ) -> None:
+        from bubblejail.namespaces import UserNamespace
+        target_namespace = UserNamespace.from_pid(pid)
+        parent_ns = target_namespace.get_parent_ns()
+        parent_ns.setns()
+
+        for proc_file, limit_to_set in (
+            ("max_user_namespaces", settings.max_user_namespaces),
+            ("max_mnt_namespaces", settings.max_mnt_namespaces),
+            ("max_pid_namespaces", settings.max_pid_namespaces),
+            ("max_ipc_namespaces", settings.max_ipc_namespaces),
+            ("max_net_namespaces", settings.max_net_namespaces),
+            ("max_time_namespaces", settings.max_time_namespaces),
+            ("max_uts_namespaces", settings.max_uts_namespaces),
+            ("max_cgroup_namespaces", settings.max_cgroup_namespaces),
+        ):
+            if limit_to_set < 0:
+                continue
+
+            with open("/proc/sys/user/" + proc_file, mode="w") as f:
+                f.write(str(limit_to_set))
+
+    def post_init_hook(self, pid: int) -> None:
+        settings = self.context.get_settings(NamespacesLimits.Settings)
+
+        setter_process = Process(
+            target=self.set_namespaces_limits,
+            args=(pid, settings)
+        )
+        setter_process.start()
+        setter_process.join(3)
+        setter_process.close()
+
+    name = "namespaces_limits"
+    pretty_name = "Limit namespaces"
+    description = (
+        "Limit number of namespaces available inside sandbox. "
+        "Namespace limits are recursive. Setting limit 0 blocks "
+        "creating new namespaces. Setting -1 unlocks the limit."
+    )
+
+
 SERVICES_CLASSES: tuple[Type[BubblejailService], ...] = (
     CommonSettings, X11, Wayland,
     Network, PulseAudio, HomeShare, DirectRendering,
     Systray, Joystick, RootShare, OpenJDK, Notifications,
     GnomeToolkit, Pipewire, VideoForLinux, IBus, Fcitx,
-    Slirp4netns,
+    Slirp4netns, NamespacesLimits,
 )
 
 SERVICES_MAP: dict[str, Type[BubblejailService]] = {
