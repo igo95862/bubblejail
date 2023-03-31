@@ -34,6 +34,7 @@ bubblejail_lib_package = custom_target(
     output : source_files + ['__pycache__'],
     install : true,
     install_dir : bubblejail_package_dir,
+    install_tag : 'runtime',
     command : [
         bytecode_compiler,
         '--input-files', '@INPUT@',

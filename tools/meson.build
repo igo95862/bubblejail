@@ -64,6 +64,7 @@ bubblejail_cli_launch = custom_target(
     install : true,
     install_dir : get_option('bindir'),
     install_mode : 'rwxr-xr-x',
+    install_tag : 'runtime',
     command : jinja2_commands,
 )
 
@@ -80,6 +81,7 @@ bubblejail_gui_qt_launch = custom_target(
     install : true,
     install_dir : get_option('bindir'),
     install_mode : 'rwxr-xr-x',
+    install_tag : 'bubblejail-gui',
     command : jinja2_commands,
 )
 
@@ -95,6 +97,7 @@ bubblejail_helper_launch = custom_target(
     capture : true,
     install : true,
     install_dir : get_option('libdir') / 'bubblejail',
+    install_tag : 'runtime',
     install_mode : 'rwxr-xr-x',
     command : jinja2_commands,
 )
