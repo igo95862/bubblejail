@@ -2,3 +2,4 @@ option('use_python_site_packages_dir', type: 'boolean', value: false, descriptio
 option('version_display', type: 'string', value: '', description: 'Custom --version display.')
 option('bytecode-optimization', type : 'integer', min : 0, max : 2, value : 1)
 option('generate-namespaces-constants', type: 'boolean', value: false, description: 'Generate new namespace constants rather than using x86_64 pre-generated file. This option is under development. DO NOT USE')
+option('man', type : 'boolean', value : true, description : 'Generate and install man pages for CLI tool and services.')

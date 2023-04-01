@@ -28,9 +28,8 @@ bubblejail_man_page = custom_target(
     input : bubblejail_man_page_markdown,
     capture : true,
     feed : true,
-    build_by_default : true,
     output : 'bubblejail.1',
-    install : true,
+    install : get_option('man'),
     install_dir : get_option('mandir') / 'man1',
     command : scdoc,
 )
@@ -57,9 +56,8 @@ bubblejail_services_man_page = custom_target(
     input : bubblejail_services_man_page_markdown,
     capture : true,
     feed : true,
-    build_by_default : true,
     output : 'bubblejail.services.5',
-    install : true,
+    install : get_option('man'),
     install_dir : get_option('mandir') / 'man5',
     command : scdoc,
 )
