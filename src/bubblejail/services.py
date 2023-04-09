@@ -893,7 +893,7 @@ class NamespacesLimits(BubblejailService):
 
     @dataclass
     class Settings:
-        max_user_namespaces: int = field(
+        user: int = field(
             default=0,
             metadata=SettingFieldMetadata(
                 pretty_name='Max number of user namespaces',
@@ -904,7 +904,7 @@ class NamespacesLimits(BubblejailService):
                 is_deprecated=False,
             )
         )
-        max_mnt_namespaces: int = field(
+        mount: int = field(
             default=0,
             metadata=SettingFieldMetadata(
                 pretty_name='Max number of mount namespaces',
@@ -914,7 +914,7 @@ class NamespacesLimits(BubblejailService):
                 is_deprecated=False,
             )
         )
-        max_pid_namespaces: int = field(
+        pid: int = field(
             default=0,
             metadata=SettingFieldMetadata(
                 pretty_name='Max number of PID namespaces',
@@ -924,7 +924,7 @@ class NamespacesLimits(BubblejailService):
                 is_deprecated=False,
             )
         )
-        max_ipc_namespaces: int = field(
+        ipc: int = field(
             default=0,
             metadata=SettingFieldMetadata(
                 pretty_name='Max number of IPC namespaces',
@@ -934,7 +934,7 @@ class NamespacesLimits(BubblejailService):
                 is_deprecated=False,
             )
         )
-        max_net_namespaces: int = field(
+        net: int = field(
             default=0,
             metadata=SettingFieldMetadata(
                 pretty_name='Max number of net namespaces',
@@ -944,7 +944,7 @@ class NamespacesLimits(BubblejailService):
                 is_deprecated=False,
             )
         )
-        max_time_namespaces: int = field(
+        time: int = field(
             default=0,
             metadata=SettingFieldMetadata(
                 pretty_name='Max number of time namespaces',
@@ -954,7 +954,7 @@ class NamespacesLimits(BubblejailService):
                 is_deprecated=False,
             )
         )
-        max_uts_namespaces: int = field(
+        uts: int = field(
             default=0,
             metadata=SettingFieldMetadata(
                 pretty_name='Max number of UTS namespaces',
@@ -964,7 +964,7 @@ class NamespacesLimits(BubblejailService):
                 is_deprecated=False,
             )
         )
-        max_cgroup_namespaces: int = field(
+        cgroup: int = field(
             default=0,
             metadata=SettingFieldMetadata(
                 pretty_name='Max number of cgroups namespaces',
@@ -975,57 +975,60 @@ class NamespacesLimits(BubblejailService):
             )
         )
 
-    def iter_bwrap_options(self) -> ServiceGeneratorType:
-        settings = self.context.get_settings(NamespacesLimits.Settings)
-
-        if any(
-            x > 0 for x in (
-                settings.max_cgroup_namespaces,
-                settings.max_ipc_namespaces,
-                settings.max_mnt_namespaces,
-                settings.max_net_namespaces,
-                settings.max_pid_namespaces,
-                settings.max_time_namespaces,
-                settings.max_user_namespaces,
-                settings.max_uts_namespaces,
-            )
-        ):
-            raise NotImplementedError("Namespace limits over 0 not supported.")
-
-        yield from ()
-
     @staticmethod
     def set_namespaces_limits(
         pid: int,
-        settings: NamespacesLimits.Settings,
+        namespace_files_to_limits: dict[str, int],
     ) -> None:
         from bubblejail.namespaces import UserNamespace
         target_namespace = UserNamespace.from_pid(pid)
         parent_ns = target_namespace.get_parent_ns()
         parent_ns.setns()
 
-        for proc_file, limit_to_set in (
-            ("max_user_namespaces", settings.max_user_namespaces),
-            ("max_mnt_namespaces", settings.max_mnt_namespaces),
-            ("max_pid_namespaces", settings.max_pid_namespaces),
-            ("max_ipc_namespaces", settings.max_ipc_namespaces),
-            ("max_net_namespaces", settings.max_net_namespaces),
-            ("max_time_namespaces", settings.max_time_namespaces),
-            ("max_uts_namespaces", settings.max_uts_namespaces),
-            ("max_cgroup_namespaces", settings.max_cgroup_namespaces),
-        ):
-            if limit_to_set < 0:
-                continue
-
+        for proc_file, limit_to_set in namespace_files_to_limits.items():
             with open("/proc/sys/user/" + proc_file, mode="w") as f:
                 f.write(str(limit_to_set))
 
     def post_init_hook(self, pid: int) -> None:
         settings = self.context.get_settings(NamespacesLimits.Settings)
 
+        namespace_files_to_limits: dict[str, int] = {}
+        if (user_ns_limit := settings.user) >= 0:
+            namespace_files_to_limits["max_user_namespaces"] = (
+                user_ns_limit and user_ns_limit + 1)
+
+        if (mount_ns_limit := settings.mount) >= 0:
+            namespace_files_to_limits["max_mnt_namespaces"] = (
+                mount_ns_limit and mount_ns_limit + 1)
+
+        if (pid_ns_limit := settings.pid) >= 0:
+            namespace_files_to_limits["max_pid_namespaces"] = (
+                pid_ns_limit and pid_ns_limit + 1)
+
+        if (ipc_ns_limit := settings.ipc) >= 0:
+            namespace_files_to_limits["max_ipc_namespaces"] = (
+                ipc_ns_limit and ipc_ns_limit + 1)
+
+        if (net_ns_limit := settings.net) >= 0:
+            if not self.context.is_service_enabled(Network):
+                net_ns_limit += 1
+
+            namespace_files_to_limits["max_net_namespaces"] = net_ns_limit
+
+        if (time_ns_limit := settings.time) >= 0:
+            namespace_files_to_limits["max_time_namespaces"] = time_ns_limit
+
+        if (uts_ns_limit := settings.uts) >= 0:
+            namespace_files_to_limits["max_uts_namespaces"] = (
+                uts_ns_limit and uts_ns_limit + 1)
+
+        if (cgroup_ns_limit := settings.cgroup) >= 0:
+            namespace_files_to_limits["max_cgroup_namespaces"] = (
+                cgroup_ns_limit and cgroup_ns_limit + 1)
+
         setter_process = Process(
             target=self.set_namespaces_limits,
-            args=(pid, settings)
+            args=(pid, namespace_files_to_limits)
         )
         setter_process.start()
         setter_process.join(3)
@@ -1058,11 +1061,22 @@ if TYPE_CHECKING:
 
 
 class BubblejailRunContext:
-    def __init__(self, services_to_type_dict: dict[Type[T], T]):
+    def __init__(
+        self,
+        services: dict[str, BubblejailService],
+        services_to_type_dict: dict[Type[T], T],
+    ):
+        self.services = services
         self.services_to_type_dict = services_to_type_dict
 
     def get_settings(self, settings_type: Type[T]) -> T:
         return self.services_to_type_dict[settings_type]
+
+    def is_service_enabled(
+        self,
+        service_type: Type[BubblejailService],
+    ) -> bool:
+        return service_type.name in self.services
 
 
 class ServiceContainer:
@@ -1070,7 +1084,10 @@ class ServiceContainer:
         self.service_settings_to_type: dict[Type[Any], Any] = {}
         self.service_settings: dict[str, DataclassInstance] = {}
         self.services: dict[str, BubblejailService] = {}
-        self.context = BubblejailRunContext(self.service_settings_to_type)
+        self.context = BubblejailRunContext(
+            self.services,
+            self.service_settings_to_type,
+        )
         self.default_service = BubblejailDefaults(self.context)
 
         if conf_dict is not None:
