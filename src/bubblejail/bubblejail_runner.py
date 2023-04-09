@@ -200,9 +200,6 @@ class BubblejailRunner:
                     raise TypeError('Unknown bwrap config.')
 
         if seccomp_state is not None:
-            if __debug__:
-                seccomp_state.print()
-
             seccomp_temp_file = seccomp_state.export_to_temp_file()
             seccomp_fd = seccomp_temp_file.fileno()
             self.file_descriptors_to_pass.append(seccomp_fd)
