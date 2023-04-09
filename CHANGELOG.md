@@ -1,3 +1,42 @@
+# 0.8.RC1
+
+## Added `namespaces_limits` service
+
+Linux namespaces are a powerful instruments that can be used to create
+sandboxes but it also exposes internal kernel interfaces to unprivileged users
+which can be a source of vulnerabilities. (for example CVE-2022-25636)
+
+New service `namespaces_limits` will limit amount of namespaces that
+could be created inside sandbox.
+
+It has `user`, `mount`, `pid`, `ipc`, `net`, `time`, `uts` and `cgroup`
+settings which corresponds to each type of namespace. Those settings take
+an integer as value with `0` (default) completely disabling creating that
+type of namespace, `-1` allowing unlimited amount and any positive integer
+sets limit to that number. The positive integer is useful in case your application
+will only create a limited number of namespaces.
+
+Profiles might receive a well tested namespaces limits in the future version.
+
+## Dependenices changes
+
+* GUI has been ported to PyQt6.
+
+## Build changes
+
+* Fixed `libseccomp` and `python-xdg` being required during build.
+* Added meson option to disable man page build and installation.
+* Added meson install tags. Current tags are `runtime` for core files and cli tool,
+  `bubblejail-gui` for gui configuration tool, `fish-completion`/`bash-completion`
+  for shell autocompletion and `man` for man pages.
+  (thank you @gordon-quad)
+
+## Known issues
+
+* `slirp4netns` and `namespaces_limits` can conflict with each other because
+  `slirp4netns` tries to switch to new mount namespace.
+* Namespaces functions only work on x86_64 platform.
+
 # 0.7.0
 
 * **m4 macro processor removed as build dependency**
