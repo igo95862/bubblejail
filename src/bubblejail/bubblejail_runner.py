@@ -72,7 +72,7 @@ class BubblejailRunner:
         self.home_bind_path = parent.path_home_directory
         self.runtime_dir = parent.runtime_dir
         # Prevent our temporary file from being garbage collected
-        self.temp_files: list[IO[bytes]] = []
+        self.bwrap_temp_files: list[IO[bytes]] = []
         self.file_descriptors_to_pass: list[int] = []
         # Helper
         self.helper_executable: list[str] = [
@@ -173,7 +173,7 @@ class BubblejailRunner:
                 elif isinstance(config, FileTransfer):
                     # Copy files
                     temp_f = copy_data_to_temp_file(config.content)
-                    self.temp_files.append(temp_f)
+                    self.bwrap_temp_files.append(temp_f)
                     temp_file_descriptor = temp_f.fileno()
                     self.file_descriptors_to_pass.append(
                         temp_file_descriptor)
@@ -203,7 +203,7 @@ class BubblejailRunner:
             seccomp_temp_file = seccomp_state.export_to_temp_file()
             seccomp_fd = seccomp_temp_file.fileno()
             self.file_descriptors_to_pass.append(seccomp_fd)
-            self.temp_files.append(seccomp_temp_file)
+            self.bwrap_temp_files.append(seccomp_temp_file)
             self.bwrap_options_args.extend(('--seccomp', str(seccomp_fd)))
 
         self.post_init_hooks.extend(
@@ -299,7 +299,7 @@ class BubblejailRunner:
         args_tempfile = copy_data_to_temp_file(options_null.encode())
         args_tempfile_fileno = args_tempfile.fileno()
         self.file_descriptors_to_pass.append(args_tempfile_fileno)
-        self.temp_files.append(args_tempfile)
+        self.bwrap_temp_files.append(args_tempfile)
 
         return args_tempfile_fileno
 
@@ -378,6 +378,10 @@ class BubblejailRunner:
             open(self.ready_fd_pipe_write, mode="w") as f
         ):
             f.write("ready")
+
+        with exc_suppress(IndexError):
+            while t := self.bwrap_temp_files.pop():
+                t.close()
 
     async def _run_post_shutdown_hooks(self) -> None:
         for hook in self.post_shutdown_hooks:
@@ -464,5 +468,5 @@ class BubblejailRunner:
         except OSError:
             ...
 
-        for t in self.temp_files:
+        for t in self.bwrap_temp_files:
             t.close()
