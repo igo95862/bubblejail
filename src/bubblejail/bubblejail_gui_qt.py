@@ -36,6 +36,7 @@ from PyQt6.QtWidgets import (
     QMainWindow,
     QPushButton,
     QScrollArea,
+    QSpinBox,
     QVBoxLayout,
     QWidget,
 )
@@ -214,6 +215,38 @@ class OptionWidgetStr(OptionWidgetBase):
         return self.line_edit.text()
 
 
+class OptionWidgetInt(OptionWidgetBase):
+    def __init__(
+        self,
+        name: str,
+        description: str,
+        data: int,
+        bubblejail_setting_name: str,
+    ):
+        super().__init__(
+            name=name,
+            description=description,
+            data=data,
+            bubblejail_setting_name=bubblejail_setting_name,
+        )
+
+        self.horizontal_layout = QHBoxLayout()
+        self.widget.setLayout(self.horizontal_layout)
+
+        self.label = QLabel(name)
+        self.label.setToolTip(description)
+        self.horizontal_layout.addWidget(self.label)
+
+        self.spin_box = QSpinBox()
+        self.spin_box.setMinimum(-1000)
+        self.spin_box.setValue(data)
+        self.spin_box.setToolTip(description)
+        self.horizontal_layout.addWidget(self.spin_box)
+
+    def get_int(self) -> int:
+        return self.spin_box.value()
+
+
 class OptionWidgetSpaceSeparatedStr(OptionWidgetStr):
     def __init__(
         self,
@@ -291,7 +324,9 @@ class ServiceWidget:
         self.group_layout = QVBoxLayout()
         self.group_widget.setLayout(self.group_layout)
 
-        self.group_layout.addWidget(QLabel(service.description))
+        self.service_description_widget = QLabel(service.description)
+        self.service_description_widget.setWordWrap(True)
+        self.group_layout.addWidget(self.service_description_widget)
 
         self.option_widgets: list[OptionWidgetBase] = []
 
@@ -315,6 +350,8 @@ class ServiceWidget:
                     widget_class = OptionWidgetSpaceSeparatedStr
                 case "list[str]":
                     widget_class = OptionWidgetStrList
+                case "int":
+                    widget_class = OptionWidgetInt
                 case unknown_type:
                     raise TypeError(
                         f"Unknown field type {unknown_type} "
@@ -370,6 +407,8 @@ class ServiceWidget:
                     new_dict[k] = widget.get_str_or_list()
                 case OptionWidgetStr(bubblejail_setting_name=k):
                     new_dict[k] = widget.get_str()
+                case OptionWidgetInt(bubblejail_setting_name=k):
+                    new_dict[k] = widget.get_int()
                 case _:
                     raise TypeError(f"Unknown widget type {widget}")
 

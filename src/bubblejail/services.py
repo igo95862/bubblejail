@@ -88,7 +88,7 @@ if TYPE_CHECKING:
 
 # region Service Options
 
-ServiceSettingsTypes = str | list[str] | bool
+ServiceSettingsTypes = str | list[str] | bool | int
 ServiceSettingsDict = dict[str, ServiceSettingsTypes]
 ServicesConfDictType = dict[str, ServiceSettingsDict]
 
