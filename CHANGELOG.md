@@ -1,3 +1,10 @@
+# 0.8.RC2
+
+## Fixes
+
+* Fixed GUI not working because of integer settings that `namespaces_limits`
+  uses.
+
 # 0.8.RC1
 
 ## Added `namespaces_limits` service
