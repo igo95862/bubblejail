@@ -346,10 +346,10 @@ class BubblejailRunner:
 
         bwrap_args.extend(self.helper_arguments())
 
-        if run_args is None:
-            bwrap_args.extend(self.executable_args)
-        else:
+        if run_args:
             bwrap_args.extend(run_args)
+        else:
+            bwrap_args.extend(self.executable_args)
 
         bubblewrap_subprocess = await create_subprocess_exec(
             *bwrap_args,
