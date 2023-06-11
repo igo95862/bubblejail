@@ -18,16 +18,49 @@ from __future__ import annotations
 from unittest import TestCase
 from unittest import main as unittest_main
 
+from tomli import loads as toml_loads
+
 from bubblejail.exceptions import ServiceConflictError
 from bubblejail.services import (
     SERVICES_CLASSES,
     SERVICES_MAP,
+    X11,
     ServiceContainer,
 )
-from tomli import loads as toml_loads
 
 
 class TestServices(TestCase):
+
+    def test_x11_socket_bind(self) -> None:
+        correct_path = "/tmp/.X11-unix/X0"
+
+        self.assertEqual(
+            X11.x11_socket_path(":0"),
+            correct_path,
+        )
+
+        self.assertEqual(
+            X11.x11_socket_path("unix/:0"),
+            correct_path,
+        )
+
+        self.assertEqual(
+            X11.x11_socket_path(":0.1"),
+            correct_path,
+        )
+
+        self.assertEqual(
+            X11.x11_socket_path("unix/:1"),
+            "/tmp/.X11-unix/X1",
+        )
+
+        self.assertIsNone(
+            X11.x11_socket_path("tcp/localhost:1")
+        )
+
+        self.assertIsNone(
+            X11.x11_socket_path("unix/localhost:1")
+        )
 
     def test_service_conflict_relationship(self) -> None:
         # Test that conflict points to existing service

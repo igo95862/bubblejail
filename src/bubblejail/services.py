@@ -337,6 +337,41 @@ class CommonSettings(BubblejailService):
 
 class X11(BubblejailService):
 
+    @staticmethod
+    def x11_socket_path(display_var: str) -> str | None:
+        # See https://man.archlinux.org/man/X.7#DISPLAY_NAMES
+        # protocol/hostname:displaynumber.screennumber
+        match display_var.split("/"):
+            case [protocol, remainder]:
+                if protocol != "unix":
+                    return None
+                display_var = remainder
+            case [remainder]:
+                display_var = remainder
+            case _:
+                raise ValueError
+
+        # hostname:displaynumber.screennumber
+        match display_var.split(":"):
+            case [hostname, remainder]:
+                if hostname != "":
+                    return None
+
+                display_var = remainder
+            case _:
+                raise ValueError
+
+        # displaynumber.screennumber
+        match display_var.split("."):
+            case [displaynumber, _]:
+                ...
+            case [displaynumber]:
+                ...
+            case _:
+                raise ValueError
+
+        return f"/tmp/.X11-unix/X{displaynumber}"
+
     def iter_bwrap_options(self) -> ServiceGeneratorType:
 
         for x in XDG_DESKTOP_VARS:
@@ -344,7 +379,9 @@ class X11(BubblejailService):
                 yield EnvrimentalVar(x)
 
         yield EnvrimentalVar('DISPLAY')
-        yield Bind(f"/tmp/.X11-unix/X{environ['DISPLAY'][1:]}")
+
+        if x11_socket_path := self.x11_socket_path(environ["DISPLAY"]):
+            yield ReadOnlyBind(x11_socket_path)
 
         x_authority_path_str = environ.get('XAUTHORITY')
         if x_authority_path_str is not None:
