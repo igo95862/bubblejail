@@ -26,6 +26,7 @@ from dataclasses import (
 from multiprocessing import Process
 from os import environ, getuid, readlink
 from pathlib import Path
+from platform import machine
 from typing import TYPE_CHECKING, TypedDict
 
 from xdg import BaseDirectory
@@ -849,7 +850,6 @@ class Slirp4netns(BubblejailService):
         self.outbound_addr = settings.outbound_addr
         self.disable_host_loopback = settings.disable_host_loopback
 
-        from platform import machine
         if machine() != 'x86_64':
             raise NotImplementedError('Slirp4netns only available on x86_64')
 
@@ -1011,6 +1011,12 @@ class NamespacesLimits(BubblejailService):
                 is_deprecated=False,
             )
         )
+
+    def iter_bwrap_options(self) -> ServiceGeneratorType:
+        if machine() != 'x86_64':
+            raise NotImplementedError('Slirp4netns only available on x86_64')
+
+        yield from ()
 
     @staticmethod
     def set_namespaces_limits(
