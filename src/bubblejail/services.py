@@ -477,7 +477,7 @@ class HomeShare(BubblejailService):
 
     name = 'home_share'
     pretty_name = 'Home Share'
-    description = 'Share directories relative to home'
+    description = 'Share directories or files relative to home'
 
 
 class DirectRendering(BubblejailService):
@@ -640,7 +640,7 @@ class RootShare(BubblejailService):
     name = 'root_share'
     pretty_name = 'Root share'
     description = (
-        'Share directory relative to root /'
+        'Share directories or files relative to root /'
     )
 
 
