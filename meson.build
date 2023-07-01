@@ -1,5 +1,5 @@
 project('bubblejail',
-    version : '0.8.RC2'
+    version : '0.8.0'
 )
 
 fs = import('fs')

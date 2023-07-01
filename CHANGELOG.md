@@ -1,3 +1,10 @@
+# 0.8.0
+
+## Fixes
+
+* Fixed X11 multi-screen not working. (the single screen spanning multiple displays already works)
+* Fixed default arguments not being used when no arguments have been passed to run command.
+
 # 0.8.RC2
 
 ## Fixes
