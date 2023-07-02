@@ -44,13 +44,13 @@ If your distro does not have a package you can try to manually install with meso
 #### Requirements
 
 ##### Build requirements
-* Python 3 (>= 3.9) - python interpreter
+* Python 3 (>= 3.10) - python interpreter
 * Jinja2 - Python template engine used during build
 * Meson - build system
 * scdoc - man page generator (optional)
 
 ##### Runtime requirements
-* Python 3 (>= 3.9) - python interpreter
+* Python 3 (>= 3.10) - python interpreter
 * Python PyXDG - XDG standards for python
 * Python Tomli -  TOML file support for python, `tomli` version
 * Python Tomli-W - writer part of `tomli`
