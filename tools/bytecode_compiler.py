@@ -1,4 +1,4 @@
-#!/usr/bin/python3 -IO
+#!/usr/bin/python3
 # SPDX-License-Identifier: GPL-3.0-or-later
 
 # Copyright 2023 igo95862
