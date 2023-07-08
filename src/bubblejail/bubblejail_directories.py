@@ -42,8 +42,7 @@ UserConfigDir = Path(xdg_config_home) / 'bubblejail'
 
 
 def convert_old_conf_to_new() -> None:
-    for instance_directory in BubblejailDirectories.\
-            iter_instances_path():
+    for instance_directory in BubblejailDirectories.iter_instances_path():
         if (instance_directory / FILE_NAME_SERVICES).is_file():
             continue
 
@@ -96,17 +95,29 @@ class BubblejailDirectories:
         for profiles_directory in cls.iter_profile_directories():
             possible_profile_path = profiles_directory / profile_file_name
 
-            if possible_profile_path.is_file():
+            try:
                 with open(possible_profile_path, mode='rb') as profile_file:
                     return BubblejailProfile(**toml_load(profile_file))
+            except FileNotFoundError:
+                continue
 
         raise BubblejailException(f"Profile {profile_name} not found")
+
+    @classmethod
+    def iter_profile_names(cls) -> Generator[str, None, None]:
+        for profiles_directory in (
+                BubblejailDirectories.iter_profile_directories()
+        ):
+            try:
+                for profile_file in profiles_directory.iterdir():
+                    yield profile_file.stem
+            except FileNotFoundError:
+                continue
 
     @classmethod
     def iter_profile_directories(cls) -> PathGeneratorType:
         for conf_dir in cls.iterm_config_dirs():
             profiles_dir = conf_dir / 'profiles'
-            profiles_dir.mkdir(exist_ok=True)
             yield profiles_dir
 
     @classmethod

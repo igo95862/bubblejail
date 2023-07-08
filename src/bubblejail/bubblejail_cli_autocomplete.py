@@ -22,10 +22,10 @@ from typing import TYPE_CHECKING
 from .bubblejail_cli import (
     iter_instance_names,
     iter_list_choices,
-    iter_profile_names,
     iter_subcommand_options,
     iter_subcommands,
 )
+from .bubblejail_directories import BubblejailDirectories
 
 if TYPE_CHECKING:
     from collections.abc import Iterable
@@ -99,7 +99,9 @@ class AutoCompleteParser:
 
             if words[index - 1] == '--profile':
                 # Wants profile
-                self.last_auto_complete = iter_profile_names()
+                self.last_auto_complete = (
+                    BubblejailDirectories.iter_profile_names()
+                )
                 continue
 
             if subcommand in want_instance_set:

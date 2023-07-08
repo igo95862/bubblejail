@@ -570,11 +570,7 @@ class CreateInstanceWidget(CentralWidgets):
 
         self.current_profile: Optional[BubblejailProfile] = None
 
-        profiles_names = set()
-        for profiles_directory in \
-                BubblejailDirectories.iter_profile_directories():
-            for profile_file in profiles_directory.iterdir():
-                profiles_names.add(profile_file.stem)
+        profiles_names = set(BubblejailDirectories.iter_profile_names())
 
         for profile_name in profiles_names:
             self.profile_select_widget.add_item(profile_name)

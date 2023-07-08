@@ -31,14 +31,6 @@ if TYPE_CHECKING:
     from typing import Optional
 
 
-def iter_profile_names() -> Generator[str, None, None]:
-    for profiles_directory in BubblejailDirectories.\
-            iter_profile_directories():
-
-        for profile_file in profiles_directory.iterdir():
-            yield profile_file.stem
-
-
 def iter_instance_names() -> Generator[str, None, None]:
     for instance_directory in BubblejailDirectories.iter_instances_path():
         yield instance_directory.name
@@ -150,7 +142,7 @@ def bjail_list(list_what: str) -> None:
     if list_what == 'instances':
         str_iterator = iter_instance_names()
     elif list_what == 'profiles':
-        str_iterator = iter_profile_names()
+        str_iterator = BubblejailDirectories.iter_profile_names()
     elif list_what == 'services':
         str_iterator = (x.name for x in SERVICES_CLASSES)
     elif list_what == 'subcommands':
