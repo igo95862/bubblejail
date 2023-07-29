@@ -46,7 +46,7 @@ from .services import ServiceWantsDbusSessionBind, ServiceWantsHomeBind
 
 if TYPE_CHECKING:
     from asyncio import Task
-    from collections.abc import Callable, Iterable, Iterator
+    from collections.abc import Awaitable, Callable, Iterable, Iterator
     from typing import IO, Any, Type
 
     from .bubblejail_instance import BubblejailInstance
@@ -120,8 +120,8 @@ class BubblejailRunner:
         # Bubblewrap
         self.bubblewrap_pid: int | None = None
 
-        self.post_init_hooks: list[Callable[[int], None]] = []
-        self.post_shutdown_hooks: list[Callable[[], None]] = []
+        self.post_init_hooks: list[Callable[[int], Awaitable[None]]] = []
+        self.post_shutdown_hooks: list[Callable[[], Awaitable[None]]] = []
 
         self.ready_fd_pipe_read: int = -1
         self.ready_fd_pipe_write: int = -1
@@ -371,7 +371,7 @@ class BubblejailRunner:
             print(f"Sandboxed PID: {sandboxed_pid}")
 
         for hook in self.post_init_hooks:
-            hook(sandboxed_pid)
+            await hook(sandboxed_pid)
 
         with (
             exc_suppress(ValueError),
@@ -385,7 +385,7 @@ class BubblejailRunner:
 
     async def _run_post_shutdown_hooks(self) -> None:
         for hook in self.post_shutdown_hooks:
-            hook()
+            await hook()
 
     def sigterm_handler(self) -> None:
         try:

@@ -53,7 +53,7 @@ from .bwrap_config import (
 from .exceptions import ServiceConflictError
 
 if TYPE_CHECKING:
-    from collections.abc import Callable, Generator, Iterator
+    from collections.abc import Awaitable, Callable, Generator, Iterator
     from dataclasses import Field
     from typing import Any, ClassVar, Type, TypeVar
 
@@ -141,10 +141,10 @@ class BubblejailService:
     def iter_bwrap_options(self) -> ServiceGeneratorType:
         yield from ()
 
-    def post_init_hook(self, pid: int) -> None:
+    async def post_init_hook(self, pid: int) -> None:
         ...
 
-    def post_shutdown_hook(self) -> None:
+    async def post_shutdown_hook(self) -> None:
         ...
 
     @classmethod
@@ -895,7 +895,7 @@ class Slirp4netns(BubblejailService):
         from os import execv
         execv('/usr/bin/slirp4netns', slirp4netns_args)
 
-    def post_init_hook(self, pid: int) -> None:
+    async def post_init_hook(self, pid: int) -> None:
         settings = self.context.get_settings(Slirp4netns.Settings)
 
         outbound_addr = settings.outbound_addr
@@ -911,7 +911,7 @@ class Slirp4netns(BubblejailService):
         )
         self.slirp_process.start()
 
-    def post_shutdown_hook(self) -> None:
+    async def post_shutdown_hook(self) -> None:
         if self.slirp_process is not None:
             self.slirp_process.terminate()
             self.slirp_process.join(3)
@@ -1032,7 +1032,7 @@ class NamespacesLimits(BubblejailService):
             with open("/proc/sys/user/" + proc_file, mode="w") as f:
                 f.write(str(limit_to_set))
 
-    def post_init_hook(self, pid: int) -> None:
+    async def post_init_hook(self, pid: int) -> None:
         settings = self.context.get_settings(NamespacesLimits.Settings)
 
         namespace_files_to_limits: dict[str, int] = {}
@@ -1188,7 +1188,9 @@ class ServiceContainer:
 
         yield from self.services.values()
 
-    def iter_post_init_hooks(self) -> Iterator[Callable[[int], None]]:
+    def iter_post_init_hooks(
+        self
+    ) -> Iterator[Callable[[int], Awaitable[None]]]:
         for service in self.services.values():
             if (service.__class__.post_init_hook
                is BubblejailService.post_init_hook):
@@ -1196,7 +1198,9 @@ class ServiceContainer:
 
             yield service.post_init_hook
 
-    def iter_post_shutdown_hooks(self) -> Iterator[Callable[[], None]]:
+    def iter_post_shutdown_hooks(
+        self
+    ) -> Iterator[Callable[[], Awaitable[None]]]:
         for service in self.services.values():
             if (service.__class__.post_shutdown_hook
                is BubblejailService.post_shutdown_hook):
