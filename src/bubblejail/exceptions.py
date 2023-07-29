@@ -42,3 +42,11 @@ class BubblejailLibseccompError(BubblejailException):
 
 class LibseccompSyscallResolutionError(BubblejailLibseccompError):
     ...
+
+
+class BubblejailInitializationError(BubblejailException):
+    ...
+
+
+class BubblejailDependencyError(BubblejailInitializationError):
+    ...
