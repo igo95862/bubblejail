@@ -22,13 +22,13 @@ from asyncio import (
     get_running_loop,
     wait_for,
 )
-from asyncio.subprocess import Process
 from contextlib import suppress as exc_suppress
 from json import load as json_load
 from os import O_CLOEXEC, O_NONBLOCK, environ, kill, pipe2
 from signal import SIGTERM
 from socket import AF_UNIX, socket
 from tempfile import TemporaryFile
+from traceback import print_exc
 from typing import TYPE_CHECKING
 
 from .bubblejail_seccomp import SeccompState
@@ -46,6 +46,7 @@ from .services import ServiceWantsDbusSessionBind, ServiceWantsHomeBind
 
 if TYPE_CHECKING:
     from asyncio import Task
+    from asyncio.subprocess import Process
     from collections.abc import Awaitable, Callable, Iterable, Iterator
     from typing import IO, Any, Type
 
@@ -118,6 +119,7 @@ class BubblejailRunner:
         self.task_post_init: Task[None] | None = None
 
         # Bubblewrap
+        self.bubblewrap_process: Process | None = None
         self.bubblewrap_pid: int | None = None
 
         self.post_init_hooks: list[Callable[[int], Awaitable[None]]] = []
@@ -351,19 +353,21 @@ class BubblejailRunner:
         else:
             bwrap_args.extend(self.executable_args)
 
-        bubblewrap_subprocess = await create_subprocess_exec(
+        self.bubblewrap_process = await create_subprocess_exec(
             *bwrap_args,
             pass_fds=self.file_descriptors_to_pass,
         )
 
-        self.bubblewrap_pid = bubblewrap_subprocess.pid
+        self.bubblewrap_pid = self.bubblewrap_process.pid
 
         loop = get_running_loop()
 
         loop.add_signal_handler(SIGTERM, self.sigterm_handler)
         self.task_post_init = loop.create_task(self._run_post_init_hooks())
 
-        return bubblewrap_subprocess
+        await self.task_post_init
+
+        return self.bubblewrap_process
 
     async def _run_post_init_hooks(self) -> None:
         sandboxed_pid = await self.sandboxed_pid
@@ -386,7 +390,11 @@ class BubblejailRunner:
 
     async def _run_post_shutdown_hooks(self) -> None:
         for hook in self.post_shutdown_hooks:
-            await hook()
+            try:
+                await hook()
+            except Exception:
+                print("Failed to run post shutdown hook: ", hook)
+                print_exc()
 
     def sigterm_handler(self) -> None:
         try:
@@ -398,6 +406,7 @@ class BubblejailRunner:
 
             pid_to_kill = self.bubblewrap_pid
 
+        print("Terminating PID: ", pid_to_kill)
         kill(pid_to_kill, SIGTERM)
         # No need to wait as the bwrap should terminate when helper exits
 
@@ -423,14 +432,18 @@ class BubblejailRunner:
     ) -> None:
         # Cleanup
         try:
-            await self._run_post_shutdown_hooks()
-        except Exception as e:
-            print("Failed to run post shutdown hook: ", e)
+            if self.bubblewrap_process is not None:
+                self.bubblewrap_process.terminate()
+                await wait_for(self.bubblewrap_process.wait(), timeout=3)
+        except ProcessLookupError:
+            ...
+
+        await self._run_post_shutdown_hooks()
 
         try:
             if self.dbus_proxy_process is not None:
                 self.dbus_proxy_process.terminate()
-                await self.dbus_proxy_process.wait()
+                await wait_for(self.dbus_proxy_process.wait(), timeout=3)
         except ProcessLookupError:
             ...
 

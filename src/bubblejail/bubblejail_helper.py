@@ -25,7 +25,6 @@ from asyncio import (
     new_event_loop,
     sleep,
     start_unix_server,
-    wait_for,
 )
 from asyncio.subprocess import DEVNULL, PIPE, STDOUT
 from collections.abc import Awaitable
@@ -239,8 +238,6 @@ class BubblejailHelper(Awaitable[bool]):
         self.terminator_pool_timer = reaper_pool_timer
         self.termninator_watcher_task: Task[None] | None = None
 
-        self.ready_event = Event()
-
         # Fix-ups
         if not use_fixups:
             return
@@ -396,8 +393,6 @@ class BubblejailHelper(Awaitable[bool]):
             print('Started unix server', flush=True)
         self.termninator_watcher_task = create_task(self.termninator_watcher())
 
-        await wait_for(self.ready_event.wait(), timeout=3)
-
         if self.startup_args:
             await self.run_command(
                 self.startup_args,
@@ -457,6 +452,10 @@ def bubblejail_helper_main() -> None:
 
     parsed_args = parser.parse_args()
 
+    if parsed_args.ready_fd is not None:
+        with open(parsed_args.ready_fd) as f:
+            f.read()
+
     if not parsed_args.shell:
         startup_args = parsed_args.args_to_run
     else:
@@ -476,21 +475,6 @@ def bubblejail_helper_main() -> None:
     event_loop.add_signal_handler(SIGCHLD, handle_children)
     event_loop.add_signal_handler(SIGTERM, terminate_children, run_helper_task)
 
-    if parsed_args.ready_fd is None:
-        helper.ready_event.set()
-    else:
-        def read_ready() -> None:
-            event_loop.remove_reader(parsed_args.ready_fd)
-
-            with open(parsed_args.ready_fd) as f:
-                f.read()
-
-            helper.ready_event.set()
-
-        event_loop.add_reader(
-            parsed_args.ready_fd,
-            read_ready,
-        )
     try:
         event_loop.run_until_complete(run_helper_task)
     except CancelledError:
