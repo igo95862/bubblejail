@@ -123,8 +123,8 @@ class BubblejailRunner:
         self.post_init_hooks: list[Callable[[int], Awaitable[None]]] = []
         self.post_shutdown_hooks: list[Callable[[], Awaitable[None]]] = []
 
-        self.ready_fd_pipe_read: int = -1
-        self.ready_fd_pipe_write: int = -1
+        self.ready_fd_pipe_read: int | None = None
+        self.ready_fd_pipe_write: int | None = None
 
     def genetate_args(self) -> None:
         # TODO: Reorganize the order to allow for
@@ -281,7 +281,7 @@ class BubblejailRunner:
         yield "--helper-socket"
         yield str(self.helper_socket_fd)
 
-        if self.ready_fd_pipe_read > 0:
+        if self.ready_fd_pipe_read:
             yield "--ready-fd"
             yield str(self.ready_fd_pipe_read)
 
@@ -373,11 +373,12 @@ class BubblejailRunner:
         for hook in self.post_init_hooks:
             await hook(sandboxed_pid)
 
-        with (
-            exc_suppress(ValueError),
-            open(self.ready_fd_pipe_write, mode="w") as f
-        ):
-            f.write("ready")
+        if self.ready_fd_pipe_read and self.ready_fd_pipe_write:
+            with (
+                open(self.ready_fd_pipe_read),
+                open(self.ready_fd_pipe_write, mode="w") as f
+            ):
+                f.write("ready")
 
         with exc_suppress(IndexError):
             while t := self.bwrap_temp_files.pop():
