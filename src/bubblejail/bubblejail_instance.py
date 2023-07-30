@@ -27,7 +27,10 @@ from pathlib import Path
 from tempfile import TemporaryDirectory
 from typing import Any, cast
 
-from tomli import loads as toml_loads
+try:
+    from tomllib import loads as toml_loads
+except ImportError:
+    from tomli import loads as toml_loads
 from tomli_w import dump as toml_dump
 from xdg.BaseDirectory import get_runtime_dir
 
