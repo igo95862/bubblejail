@@ -1054,7 +1054,7 @@ class NamespacesLimits(BubblejailService):
 
     def iter_bwrap_options(self) -> ServiceGeneratorType:
         if machine() != 'x86_64':
-            raise NotImplementedError('Slirp4netns only available on x86_64')
+            raise NotImplementedError('Limit namespaces only available on x86_64')
 
         yield from ()
 
