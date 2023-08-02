@@ -219,7 +219,7 @@ def create_arg_parser() -> ArgumentParser:
 
 def bubblejail_main(arg_list: Optional[list[str]] = None) -> None:
     # Short circuit to auto-complete
-    if argv[1] == 'auto-complete':
+    if len(argv) > 1 and argv[1] == 'auto-complete':
         from .bubblejail_cli_autocomplete import run_autocomplete
         run_autocomplete()
         return
