@@ -557,7 +557,7 @@ class Systray(BubblejailService):
     name = 'systray'
     pretty_name = 'System tray icons'
     description = (
-        'Provides access to Dbus API for creating tray icons\n'
+        'Provides access to D-Bus API for creating tray icons\n'
         'This is not the only way to create tray icons but\n'
         'the most common one.'
     )
