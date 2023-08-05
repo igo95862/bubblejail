@@ -20,7 +20,10 @@ from pathlib import Path
 from subprocess import run as subprocess_run
 from typing import Any, Dict, Generator, Optional
 
-from tomli import load as toml_load
+try:
+    from tomllib import load as toml_load
+except ImportError:
+    from tomli import load as toml_load
 from tomli_w import dump as toml_dump
 from xdg import IniFile
 from xdg.BaseDirectory import xdg_config_home, xdg_data_home

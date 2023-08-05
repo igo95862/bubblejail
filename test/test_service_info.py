@@ -18,7 +18,10 @@ from __future__ import annotations
 from unittest import TestCase
 from unittest import main as unittest_main
 
-from tomli import loads as toml_loads
+try:
+    from tomllib import loads as toml_loads
+except ImportError:
+    from tomli import loads as toml_loads
 
 from bubblejail.exceptions import ServiceConflictError
 from bubblejail.services import (

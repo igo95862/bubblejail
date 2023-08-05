@@ -20,7 +20,10 @@ from pathlib import Path
 from unittest import TestCase
 from unittest import main as unittest_main
 
-from tomli import load as toml_load
+try:
+    from tomllib import load as toml_load
+except ImportError:
+    from tomli import load as toml_load
 
 from bubblejail.bubblejail_instance import BubblejailProfile
 
