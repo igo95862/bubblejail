@@ -233,7 +233,7 @@ class BubblejailInstance:
             print('Run args:')
             print(' '.join(args_to_run))
 
-            print('Dbus session args:')
+            print('D-Bus session args:')
             print(' '.join(runner.dbus_proxy_args))
             return
 
