@@ -18,7 +18,7 @@ from __future__ import annotations
 from argparse import ArgumentParser
 from asyncio import run as async_run
 from pathlib import Path
-from sys import argv
+from sys import argv, stderr
 from typing import TYPE_CHECKING
 
 from .bubblejail_cli_metadata import BUBBLEJAIL_CMD
@@ -81,9 +81,15 @@ def run_bjail(instance_name: str,
 
         if instance.is_running():
             if dry_run:
-                print('Found helper socket.')
-                print('Args to be sent: ', args_to_instance)
+                print("Found helper socket.", file=stderr)
+                print("Args would be be sent: ", args_to_instance, file=stderr)
                 return
+            else:
+                print("Instance already running.", file=stderr)
+                print(
+                    "Sending command to the instance: ", args_to_instance,
+                    file=stderr,
+                )
 
             command_return_text = async_run(
                 instance.send_run_rpc(
@@ -114,7 +120,6 @@ def run_bjail(instance_name: str,
             )
     except Exception:
         from os import isatty
-        from sys import stderr
 
         if not isatty(stderr.fileno()):
             from subprocess import run as subprocess_run
