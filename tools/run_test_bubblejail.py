@@ -29,7 +29,7 @@ def setup_test_env() -> None:
         custom_datadirs,
     )
 
-    def disable_desktop_entry(*args, **kwargs) -> None:
+    def disable_desktop_entry(*args: Any, **kwargs: Any) -> None:
         ...
 
     setattr(
