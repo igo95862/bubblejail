@@ -290,6 +290,8 @@ class BubblejailRunner:
         if self.is_shell_debug:
             yield "--shell"
 
+        yield "--"
+
     def read_info_fd(self) -> None:
         with open(self.info_fd_pipe_read, closefd=False) as f:
             info_dict = json_load(f)

@@ -15,7 +15,6 @@
 # along with bubblejail.  If not, see <https://www.gnu.org/licenses/>.
 from __future__ import annotations
 
-from argparse import REMAINDER as ARG_REMAINDER
 from argparse import ArgumentParser
 from asyncio import (
     CancelledError,
@@ -441,7 +440,7 @@ def get_helper_argument_parser() -> ArgumentParser:
 
     parser.add_argument(
         'args_to_run',
-        nargs=ARG_REMAINDER,
+        nargs="*",
     )
 
     return parser

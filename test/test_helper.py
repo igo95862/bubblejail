@@ -91,13 +91,13 @@ class HelperParserTests(TestCase):
 
     def test_parser(self) -> None:
         """Test how helper argument parser works"""
-        required_args = ['--helper-socket', '0']
+        required_args = ['--helper-socket', '0', '--']
 
         with self.subTest('No shell'):
             no_shell_example_args = [
                 '/bin/true',
                 '--long-opt', '-e', '-test',
-                '/bin/false', '--shell'
+                '/bin/false', '--shell',
             ]
             parsed_args = self.parser.parse_args(
                 required_args + no_shell_example_args
@@ -108,24 +108,20 @@ class HelperParserTests(TestCase):
 
         with self.subTest('Shell plus args'):
             with_shell_example_args = [
-                '--shell', '/bin/ls', '-l'
+                 '/bin/ls', '-l'
             ]
 
             parsed_args = self.parser.parse_args(
-                required_args + with_shell_example_args
+                ['--shell'] + required_args + with_shell_example_args
             )
 
             self.assertTrue(parsed_args.shell)
             self.assertEqual(
-                parsed_args.args_to_run, with_shell_example_args[1:])
+                parsed_args.args_to_run, with_shell_example_args)
 
         with self.subTest('Only shell'):
-            just_shell_example = [
-                '--shell'
-            ]
-
             parsed_args = self.parser.parse_args(
-                required_args + just_shell_example
+                ['--shell'] + required_args
             )
 
             self.assertTrue(parsed_args.shell)
