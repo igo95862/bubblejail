@@ -1055,7 +1055,9 @@ class NamespacesLimits(BubblejailService):
 
     def iter_bwrap_options(self) -> ServiceGeneratorType:
         if machine() != 'x86_64':
-            raise NotImplementedError('Limit namespaces only available on x86_64')
+            raise NotImplementedError(
+                'Limit namespaces only available on x86_64'
+            )
 
         yield from ()
 
@@ -1114,9 +1116,21 @@ class NamespacesLimits(BubblejailService):
             target=self.set_namespaces_limits,
             args=(pid, namespace_files_to_limits)
         )
-        setter_process.start()
-        setter_process.join(3)
-        setter_process.close()
+        try:
+            setter_process.start()
+            setter_process.join(3)
+            if setter_process.exitcode is None:
+                setter_process.kill()
+                setter_process.join(1)
+                raise BubblejailInitializationError(
+                    "Limit namespaces subprocess timed out"
+                )
+            elif setter_process.exitcode != 0:
+                raise BubblejailInitializationError(
+                    "Limit namespaces subprocess failed"
+                )
+        finally:
+            setter_process.close()
 
     name = "namespaces_limits"
     pretty_name = "Limit namespaces"
