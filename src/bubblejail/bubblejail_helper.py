@@ -39,7 +39,7 @@ from typing import TYPE_CHECKING
 if TYPE_CHECKING:
     from asyncio import AbstractServer, StreamReader, StreamWriter, Task
     from collections.abc import Generator
-    from typing import Any, Literal
+    from typing import Any, Literal, Type
 
     RpcMethods = Literal['ping', 'run']
     RpcData = dict[str, bool | str | list[str]] | list[str]
@@ -398,20 +398,25 @@ class BubblejailHelper(Awaitable[bool]):
             )
 
     async def stop_async(self) -> None:
+        self.terminated.set()
 
-        if (self.termninator_watcher_task is not None
-            and
-                not self.termninator_watcher_task.done()):
+        print('Terminated', flush=True)
+
+    async def __aenter__(self) -> None:
+        ...
+
+    async def __aexit__(
+            self, exc_type: Type[Exception],
+            exc: Exception, tb: Any) -> None:
+        if (
+            self.termninator_watcher_task is not None
+            and not self.termninator_watcher_task.done()
+        ):
             self.termninator_watcher_task.cancel()
-            await self.termninator_watcher_task
 
         if self.server is not None:
             self.server.close()
             await self.server.wait_closed()
-
-        self.terminated.set()
-
-        print('Terminated', flush=True)
 
     def __await__(self) -> Generator[Any, None, bool]:
         # Pylint does not recognize that we get a coroutine object
@@ -466,8 +471,9 @@ def bubblejail_helper_main() -> None:
     )
 
     async def run_helper() -> None:
-        await helper.start_async()
-        await helper
+        async with helper:
+            await helper.start_async()
+            await helper
 
     event_loop = new_event_loop()
     run_helper_task = event_loop.create_task(run_helper(), name='Run helper')
