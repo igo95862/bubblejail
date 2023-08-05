@@ -945,6 +945,7 @@ class Slirp4netns(BubblejailService):
             )
         finally:
             loop.remove_reader(ready_pipe_read)
+            early_process_end_task.cancel()
 
         with open(ready_pipe_write), open(ready_pipe_read) as f:
             f.read()
