@@ -29,6 +29,15 @@ def setup_test_env() -> None:
         custom_datadirs,
     )
 
+    def disable_desktop_entry(*args, **kwargs) -> None:
+        ...
+
+    setattr(
+        BubblejailDirectories,
+        'overwrite_desktop_entry_for_profile',
+        disable_desktop_entry,
+    )
+
     helper_path = build_dir / 'src/bubblejail/bubblejail_helper.py'
     original_run = BubblejailInstance.async_run_init
 
