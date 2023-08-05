@@ -23,7 +23,7 @@ from unittest import main as unittest_main
 try:
     from tomllib import load as toml_load
 except ImportError:
-    from tomli import load as toml_load
+    from tomli import load as toml_load  # type: ignore
 
 from bubblejail.bubblejail_instance import BubblejailProfile
 
