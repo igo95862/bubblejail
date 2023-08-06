@@ -278,7 +278,7 @@ class BubblejailDirectories:
 
             new_dot_desktop.set(
                 key='Exec',
-                value=(f"bubblejail run {instance_name} "
+                value=(f"bubblejail run -- {instance_name} "
                        f"{' '.join(old_exec.split())}"),
                 group=group_name)
 
