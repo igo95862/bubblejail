@@ -168,6 +168,32 @@ class DbusSessionOwn(DbusSessionArgs):
     arg_word = '--own'
 
 
+class DbusSessionRule(DbusSessionArgs):
+    def __init__(
+        self,
+        bus_name: str,
+        interface_name: str = "*",
+        object_path: str = "/*",
+    ):
+        super().__init__(bus_name)
+        self.interface_name = interface_name
+        self.object_path = object_path
+
+    def to_args(self) -> str:
+        return (
+            f"{self.arg_word}={self.bus_name}="
+            f"{self.interface_name}@{self.object_path}"
+        )
+
+
+class DbusSessionCall(DbusSessionRule):
+    arg_word = "--call"
+
+
+class DbusSessionBroadcast(DbusSessionRule):
+    arg_word = "--broadcast"
+
+
 class SeccompDirective:
     ...
 

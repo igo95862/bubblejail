@@ -44,6 +44,7 @@ from .bwrap_config import (
     BwrapConfigBase,
     ChangeDir,
     DbusCommon,
+    DbusSessionCall,
     DbusSessionOwn,
     DbusSessionTalkTo,
     DevBind,
@@ -552,7 +553,10 @@ class DirectRendering(BubblejailService):
 
 class Systray(BubblejailService):
     def iter_bwrap_options(self) -> ServiceGeneratorType:
-        yield DbusSessionTalkTo('org.kde.StatusNotifierWatcher')
+        yield DbusSessionCall(
+            "org.kde.StatusNotifierWatcher",
+            object_path="/StatusNotifierWatcher",
+        )
 
     name = 'systray'
     pretty_name = 'System tray icons'
@@ -668,7 +672,10 @@ class OpenJDK(BubblejailService):
 
 class Notifications(BubblejailService):
     def iter_bwrap_options(self) -> ServiceGeneratorType:
-        yield DbusSessionTalkTo('org.freedesktop.Notifications')
+        yield DbusSessionCall(
+            "org.freedesktop.Notifications",
+            object_path="/org/freedesktop/Notifications",
+        )
 
     name = 'notify'
     pretty_name = 'Notifications'
