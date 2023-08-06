@@ -1,3 +1,31 @@
+# 0.8.1
+
+## Features
+
+* Added support for `tomllib` standard library package for reading TOML files.
+  It is available since Python 3.11. `tomli` package is now only needed if
+  running on Python 3.10. (note that TOML writing library `tomli-w` is still
+  required)
+* Using `run` command on an already running instance now prints a message to stderr
+  that the instance already running and the commands that will be sent to instance.
+* Tightened D-Bus filtering rules for Notifications and Systray services. Turns out
+  a lot of D-Bus servers for those services expose too many interfaces than required.
+  (thank you @rusty-snake for pointing this out)
+
+## Fixes
+
+* Fixed trying to create config directories on access. If a system wide directory was
+  missing like `/etc/bubblejail/profiles/` bubblejail would fail to run.
+  (reported by @rusty-snake)
+* Removed isolated python mode for build scripts. This makes it easier to build bubblejail
+  when meson or Python is installed in non system directory. (fixed with the help of @eli-schwartz)
+* Fixed `slirp4netns` initialization failure being ignored. Now if `slirp4netns` fails to
+  start bubblejail will also fail. (reported by @xiota)
+* Fixed running bubblejail without arguments raising exception instead of help text.
+  (fixed by @rusty-snake)
+* Fixed `namespaces_limits` initialization failure being ignored. Now if `namespaces_limits`
+  fails to set namespace limits bubblejail will also fail. (reported by @rusty-snake)
+
 # 0.8.0
 
 ## Fixes
