@@ -154,6 +154,18 @@ class BubblejailRunner:
         # Unset all variables
         self.bwrap_options_args.append('--clearenv')
 
+        # Pass terminal variables if debug shell activated
+        if self.is_shell_debug:
+            if term_env := environ.get("TERM"):
+                self.bwrap_options_args.extend(
+                    ("--setenv", "TERM", term_env)
+                )
+
+            if colorterm_env := environ.get("COLORTERM"):
+                self.bwrap_options_args.extend(
+                    ("--setenv", "COLORTERM", colorterm_env)
+                )
+
         for service in self.instance_config.iter_services():
             config_iterator = service.iter_bwrap_options()
 
