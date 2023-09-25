@@ -1,7 +1,7 @@
 # Generic profile
 description='''
 Generic profile with most common settings.
-Useful for sanboxing applications that don't have a profile.
+Useful for sandboxing applications that don't have a profile.
 '''
 
 [services.common]
