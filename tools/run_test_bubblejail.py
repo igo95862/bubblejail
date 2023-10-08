@@ -2,6 +2,7 @@
 from __future__ import annotations
 
 from argparse import ArgumentParser
+from logging import DEBUG, basicConfig
 from os import environ
 from pathlib import Path
 from readline import read_history_file, set_history_length, write_history_file
@@ -66,6 +67,8 @@ def shell_main() -> None:
     history_file.touch(exist_ok=True)
     read_history_file(history_file)
     set_history_length(1000)
+
+    basicConfig(level=DEBUG)
 
     while True:
         try:
