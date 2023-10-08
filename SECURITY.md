@@ -5,7 +5,7 @@
 If you discover a security vulnerability you can privately contact me at
 [igo95862@yandex.ru](mailto:igo95862@yandex.ru).
 
-Use following GPG key to encypt the message:
+Use following GPG key to encrypt the message:
 
 ```
 -----BEGIN PGP PUBLIC KEY BLOCK-----
