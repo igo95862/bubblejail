@@ -64,6 +64,7 @@ from .exceptions import (
     BubblejailInitializationError,
     ServiceConflictError,
 )
+from .logging import BUBBLEJAIL_BASE_LOGGER
 
 if TYPE_CHECKING:
     from asyncio.subprocess import Process as AsyncioProcess
@@ -89,6 +90,8 @@ class ServiceWantsDbusSessionBind(ServiceWantsSend):
 
 
 if TYPE_CHECKING:
+    from logging import Logger
+
     ServiceIterTypes = (
         BwrapConfigBase | FileTransfer |
         SeccompDirective | LaunchArguments |
@@ -145,6 +148,7 @@ def generate_toolkits() -> Generator[ServiceIterTypes, None, None]:
 
 
 class BubblejailService:
+    logger: ClassVar[Logger] = BUBBLEJAIL_BASE_LOGGER.getChild("service")
     xdg_runtime_dir: ClassVar[Path] = Path(f"/run/user/{getuid()}")
 
     Settings: Type[DataclassInstance] = make_dataclass("EmptySettings", ())
@@ -824,6 +828,7 @@ class Fcitx(BubblejailService):
 
 
 class Slirp4netns(BubblejailService):
+    logger = BubblejailService.logger.getChild("slirp4netns")
 
     @dataclass
     class Settings:
@@ -925,6 +930,8 @@ class Slirp4netns(BubblejailService):
 
         slirp4netns_args.append(str(pid))
         slirp4netns_args.append('tap0')
+
+        self.logger.debug("Slirp4netns args: %s", slirp4netns_args)
 
         self.slirp_process = await create_subprocess_exec(
             *slirp4netns_args,
