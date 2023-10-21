@@ -17,6 +17,7 @@ source_files = [
    'py.typed',
    'namespaces.py',
    'namespaces_constants.py',
+   'logging.py',
 ]
 
 if get_option('use_python_site_packages_dir')

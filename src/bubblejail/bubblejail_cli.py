@@ -17,6 +17,7 @@ from __future__ import annotations
 
 from argparse import ArgumentParser
 from asyncio import run as async_run
+from logging import basicConfig as logging_basic_config
 from pathlib import Path
 from sys import argv, stderr
 from typing import TYPE_CHECKING
@@ -24,11 +25,15 @@ from typing import TYPE_CHECKING
 from .bubblejail_cli_metadata import BUBBLEJAIL_CMD
 from .bubblejail_directories import BubblejailDirectories
 from .bubblejail_utils import BubblejailSettings
+from .logging import BUBBLEJAIL_BASE_LOGGER
 from .services import SERVICES_CLASSES
 
 if TYPE_CHECKING:
     from collections.abc import Callable, Generator, Iterable, Iterator
     from typing import Optional
+
+
+logger = BUBBLEJAIL_BASE_LOGGER.getChild("cli")
 
 
 def iter_instance_names() -> Generator[str, None, None]:
@@ -235,8 +240,17 @@ def bubblejail_main(arg_list: Optional[list[str]] = None) -> None:
         action='version',
         version=BubblejailSettings.VERSION,
     )
+    parser.add_argument(
+        "--log-level",
+        choices=("ERROR", "WARNING", "INFO", "DEBUG"),
+        default="INFO",
+        help="set log level",
+    )
 
     args_dict = vars(parser.parse_args(arg_list))
+
+    log_level = args_dict.pop("log_level")
+    logging_basic_config(level=log_level)
 
     func = args_dict.pop('func')
 
