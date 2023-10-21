@@ -42,6 +42,7 @@ from .bwrap_config import (
     LaunchArguments,
     SeccompDirective,
 )
+from .logging import BUBBLEJAIL_BASE_LOGGER
 from .services import ServiceWantsDbusSessionBind, ServiceWantsHomeBind
 
 if TYPE_CHECKING:
@@ -62,6 +63,8 @@ def copy_data_to_temp_file(data: bytes) -> IO[bytes]:
 
 
 class BubblejailRunner:
+    logger = BUBBLEJAIL_BASE_LOGGER.getChild("runner")
+
     def __init__(
         self,
         parent: BubblejailInstance,
@@ -310,6 +313,10 @@ class BubblejailRunner:
             self.sandboxed_pid.set_result(info_dict["child-pid"])
 
     def get_args_file_descriptor(self) -> int:
+        self.logger.debug(
+            "Generating null-separated arguments: %s",
+            self.bwrap_options_args
+        )
         options_null = '\0'.join(self.bwrap_options_args)
 
         args_tempfile = copy_data_to_temp_file(options_null.encode())
@@ -337,6 +344,10 @@ class BubblejailRunner:
         running_loop.add_reader(
             self.dbus_proxy_pipe_read,
             proxy_ready_callback,
+        )
+
+        self.logger.debug(
+            "xdg-dbus-proxy arguments: %s", self.dbus_proxy_args
         )
 
         self.dbus_proxy_process = await create_subprocess_exec(
@@ -367,6 +378,10 @@ class BubblejailRunner:
         else:
             bwrap_args.extend(self.executable_args)
 
+        self.logger.debug(
+            "bubblewrap arguments: %s", bwrap_args
+        )
+
         self.bubblewrap_process = await create_subprocess_exec(
             *bwrap_args,
             pass_fds=self.file_descriptors_to_pass,
@@ -385,8 +400,7 @@ class BubblejailRunner:
 
     async def _run_post_init_hooks(self) -> None:
         sandboxed_pid = await self.sandboxed_pid
-        if __debug__:
-            print(f"Sandboxed PID: {sandboxed_pid}")
+        self.logger.debug("Sandboxed PID: %s", sandboxed_pid)
 
         for hook in self.post_init_hooks:
             await hook(sandboxed_pid)
