@@ -458,7 +458,10 @@ def bubblejail_helper_main() -> None:
 
     if parsed_args.ready_fd is not None:
         with open(parsed_args.ready_fd) as f:
-            f.read()
+            if "bubblejail-ready" != f.read():
+                raise RuntimeError(
+                    "Could not read 'bubblejail-ready' from ready fd."
+                )
 
     if not parsed_args.shell:
         startup_args = parsed_args.args_to_run

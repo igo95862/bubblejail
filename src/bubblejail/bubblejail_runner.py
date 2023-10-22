@@ -396,7 +396,7 @@ class BubblejailRunner:
                 open(self.ready_fd_pipe_read),
                 open(self.ready_fd_pipe_write, mode="w") as f
             ):
-                f.write("ready")
+                f.write("bubblejail-ready")
 
         with exc_suppress(IndexError):
             while t := self.bwrap_temp_files.pop():
