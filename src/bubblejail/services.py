@@ -890,9 +890,9 @@ class Slirp4netns(BubblejailService):
         outbound_addr = settings.outbound_addr
         disable_host_loopback = settings.disable_host_loopback
 
-        from bubblejail.namespaces import UserNamespace
-        target_namespace = UserNamespace.from_pid(pid)
-        parent_ns = target_namespace.get_parent_ns()
+        from bubblejail.namespaces import NetworkNamespace
+        target_namespace = NetworkNamespace.from_pid(pid)
+        parent_ns = target_namespace.get_user_ns()
         parent_ns_fd = parent_ns._fd
         parent_ns_path = f"/proc/{getpid()}/fd/{parent_ns_fd}"
 
@@ -1075,7 +1075,7 @@ class NamespacesLimits(BubblejailService):
     ) -> None:
         from bubblejail.namespaces import UserNamespace
         target_namespace = UserNamespace.from_pid(pid)
-        parent_ns = target_namespace.get_parent_ns()
+        parent_ns = target_namespace.get_user_ns()
         parent_ns.setns()
 
         for proc_file, limit_to_set in namespace_files_to_limits.items():
