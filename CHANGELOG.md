@@ -1,3 +1,12 @@
+# 0.8.2
+
+## Fixes
+
+* Fix slirp4netns service sometimes failing because of wrong user namespace
+  being passed. (reported by @xiota)
+* Fix bubblejail sometimes continuing to run even if some service failed to
+  initialize. (reported by @xiota)
+
 # 0.8.1
 
 ## Features
