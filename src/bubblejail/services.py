@@ -620,7 +620,7 @@ class Joystick(BubblejailService):
     description = (
         'Windowing systems (x11 and wayland) do not support gamepads.\n'
         'Every game has to read from device files directly.\n'
-        'This service provides access to required '
+        'This service provides access to them.'
     )
 
 
