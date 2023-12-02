@@ -445,6 +445,13 @@ class Wayland(BubblejailService):
 
 class Network(BubblejailService):
     def iter_bwrap_options(self) -> ServiceGeneratorType:
+        # Systemd-resolved makes /etc/resolv.conf a symlink
+        # to /run/systemd/resolve/stub-resolv.conf.
+        # Same do some DHCP clients like NetworkManager.
+        resolv_conf_path = Path("/etc/resolv.conf")
+        actual_resolv_path = resolv_conf_path.resolve()
+        if resolv_conf_path != actual_resolv_path:
+            yield ReadOnlyBind(actual_resolv_path)
 
         yield ShareNetwork()
 
