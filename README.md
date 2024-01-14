@@ -13,7 +13,7 @@ One of the biggest issues with Firejail is that you can accidentally run unsandb
 
 Bubblejail, instead of trying to transparently overlay an existing home directory, creates a separate home directory.
 
-Every **Instance** represents a separate home directory. Typically, every sandboxed application has its own home directory.
+Every **Instance** represents a separate home directory. Typically, every sandboxed application has its own home directory stored under `~/.local/share/bubblejail/instances/`.
 
 Each instance has a `services.toml` file which defines the configuration of the instance such as system resources that the sandbox should have access to.
 
