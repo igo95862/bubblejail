@@ -55,6 +55,27 @@ the application has.
 
 {% endfor %}
 
+# DIRECTORIES
+
+## Bubblejail data directory
+
+Bubblejail stores all data such as instances in a _bubblejail_ directory located
+in the _$XDG_DATA_HOME_ directory as specified by XDG Base Directory specification.
+By default Bubblejail's data directory can be found at _$HOME/.local/share/bubblejail_.
+
+## Instance directories
+
+Every instance is identified by a directory. Those instance directories can be found
+under _instances_ folder in the *Bubblejail data directory*. The name of an instance
+directory serves as the unique name of an instance. For example, existence of
+_$HOME/.local/share/bubblejail/instances/Firefox/_ directory means that there is an
+instance named _Firefox_.
+
+Instance directory has several important files and directories:
+
+- _home_: Instance's home directory.
+- _services.toml_: Instance's services configuration.
+
 # SEE ALSO
 
 *bubblejail.services*(5)
