@@ -18,6 +18,7 @@ dbus_name = "org.mozilla.*"
 [services.network]
 [services.pulse_audio]
 [services.notify]
+[services.direct_rendering]
 
 [services.home_share]
-home_paths = [ "Downloads",]
+home_paths = ["Downloads",]
