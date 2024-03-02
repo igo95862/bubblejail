@@ -468,7 +468,6 @@ class InstanceEditWidget(CentralWidgets):
 
         self.service_widgets: List[ServiceWidget] = []
         for service in SERVICES_CLASSES:
-
             try:
                 service_settings_dict: None | ServiceSettingsDict = (
                     services_settings_dicts[service.name])
@@ -476,7 +475,8 @@ class InstanceEditWidget(CentralWidgets):
                 service_settings_dict = None
 
             new_service_widget = ServiceWidget(service, service_settings_dict)
-            self.scrolled_layout.addWidget(new_service_widget.group_widget)
+            if service.display_in_gui:
+                self.scrolled_layout.addWidget(new_service_widget.group_widget)
             self.service_widgets.append(new_service_widget)
 
             new_service_widget.group_widget.clicked.connect(

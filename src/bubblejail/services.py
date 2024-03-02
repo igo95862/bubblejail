@@ -176,6 +176,7 @@ class BubblejailService:
     pretty_name: ClassVar[str]
     description: ClassVar[str]
     conflicts: ClassVar[frozenset[str]] = frozenset()
+    display_in_gui: ClassVar[bool] = True
 
 
 # Pre version 0.6.0 home bind path
@@ -676,6 +677,8 @@ class OpenJDK(BubblejailService):
         'Example: Minecraft'
     )
 
+    display_in_gui = False
+
 
 class Notifications(BubblejailService):
     def iter_bwrap_options(self) -> ServiceGeneratorType:
@@ -738,6 +741,7 @@ class GnomeToolkit(BubblejailService):
     name = 'gnome_toolkit'
     pretty_name = 'GNOME toolkit'
     description = 'Access to GNOME APIs'
+    display_in_gui = False
 
 
 class Pipewire(BubblejailService):
