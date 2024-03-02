@@ -25,7 +25,9 @@ Each instance has a `services.toml` file which defines the configuration of the 
 
 ### Packages
 
-[![Packaging status](https://repology.org/badge/vertical-allrepos/bubblejail.svg)](https://repology.org/project/bubblejail/versions)
+<a href="https://repology.org/project/bubblejail/versions">
+    <img src="https://repology.org/badge/vertical-allrepos/bubblejail.svg" alt="Packaging status" align="right">
+</a>
 
 [AUR git](https://aur.archlinux.org/packages/bubblejail-git/)
 
