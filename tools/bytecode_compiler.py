@@ -16,6 +16,7 @@
 # along with bubblejail.  If not, see <https://www.gnu.org/licenses/>.
 from __future__ import annotations
 
+import sys
 from argparse import ArgumentParser
 from compileall import compile_dir
 from pathlib import Path
@@ -23,6 +24,9 @@ from shutil import copy
 
 
 def compiler(build_dir: Path, prefix: Path, optimize_level: int) -> None:
+    # Always compile bytecode to __pycache__ folder
+    sys.pycache_prefix = None
+
     compile_dir(
         dir=str(build_dir),
         optimize=0,
