@@ -1,3 +1,22 @@
+# 0.8.3
+
+## Features
+
+* Add `debug` service which can be used to add arguments to `bwrap`
+  and `xdg-dbus-proxy` invocations. See `bubblejail.services` man page
+  for its configuration keys and values. (requested by @xiota)
+* Document directories used by bubblejail in `bubblejail` man page.
+  (requested by @firefoxlover)
+
+## Fixes
+
+* Mount file pointed by symlink if `/etc/resolv.conf` is a symlink when `network`
+  service is used. This fixes DNS issues when systemd-resolved is used.
+  (first reported by @adworacz)
+* Fixed `joystick` description not being complete. (reported by @xiota)
+* Fixed `PYTHONPYCACHEPREFIX` environment variable breaking build system.
+  (first reported by `mlj` on AUR)
+
 # 0.8.2
 
 ## Fixes
