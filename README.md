@@ -143,4 +143,10 @@ Configuration utility
 * transmission-gtk
 * generic: most common services, useful for sandboxing applications without profiles
 
+See following wiki guides on how to setup bubblejail if a particular application
+does not have a profile:
+
+* [Example: setting up Torbrowser](../../wiki/Example:-setting-up-Torbrowser)
+* [Re‐using profiles for similar applications. Example with qutebrowser and chromium.](../../wiki/Re‐using-profiles-for-similar-applications.-Example-with-qutebrowser-and-chromium.)
+
 ## [TODO](https://github.com/igo95862/bubblejail/blob/master/docs/TODO.md)
