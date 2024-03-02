@@ -31,6 +31,8 @@ Each instance has a `services.toml` file which defines the configuration of the 
 
 [AUR stable](https://aur.archlinux.org/packages/bubblejail/)
 
+[Fedora package .spec](https://github.com/rusty-snake/fedora-extras/tree/main/bubblejail) by [@rusty-snake](https://github.com/rusty-snake)
+
 ### Distro specific quirks
 
 [Void Linux](docs/distro_notes/void.md)
