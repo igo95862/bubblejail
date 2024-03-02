@@ -42,11 +42,14 @@ from xdg import BaseDirectory
 from .bwrap_config import (
     Bind,
     BwrapConfigBase,
+    BwrapRawArgs,
     ChangeDir,
     DbusCommon,
     DbusSessionCall,
     DbusSessionOwn,
+    DbusSessionRawArg,
     DbusSessionTalkTo,
+    DbusSystemRawArg,
     DevBind,
     DevBindTry,
     DirCreate,
@@ -1159,12 +1162,71 @@ class NamespacesLimits(BubblejailService):
     )
 
 
+class Debug(BubblejailService):
+
+    @dataclass
+    class Settings:
+        raw_bwrap_args: list[str] = field(
+            default_factory=list,
+            metadata=SettingFieldMetadata(
+                pretty_name='Raw bwrap args',
+                description=(
+                    'Raw arguments to add to bwrap invocation. '
+                    'See bubblewrap documentation.'
+                ),
+                is_deprecated=False,
+            )
+        )
+        raw_dbus_session_args: list[str] = field(
+            default_factory=list,
+            metadata=SettingFieldMetadata(
+                pretty_name='Raw xdg-dbus-proxy session args',
+                description=(
+                    'Raw arguments to add to xdg-dbus-proxy session '
+                    'invocation. See xdg-dbus-proxy documentation.'
+                ),
+                is_deprecated=False,
+            )
+        )
+        raw_dbus_system_args: list[str] = field(
+            default_factory=list,
+            metadata=SettingFieldMetadata(
+                pretty_name='Raw xdg-dbus-proxy system args',
+                description=(
+                    'Raw arguments to add to xdg-dbus-proxy system '
+                    'invocation. See xdg-dbus-proxy documentation.'
+                ),
+                is_deprecated=False,
+            )
+        )
+
+    def iter_bwrap_options(self) -> ServiceGeneratorType:
+        settings = self.context.get_settings(Debug.Settings)
+
+        if raw_bwrap_args := settings.raw_bwrap_args:
+            yield BwrapRawArgs(raw_bwrap_args)
+
+        for dbus_session_raw_arg in settings.raw_dbus_session_args:
+            yield DbusSessionRawArg(dbus_session_raw_arg)
+
+        for dbus_system_raw_arg in settings.raw_dbus_system_args:
+            yield DbusSystemRawArg(dbus_system_raw_arg)
+
+    name = "debug"
+    pretty_name = "Debug options"
+    description = (
+        "Various debug options such as adding arguments "
+        "to the bwrap or xdg-dbus-proxy."
+    )
+    display_in_gui = False
+
+
 SERVICES_CLASSES: tuple[Type[BubblejailService], ...] = (
     CommonSettings, X11, Wayland,
     Network, PulseAudio, HomeShare, DirectRendering,
     Systray, Joystick, RootShare, OpenJDK, Notifications,
     GnomeToolkit, Pipewire, VideoForLinux, IBus, Fcitx,
-    Slirp4netns, NamespacesLimits,
+    Slirp4netns, NamespacesLimits, Debug,
 )
 
 SERVICES_MAP: dict[str, Type[BubblejailService]] = {

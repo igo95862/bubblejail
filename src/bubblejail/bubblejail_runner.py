@@ -251,6 +251,7 @@ class BubblejailRunner:
             str(self.dbus_system_socket_path),
         ))
 
+        self.dbus_proxy_args.extend(dbus_system_opts)
         self.dbus_proxy_args.append('--filter')
         if self.is_log_dbus:
             self.dbus_proxy_args.append('--log')

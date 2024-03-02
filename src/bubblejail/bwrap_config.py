@@ -136,6 +136,17 @@ class ChangeDir(BwrapConfigBase):
         yield self.dest
 
 
+class BwrapRawArgs(BwrapConfigBase):
+    arg_word = ""
+
+    def __init__(self, raw_args: list[str]):
+        super().__init__()
+        self.raw_args = raw_args
+
+    def to_args(self) -> Generator[str, None, None]:
+        yield from self.raw_args
+
+
 class FileTransfer:
     def __init__(self, content: bytes, dest: Pathlike):
         self.content = content
@@ -192,6 +203,16 @@ class DbusSessionCall(DbusSessionRule):
 
 class DbusSessionBroadcast(DbusSessionRule):
     arg_word = "--broadcast"
+
+
+class DbusSessionRawArg(DbusSessionArgs):
+    def to_args(self) -> str:
+        return self.bus_name
+
+
+class DbusSystemRawArg(DbusSystemArgs):
+    def to_args(self) -> str:
+        return self.bus_name
 
 
 class SeccompDirective:
