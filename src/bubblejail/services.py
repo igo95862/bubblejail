@@ -31,7 +31,7 @@ from dataclasses import (
     make_dataclass,
 )
 from multiprocessing import Process
-from os import O_CLOEXEC, O_NONBLOCK, environ, getpid, getuid, paths, pipe2, readlink
+from os import O_CLOEXEC, O_NONBLOCK, environ, getpid, getuid, path, pipe2, readlink
 from pathlib import Path
 from platform import machine
 from shutil import which
