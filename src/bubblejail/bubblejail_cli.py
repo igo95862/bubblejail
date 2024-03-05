@@ -129,7 +129,6 @@ def run_bjail(instance_name: str,
                 subprocess_run(
                     (
                         'notify-send',
-                        '--urgency', 'critical',
                         '--icon', 'bubblejail-config',
                         f"Failed to run instance: {instance_name}",
                         f"Exception: {format_exc(0)}"
