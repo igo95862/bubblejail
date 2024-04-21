@@ -1,3 +1,7 @@
+<!--
+SPDX-License-Identifier: GPL-3.0-or-later
+SPDX-FileCopyrightText: 2023 igo95862
+-->
 ## Missing recommended packages
 
 Alpine Linux packaging does not support optional

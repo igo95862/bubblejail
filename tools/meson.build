@@ -1,4 +1,5 @@
-
+# SPDX-License-Identifier: GPL-3.0-or-later
+# SPDX-FileCopyrightText: 2022 igo95862
 bubblejail_test_cmd_run = run_target(
     'bubblejail_test_cmd_run',
     command : [py_installation, files('run_test_bubblejail.py'), 'shell'],

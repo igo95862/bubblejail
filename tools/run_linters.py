@@ -45,6 +45,10 @@ def run_mypy() -> bool:
     )
 
 
+def run_reuse() -> bool:
+    return run_linter(["reuse", "lint"])
+
+
 def main() -> None:
     BUILD_DIR.mkdir(exist_ok=True)
 
@@ -52,6 +56,7 @@ def main() -> None:
 
     has_failed |= run_pyflakes()
     has_failed |= run_mypy()
+    has_failed |= run_reuse()
 
     if has_failed:
         raise SystemExit(1)

@@ -1,3 +1,5 @@
+# SPDX-License-Identifier: GPL-3.0-or-later
+# SPDX-FileCopyrightText: 2022 igo95862
 unittests = files(
     'test_helper.py',
     'test_profiles.py',

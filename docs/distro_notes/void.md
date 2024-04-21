@@ -1,3 +1,7 @@
+<!--
+SPDX-License-Identifier: GPL-3.0-or-later
+SPDX-FileCopyrightText: 2022 igo95862
+-->
 ## Void Linux missing `/etc/machine-id` file
 
 ### Affected applications

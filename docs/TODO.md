@@ -1,3 +1,7 @@
+<!--
+SPDX-License-Identifier: GPL-3.0-or-later
+SPDX-FileCopyrightText: 2020 igo95862
+-->
 # General
 
 * Need Dbus support for stuff like systemd integration. Waiting on my new dbus library. https://github.com/igo95862/py-sd-bus

@@ -1,3 +1,7 @@
+<!--
+SPDX-License-Identifier: GPL-3.0-or-later
+SPDX-FileCopyrightText: 2023 igo95862
+-->
 # 0.8.3
 
 ## Features

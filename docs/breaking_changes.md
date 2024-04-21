@@ -1,3 +1,7 @@
+<!--
+SPDX-License-Identifier: GPL-3.0-or-later
+SPDX-FileCopyrightText: 2020 igo95862
+-->
 ## From 0.5.0
 
 ### TOML python package has been switched

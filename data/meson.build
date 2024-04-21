@@ -1,4 +1,5 @@
-
+# SPDX-License-Identifier: GPL-3.0-or-later
+# SPDX-FileCopyrightText: 2020 igo95862
 install_data(
     'bubblejail-config.png',
     install_dir : get_option('datadir') / 'icons/hicolor/48x48/apps',

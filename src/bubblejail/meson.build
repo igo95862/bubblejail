@@ -1,4 +1,5 @@
-
+# SPDX-License-Identifier: GPL-3.0-or-later
+# SPDX-FileCopyrightText: 2020 igo95862
 source_files = [
    '__init__.py',
    'bubblejail_cli.py',

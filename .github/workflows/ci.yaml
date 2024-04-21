@@ -19,7 +19,7 @@ jobs:
         run: |
           pacman --noconfirm -Syu \
             git \
-            python-pyflakes \
+            python-pyflakes reuse \
             mypy python-pyqt6 python-tomli-w
       - name: Checkout
         uses: actions/checkout@v4

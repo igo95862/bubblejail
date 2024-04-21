@@ -1,4 +1,5 @@
-
+# SPDX-License-Identifier: GPL-3.0-or-later
+# SPDX-FileCopyrightText: 2023 igo95862
 add_languages('c')
 
 lint_args = ['-Wall', '-Wextra', '-Werror']
