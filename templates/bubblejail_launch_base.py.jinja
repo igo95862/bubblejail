@@ -1,0 +1,23 @@
+#!/usr/bin/python3 -{{ PYTHON_SHEBANG_SHORT_OPTS }}
+# SPDX-License-Identifier: GPL-3.0-or-later
+# SPDX-FileCopyrightText: 2024 igo95862
+from __future__ import annotations
+
+if __name__ == "__main__":
+    {% if PYTHON_PACKAGES_DIR is defined %}
+    from sys import path
+
+    path.append("{{ PYTHON_PACKAGES_DIR }}")
+
+    {% endif %}
+    from bubblejail.bubblejail_utils import BubblejailSettings
+
+    BubblejailSettings.HELPER_PATH_STR = "{{ LIB_PREFIX }}/bubblejail/bubblejail-helper"
+    BubblejailSettings.SHARE_PATH_STR = "{{ SHARE_PREFIX }}"
+    BubblejailSettings.SYSCONF_PATH_STR = "{{ SYSCONF_DIR }}"
+    BubblejailSettings.VERSION = "{{ BUBBLEJAIL_VERSION }}"
+
+    {% filter indent(4,True) %}
+    {% block launch_commands %}
+    {% endblock %}
+    {% endfilter %}

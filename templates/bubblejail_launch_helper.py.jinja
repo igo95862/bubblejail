@@ -1,0 +1,10 @@
+{#
+SPDX-License-Identifier: GPL-3.0-or-later
+SPDX-FileCopyrightText: 2024 igo95862
+#}
+{% extends 'bubblejail_launch_base.py.jinja' %}
+{% block launch_commands %}
+from bubblejail.bubblejail_helper import bubblejail_helper_main
+
+bubblejail_helper_main()
+{% endblock %}

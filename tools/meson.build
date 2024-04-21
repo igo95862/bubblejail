@@ -52,53 +52,38 @@ endif
 
 jinja2_commands +=  '@PLAINNAME@'
 
+base_launch_kwargs = {
+    'build_by_default': true,
+    'depend_files': files(templates_dir / 'bubblejail_launch_base.py.jinja'),
+    'capture': true,
+    'install': true,
+    'install_mode': 'rwxr-xr-x',
+    'command': jinja2_commands,
+}
+
 bubblejail_cli_launch = custom_target(
     'bubblejail_cli_launch',
-    build_by_default : true,
-    input : files( templates_dir / 'bubblejail_cli_launch.py.jinja2'),
-    depend_files : files(
-        templates_dir / 'setup_python_path.py.jinja2',
-        templates_dir / 'setup_bubblejail_settings.py.jinja2',
-    ),
+    input : files( templates_dir / 'bubblejail_launch_cli.py.jinja'),
     output : 'bubblejail',
-    capture : true,
-    install : true,
     install_dir : get_option('bindir'),
-    install_mode : 'rwxr-xr-x',
     install_tag : 'runtime',
-    command : jinja2_commands,
+    kwargs : base_launch_kwargs,
 )
 
 bubblejail_gui_qt_launch = custom_target(
     'bubblejail_gui_qt_launch',
-    build_by_default : true,
-    input : files( templates_dir / 'bubblejail_gui_qt_launch.py.jinja2'),
-    depend_files : files(
-        templates_dir / 'setup_python_path.py.jinja2',
-        templates_dir / 'setup_bubblejail_settings.py.jinja2',
-    ),
+    input : files( templates_dir / 'bubblejail_launch_gui_qt.py.jinja'),
     output : 'bubblejail-config',
-    capture : true,
-    install : true,
     install_dir : get_option('bindir'),
-    install_mode : 'rwxr-xr-x',
     install_tag : 'bubblejail-gui',
-    command : jinja2_commands,
+    kwargs : base_launch_kwargs,
 )
 
 bubblejail_helper_launch = custom_target(
     'bubblejail_helper_launch',
-    build_by_default : true,
-    input : files( templates_dir / 'bubblejail_helper_launch.py.jinja2'),
-    depend_files : files(
-        templates_dir / 'setup_python_path.py.jinja2',
-        templates_dir / 'setup_bubblejail_settings.py.jinja2',
-    ),
+    input : files( templates_dir / 'bubblejail_launch_helper.py.jinja'),
     output : 'bubblejail-helper',
-    capture : true,
-    install : true,
     install_dir : get_option('libdir') / 'bubblejail',
     install_tag : 'runtime',
-    install_mode : 'rwxr-xr-x',
-    command : jinja2_commands,
+    kwargs : base_launch_kwargs,
 )

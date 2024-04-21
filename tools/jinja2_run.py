@@ -5,8 +5,9 @@ from __future__ import annotations
 
 from argparse import ArgumentParser
 from pathlib import Path
+from sys import stdout
 
-from jinja2 import Environment, FileSystemLoader
+from jinja2 import Environment, FileSystemLoader, StrictUndefined
 
 
 def execute_template(
@@ -18,11 +19,13 @@ def execute_template(
 
     env = Environment(
         loader=FileSystemLoader(template_dir),
+        trim_blocks=True,
+        lstrip_blocks=True,
+        undefined=StrictUndefined,
     )
 
     template = env.get_template(template_name)
-
-    print(template.render(**define_dict))
+    stdout.write(template.render(**define_dict))
 
 
 def main() -> None:
