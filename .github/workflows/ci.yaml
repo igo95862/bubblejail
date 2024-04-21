@@ -29,3 +29,21 @@ jobs:
       - name: Run linters
         run: |
           python3 tools/run_linters.py
+
+  build:
+    name: Build
+    runs-on: ubuntu-latest
+    container:
+      image: docker.io/archlinux:latest
+    steps:
+      - name: Install build dependencies
+        run: |
+          pacman --noconfirm -Syu \
+            git python python-jinja scdoc meson
+      - name: Checkout
+        uses: actions/checkout@v4
+      - name: Run meson
+        run: |
+          arch-meson -Dman=true build
+          meson compile --verbose -C build
+          meson install -C build --destdir install
