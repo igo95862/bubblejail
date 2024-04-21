@@ -1,8 +1,5 @@
 # Bubblejail
 
-[![CodeQL](https://github.com/igo95862/bubblejail/actions/workflows/codeql.yml/badge.svg)](https://github.com/igo95862/bubblejail/actions/workflows/codeql.yml)
-[![CI: build, mypy, pyflakes, codespell](https://github.com/igo95862/bubblejail/actions/workflows/python-lint.yml/badge.svg)](https://github.com/igo95862/bubblejail/actions/workflows/python-lint.yml)
-
 Bubblejail is a [bubblewrap](https://github.com/containers/bubblewrap)-based alternative to Firejail.
 
 ## Description

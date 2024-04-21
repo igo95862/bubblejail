@@ -1,0 +1,31 @@
+# SPDX-License-Identifier: GPL-3.0-or-later
+# SPDX-FileCopyrightText: 2024 igo95862
+---
+name: CI
+
+on:
+  push:
+  pull_request:
+  workflow_dispatch:
+
+jobs:
+  linters:
+    name: Run source code linters
+    runs-on: ubuntu-latest
+    container:
+      image: docker.io/archlinux:latest
+    steps:
+      - name: Install linters and Python dependencies
+        run: |
+          pacman --noconfirm -Syu \
+            git \
+            python-pyflakes \
+            mypy python-pyqt6 python-tomli-w
+      - name: Checkout
+        uses: actions/checkout@v4
+      - name: Add safe git directory
+        run: |
+          git config --global --add safe.directory "$GITHUB_WORKSPACE"
+      - name: Run linters
+        run: |
+          python3 tools/run_linters.py
