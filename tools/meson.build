@@ -1,17 +1,5 @@
 # SPDX-License-Identifier: GPL-3.0-or-later
 # SPDX-FileCopyrightText: 2022 igo95862
-bubblejail_test_cmd_run = run_target(
-    'bubblejail_test_cmd_run',
-    command : [py_installation, files('run_test_bubblejail.py'), 'shell'],
-    depends : bubblejail_lib_package,
-    env : test_env,
-)
-bubblejail_test_gui_run = run_target(
-    'bubblejail_test_gui_run',
-    command : [py_installation, files('run_test_bubblejail.py'), 'gui'],
-    depends : bubblejail_lib_package,
-    env : test_env,
-)
 
 lib_prefix_path = get_option('prefix') / get_option('libdir')
 share_prefix_path = get_option('prefix') / get_option('datadir')

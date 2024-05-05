@@ -13,6 +13,6 @@ foreach unittest : unittests
         fs.stem(unittest),
         py_installation,
         args : [unittest],
-        env : test_env,
+        env : python_package_env,
     )
 endforeach

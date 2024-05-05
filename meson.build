@@ -13,10 +13,22 @@ bytecode_compiler = find_program(
     dirs : [ meson.project_source_root() / 'tools' ],
 )
 
-test_env = environment()
-test_env.set('MESON_SOURCE_ROOT', meson.project_source_root())
+if get_option('use_python_site_packages_dir')
+    python_packages_dir = py_installation.get_path('purelib')
+else
+    python_packages_dir = get_option('libdir') / 'bubblejail/python_packages/'
+endif
+
+meson.add_install_script(
+    bytecode_compiler,
+    '--optimize-level', get_option('bytecode-optimization').to_string(),
+    '--packages-dir', python_packages_dir,
+    install_tag : 'runtime',
+    dry_run : true,
+)
 
 python_package_env = environment()
+python_package_env.set('MESON_SOURCE_ROOT', meson.project_source_root())
 
 templates_dir = meson.current_source_dir() / 'templates'
 

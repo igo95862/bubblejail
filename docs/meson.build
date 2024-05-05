@@ -10,7 +10,6 @@ man_generator = find_program('man_generator.py')
 
 bubblejail_man_page_markdown = custom_target(
     'bubblejail_man_page_markdown',
-    depends : bubblejail_lib_package,
     depend_files : files(
         './templates/bubblejail.1.scd.jinja2',
         './man_generator.py',
@@ -39,7 +38,6 @@ bubblejail_man_page = custom_target(
 
 bubblejail_services_man_page_markdown = custom_target(
     'bubblejail_services_man_page_markdown',
-    depends : bubblejail_lib_package,
     depend_files : files(
         './templates/bubblejail.services.5.scd.jinja2',
         './man_generator.py',
