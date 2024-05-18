@@ -4,13 +4,9 @@ from __future__ import annotations
 
 from os import environ
 from pathlib import Path
+from tomllib import load as toml_load
 from unittest import TestCase
 from unittest import main as unittest_main
-
-try:
-    from tomllib import load as toml_load
-except ImportError:
-    from tomli import load as toml_load  # type: ignore
 
 from bubblejail.bubblejail_instance import BubblejailProfile
 

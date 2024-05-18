@@ -2,13 +2,10 @@
 # SPDX-FileCopyrightText: 2020 igo95862
 from __future__ import annotations
 
+from tomllib import loads as toml_loads
 from unittest import TestCase
 from unittest import main as unittest_main
 
-try:
-    from tomllib import loads as toml_loads
-except ImportError:
-    from tomli import loads as toml_loads
 
 from bubblejail.exceptions import ServiceConflictError
 from bubblejail.services import (

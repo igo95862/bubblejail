@@ -12,12 +12,9 @@ from functools import cached_property
 from os import environ, stat
 from pathlib import Path
 from tempfile import TemporaryDirectory
+from tomllib import loads as toml_loads
 from typing import Any, cast
 
-try:
-    from tomllib import loads as toml_loads
-except ImportError:
-    from tomli import loads as toml_loads
 from tomli_w import dump as toml_dump
 from xdg.BaseDirectory import get_runtime_dir
 

@@ -49,20 +49,19 @@ If your distro does not have a package you can try to manually install with meso
 #### Requirements
 
 ##### Build requirements
-* Python 3 (>= 3.10) - python interpreter
+* Python 3 (>= 3.11) - python interpreter
 * Jinja2 - Python template engine used during build
 * Meson - build system
 * scdoc - man page generator (optional)
 
 ##### Runtime requirements
-* Python 3 (>= 3.10) - python interpreter
+* Python 3 (>= 3.11) - python interpreter
 * Python PyXDG - XDG standards for python
 * Python Tomli-W - writer part of `tomli`
 * Bubblewrap (>= 0.5.0) - sandboxing command line utility
 * XDG D-Bus Proxy - filtering D-Bus proxy
 * Python Qt6 - for GUI
 * libseccomp - helper library for seccomp rules
-* Python Tomli -  TOML file support for python, only for Python 3.10
 
 ##### Runtime highly recommended dependencies
 * Desktop File Utils - allows new desktop entries to be registered

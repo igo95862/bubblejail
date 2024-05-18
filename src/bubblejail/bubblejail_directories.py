@@ -5,12 +5,9 @@ from __future__ import annotations
 from os import environ
 from pathlib import Path
 from subprocess import run as subprocess_run
+from tomllib import load as toml_load
 from typing import Any, Dict, Generator, Optional
 
-try:
-    from tomllib import load as toml_load
-except ImportError:
-    from tomli import load as toml_load  # type: ignore
 from tomli_w import dump as toml_dump
 from xdg import IniFile
 from xdg.BaseDirectory import xdg_config_home, xdg_data_home
