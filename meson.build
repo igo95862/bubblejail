@@ -7,25 +7,21 @@ project('bubblejail',
 fs = import('fs')
 pymod = import('python')
 py_installation = pymod.find_installation('python3')
+python_purelib_option = get_option('python.purelibdir')
 
-bytecode_compiler = find_program(
-    'bytecode_compiler.py',
-    dirs : [ meson.project_source_root() / 'tools' ],
-)
-
-if get_option('use_python_site_packages_dir')
-    python_packages_dir = py_installation.get_path('purelib')
+if python_purelib_option == py_installation.get_path('purelib') or python_purelib_option == ''
+    if not get_option('allow-site-packages-dir')
+        error('Please configure meson with -Dpython.purelibdir=lib/bubblejail/python-packages -Dpython.platlibdir=lib/bubblejail/python-packages options.')
+    endif
+    extra_python_packages_dir = ''
 else
-    python_packages_dir = get_option('libdir') / 'bubblejail/python_packages/'
+    extra_python_packages_dir = get_option('prefix') / python_purelib_option
+    message('Using non site-packages directory', extra_python_packages_dir)
 endif
 
-meson.add_install_script(
-    bytecode_compiler,
-    '--optimize-level', get_option('bytecode-optimization').to_string(),
-    '--packages-dir', python_packages_dir,
-    install_tag : 'runtime',
-    dry_run : true,
-)
+if get_option('use-vendored-python-lxns').enabled()
+    subproject('python-lxns', default_options : {'use_limited_api': true})
+endif
 
 python_package_env = environment()
 python_package_env.set('MESON_SOURCE_ROOT', meson.project_source_root())

@@ -1,0 +1,5 @@
+# SPDX-License-Identifier: GPL-3.0-or-later
+# SPDX-FileCopyrightText: 2024 igo95862
+[submodule "subprojects/python-lxns"]
+	path = subprojects/python-lxns
+	url = https://github.com/igo95862/python-lxns.git

@@ -13,6 +13,9 @@ PYTHON_SOURCES: list[Path] = [
     PROJECT_ROOT_PATH / "test",
     PROJECT_ROOT_PATH / "docs/man_generator.py",
 ]
+LXNS_SUBPROJECT_PYTHON_SOURCE = (
+    PROJECT_ROOT_PATH / "subprojects/python-lxns/src/"
+)
 
 
 def run_linter(args: list[str | Path]) -> bool:
@@ -35,13 +38,19 @@ def run_pyflakes() -> bool:
 
 def run_mypy() -> bool:
     cache_dir = BUILD_DIR / "mypy_cache"
+    mypy_args: list[str | Path] = [
+        "mypy",
+        "--pretty",
+        "--strict",
+        "--cache-dir", cache_dir,
+        "--ignore-missing-imports",
+        *PYTHON_SOURCES
+    ]
+    if LXNS_SUBPROJECT_PYTHON_SOURCE.exists():
+        mypy_args.append(LXNS_SUBPROJECT_PYTHON_SOURCE)
+
     return run_linter(
-        ["mypy",
-         "--pretty",
-         "--strict",
-         "--cache-dir", cache_dir,
-         "--ignore-missing-imports",
-         *PYTHON_SOURCES]
+        mypy_args
     )
 
 

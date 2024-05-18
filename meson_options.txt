@@ -1,7 +1,6 @@
 # SPDX-License-Identifier: GPL-3.0-or-later
 # SPDX-FileCopyrightText: 2022 igo95862
-option('use_python_site_packages_dir', type: 'boolean', value: false, description: 'Use pythons site-packages dir for bubblejail python package instead of version independent location.')
 option('version_display', type: 'string', value: '', description: 'Custom --version display.')
-option('bytecode-optimization', type : 'integer', min : 0, max : 2, value : 1)
-option('generate-namespaces-constants', type: 'boolean', value: false, description: 'Generate new namespace constants rather than using x86_64 pre-generated file. This option is under development. DO NOT USE')
 option('man', type : 'boolean', value : true, description : 'Generate and install man pages for CLI tool and services.')
+option('allow-site-packages-dir', type : 'boolean', value : false, description : 'Allow using Python\'s site-packages directory for Python modules instead of version independent location.')
+option('use-vendored-python-lxns', type : 'feature', value : 'disabled', description : 'Use meson subproject for python-lxns library.')

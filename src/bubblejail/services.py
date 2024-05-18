@@ -20,7 +20,6 @@ from dataclasses import (
 from multiprocessing import Process
 from os import O_CLOEXEC, O_NONBLOCK, environ, getpid, getuid, pipe2, readlink
 from pathlib import Path
-from platform import machine
 from shutil import which
 from typing import TYPE_CHECKING, TypedDict
 
@@ -871,9 +870,6 @@ class Slirp4netns(BubblejailService):
         self.outbound_addr = settings.outbound_addr
         self.disable_host_loopback = settings.disable_host_loopback
 
-        if machine() != 'x86_64':
-            raise NotImplementedError('Slirp4netns only available on x86_64')
-
         dns_servers = settings.dns_servers.copy()
         dns_servers.append("10.0.2.3")
 
@@ -891,10 +887,10 @@ class Slirp4netns(BubblejailService):
         outbound_addr = settings.outbound_addr
         disable_host_loopback = settings.disable_host_loopback
 
-        from bubblejail.namespaces import NetworkNamespace
+        from lxns.namespaces import NetworkNamespace
         target_namespace = NetworkNamespace.from_pid(pid)
-        parent_ns = target_namespace.get_user_ns()
-        parent_ns_fd = parent_ns._fd
+        parent_ns = target_namespace.get_user_namespace()
+        parent_ns_fd = parent_ns.fileno()
         parent_ns_path = f"/proc/{getpid()}/fd/{parent_ns_fd}"
 
         ready_pipe_read, ready_pipe_write = (
@@ -1061,23 +1057,16 @@ class NamespacesLimits(BubblejailService):
             )
         )
 
-    def iter_bwrap_options(self) -> ServiceGeneratorType:
-        if machine() != 'x86_64':
-            raise NotImplementedError(
-                'Limit namespaces only available on x86_64'
-            )
-
-        yield from ()
-
     @staticmethod
     def set_namespaces_limits(
         pid: int,
         namespace_files_to_limits: dict[str, int],
     ) -> None:
-        from bubblejail.namespaces import UserNamespace
+        from lxns.namespaces import UserNamespace
         target_namespace = UserNamespace.from_pid(pid)
-        parent_ns = target_namespace.get_user_ns()
+        parent_ns = target_namespace.get_user_namespace()
         parent_ns.setns()
+        target_namespace.setns()
 
         for proc_file, limit_to_set in namespace_files_to_limits.items():
             with open("/proc/sys/user/" + proc_file, mode="w") as f:

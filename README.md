@@ -62,6 +62,7 @@ If your distro does not have a package you can try to manually install with meso
 * XDG D-Bus Proxy - filtering D-Bus proxy
 * Python Qt6 - for GUI
 * libseccomp - helper library for seccomp rules
+* [python-lxns](https://github.com/igo95862/python-lxns) - Linux kernel namespaces library for Python
 
 ##### Runtime highly recommended dependencies
 * Desktop File Utils - allows new desktop entries to be registered
@@ -74,12 +75,12 @@ If your distro does not have a package you can try to manually install with meso
 
 #### Using meson to install
 
-1. Run `meson setup build` to setup build directory
+1. Run `meson setup build -Dpython.purelibdir=lib/bubblejail/python-packages` to setup build directory
 1. Switch to build directory `cd build`
 1. Compile `meson compile`
 1. Install `sudo meson install`
 
-If you want to uninstall run `ninja uninstall` from build directory.
+If you want to uninstall run `sudo ninja uninstall` from build directory.
 
 ## Screenshots
 

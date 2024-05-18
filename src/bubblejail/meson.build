@@ -16,16 +16,11 @@ source_files = [
    'exceptions.py',
    'services.py',
    'py.typed',
-   'namespaces.py',
-   'namespaces_constants.py',
 ]
 
 
-
-bubblejail_package_dir = python_packages_dir / 'bubblejail'
-
-install_data(
+py_installation.install_sources(
     source_files,
-    install_dir : bubblejail_package_dir,
+    subdir : 'bubblejail',
     install_tag : 'runtime',
 )

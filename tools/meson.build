@@ -11,18 +11,16 @@ if version_display == ''
     version_display = meson.project_version()
 endif
 
-bytecode_optimization = get_option('bytecode-optimization')
-if bytecode_optimization == 0
-    python_shebang_short_opts = 'I'
-elif bytecode_optimization == 1
+bytecode_optimization = get_option('python.bytecompile')
+if bytecode_optimization == 1
     python_shebang_short_opts = 'IO'
 elif bytecode_optimization == 2
     python_shebang_short_opts = 'IOO'
 else
-    error('Unkown python optimization level')
+    python_shebang_short_opts = 'I'
 endif
 
-jinja2_compiler = find_program('./jinja2_run.py')
+jinja2_compiler = find_program('jinja2_run.py')
 
 jinja2_commands = [
     jinja2_compiler,
@@ -34,8 +32,8 @@ jinja2_commands = [
     '--define', 'PYTHON_SHEBANG_SHORT_OPTS', python_shebang_short_opts,
 ]
 
-if not get_option('use_python_site_packages_dir')
-    jinja2_commands += ['--define', 'PYTHON_PACKAGES_DIR', get_option('prefix') / python_packages_dir]
+if extra_python_packages_dir != ''
+    jinja2_commands += ['--define', 'PYTHON_PACKAGES_DIR', extra_python_packages_dir]
 endif
 
 jinja2_commands +=  '@PLAINNAME@'
