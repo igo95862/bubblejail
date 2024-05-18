@@ -8,3 +8,4 @@ build
 dev*
 strace*.txt
 .git
+venv

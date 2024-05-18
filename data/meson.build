@@ -24,11 +24,9 @@ install_subdir(
     install_tag : 'runtime'
 )
 
-install_subdir(
-    'etc/bubblejail',
-    install_dir : get_option('sysconfdir'),
-    exclude_files : ['profiles/.gitkeep'],
-    install_tag : 'runtime'
+install_emptydir(
+    get_option('sysconfdir') / 'bubblejail/profiles',
+    install_mode : ['rwxr-xr-x'],
 )
 
 install_data(

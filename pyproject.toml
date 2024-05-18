@@ -1,0 +1,8 @@
+# SPDX-License-Identifier: GPL-3.0-or-later
+# SPDX-FileCopyrightText: 2024 igo95862
+
+# This exists ONLY to allow venv editable installs
+# Bubblejail is NOT intended to be installed with meson-python
+[build-system]
+build-backend = 'mesonpy'
+requires = ['meson-python']

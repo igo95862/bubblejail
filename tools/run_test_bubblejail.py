@@ -4,7 +4,6 @@
 from __future__ import annotations
 
 from argparse import ArgumentParser
-from os import environ
 from pathlib import Path
 from readline import read_history_file, set_history_length, write_history_file
 from shlex import split as shelx_split
@@ -17,9 +16,28 @@ from bubblejail.bubblejail_gui_qt import run_gui
 from bubblejail.bubblejail_instance import BubblejailInstance
 
 
+# How to run testing bubblejail
+# 1. Create venv:
+#    python -m venv --system-site-packages venv
+#
+# 2. Use meson-python editable installs:
+#     ./venv/bin/pip install \
+#       --no-build-isolation --config-settings=editable-verbose=true \
+#       --config-settings=setup-args=-Dman=false \
+#       --config-settings=setup-args=-Duse-vendored-python-lxns=enabled \
+#       --config-settings=install-args=--tags=runtime \
+#       --config-settings=setup-args=-Dallow-site-packages-dir=true \
+#       --editable .
+#
+# 3. Run this script with venv:
+#    ./venv/bin/python ./tools/run_test_bubblejail.py shell
+
+PROJECT_ROOT_PATH = Path(__file__).parent.parent
+BUILD_DIR = PROJECT_ROOT_PATH / "build"
+
+
 def setup_test_env() -> None:
-    build_dir = Path(environ['MESON_BUILD_ROOT'])
-    custom_data_dir = build_dir / 'bubblejail_test_datadir'
+    custom_data_dir = BUILD_DIR / 'bubblejail_test_datadir'
     custom_data_dir.mkdir(exist_ok=True)
 
     def custom_datadirs() -> Generator[Path, None, None]:
@@ -40,7 +58,7 @@ def setup_test_env() -> None:
         disable_desktop_entry,
     )
 
-    helper_path = build_dir / 'src/bubblejail/bubblejail_helper.py'
+    helper_path = PROJECT_ROOT_PATH / 'src/bubblejail/bubblejail_helper.py'
     original_run = BubblejailInstance.async_run_init
 
     async def run_with_helper_script(
@@ -63,8 +81,7 @@ def setup_test_env() -> None:
 
 
 def shell_main() -> None:
-    build_dir = Path(environ['MESON_BUILD_ROOT'])
-    history_file = build_dir / 'bubblejail_cmd_history'
+    history_file = BUILD_DIR / 'bubblejail_cmd_history'
     history_file.touch(exist_ok=True)
     read_history_file(history_file)
     set_history_length(1000)
