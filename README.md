@@ -75,7 +75,7 @@ If your distro does not have a package you can try to manually install with meso
 
 #### Using meson to install
 
-1. Run `meson setup build -Dpython.purelibdir=lib/bubblejail/python-packages` to setup build directory
+1. Run `meson setup build` to setup build directory
 1. Switch to build directory `cd build`
 1. Compile `meson compile`
 1. Install `sudo meson install`

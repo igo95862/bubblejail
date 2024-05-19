@@ -44,6 +44,6 @@ jobs:
         uses: actions/checkout@v4
       - name: Run meson
         run: |
-          arch-meson -Dman=true -Dallow-site-packages-dir=true build
+          arch-meson -Dman=true build
           meson compile --verbose -C build
           meson install -C build --destdir install

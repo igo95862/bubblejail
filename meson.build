@@ -1,7 +1,12 @@
 # SPDX-License-Identifier: GPL-3.0-or-later
 # SPDX-FileCopyrightText: 2020 igo95862
 project('bubblejail',
-    version : '0.8.3'
+    version : '0.8.3',
+    # Patch out these lines to install bubblejail's packages to site-packages
+    default_options : {
+        'python.purelibdir' : 'lib/bubblejail/python-packages',
+        'python.platlibdir' : 'lib/bubblejail/python-packages',
+    },
 )
 
 fs = import('fs')
@@ -10,9 +15,6 @@ py_installation = pymod.find_installation('python3')
 python_purelib_option = get_option('python.purelibdir')
 
 if python_purelib_option == py_installation.get_path('purelib') or python_purelib_option == ''
-    if not get_option('allow-site-packages-dir')
-        error('Please configure meson with -Dpython.purelibdir=lib/bubblejail/python-packages -Dpython.platlibdir=lib/bubblejail/python-packages options.')
-    endif
     extra_python_packages_dir = ''
 else
     extra_python_packages_dir = get_option('prefix') / python_purelib_option
