@@ -79,6 +79,20 @@ def setup_test_env() -> None:
         run_with_helper_script,
     )
 
+    import bubblejail.bubblejail_instance
+
+    custom_run_dir = BUILD_DIR / "bubblejail_test_rundir"
+    custom_run_dir.mkdir(exist_ok=True)
+
+    def custom_runtime_dir() -> str:
+        return str(custom_run_dir)
+
+    setattr(
+        bubblejail.bubblejail_instance,
+        "get_runtime_dir",
+        custom_runtime_dir,
+    )
+
 
 def shell_main() -> None:
     history_file = BUILD_DIR / 'bubblejail_cmd_history'
