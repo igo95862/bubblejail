@@ -278,18 +278,38 @@ class BubblejailInstance:
 class BubblejailProfile:
     def __init__(
         self,
-        dot_desktop_path: str | None = None,
+        dot_desktop_path: list[str] | str | None = None,
         is_gtk_application: bool = False,
         services:  ServicesConfDictType | None = None,
         description: str = 'No description',
         import_tips: str = 'None',
     ) -> None:
-        self.dot_desktop_path = (Path(dot_desktop_path)
-                                 if dot_desktop_path is not None else None)
+
+        match dot_desktop_path:
+            case list():
+                self.desktop_entries_paths = [
+                    Path(x) for x in dot_desktop_path
+                ]
+            case str():
+                self.desktop_entries_paths = [Path(dot_desktop_path)]
+            case None:
+                self.desktop_entries_paths = []
+            case _:
+                raise TypeError(
+                    "Desktop entry path be a str, list[str] or None "
+                    "not {dot_desktop_path!r}"
+                )
         self.is_gtk_application = is_gtk_application
         self.config = BubblejailInstanceConfig(services)
         self.description = description
         self.import_tips = import_tips
+
+    def find_desktop_entry(self) -> Path | None:
+        for path in self.desktop_entries_paths:
+            if path.exists():
+                return path
+
+        return None
 
 
 class BubblejailInstanceMetadata:

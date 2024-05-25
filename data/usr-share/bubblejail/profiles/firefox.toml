@@ -2,7 +2,10 @@
 # SPDX-FileCopyrightText: 2020 igo95862
 
 # Firefox on X11
-dot_desktop_path = "/usr/share/applications/firefox.desktop"
+dot_desktop_path = [
+    "/usr/share/applications/firefox.desktop",
+    "/usr/share/applications/firefox-esr.desktop",
+]
 is_gtk_application = true
 description='''
 Firefox web browser.

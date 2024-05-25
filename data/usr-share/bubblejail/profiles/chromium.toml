@@ -2,7 +2,10 @@
 # SPDX-FileCopyrightText: 2020 igo95862
 
 # Chromium
-dot_desktop_path = "/usr/share/applications/chromium.desktop"
+dot_desktop_path = [
+    "/usr/share/applications/chromium-browser.desktop",
+    "/usr/share/applications/chromium.desktop",
+]
 description='''
 Chromium web browser
 '''

@@ -150,7 +150,7 @@ class BubblejailDirectories:
         instance = BubblejailInstance(instance_directory)
 
         if create_dot_desktop:
-            if profile.dot_desktop_path is not None:
+            if profile.desktop_entries_paths:
                 cls.overwrite_desktop_entry_for_profile(
                     instance_name=new_name,
                     profile_object=profile,
@@ -233,21 +233,22 @@ class BubblejailDirectories:
         elif profile_object is not None:
             # 3. Profile was passed directly
             profile = profile_object
-            dot_desktop_path = profile.dot_desktop_path
+            dot_desktop_path = profile.find_desktop_entry()
         elif profile_name is not None:
             # 4. Profile name was passed
             profile = cls.profile_get(profile_name)
-            dot_desktop_path = profile.dot_desktop_path
+            dot_desktop_path = profile.find_desktop_entry()
         elif instance.metadata_creation_profile_name is not None:
             # 5. Use the profile name saved in meta data
             profile = cls.profile_get(instance.metadata_creation_profile_name)
-            dot_desktop_path = profile.dot_desktop_path
+            dot_desktop_path = profile.find_desktop_entry()
         else:
             raise RuntimeError('No profile or desktop entry specified')
 
         if dot_desktop_path is None:
-            raise TypeError('Desktop entry path can\'t be None.',
-                            dot_desktop_path)
+            raise RuntimeError(
+                "Couldn't resolve desktop entry path."
+            )
 
         new_dot_desktop = IniFile.IniFile(
             filename=str(dot_desktop_path))

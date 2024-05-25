@@ -575,22 +575,24 @@ class CreateInstanceWidget(CentralWidgets):
             except BubblejailInstanceNotFoundError:
                 ...
 
-        if self.current_profile is not None:
-            if self.current_profile.dot_desktop_path is not None and \
-                    not self.current_profile.dot_desktop_path.is_file():
-                warn_text = (
-                    '⚠ WARNING \n'
-                    'Desktop entry does not exist\n'
-                    'Maybe you don\'t have application installed?'
-                )
-                return False, warn_text
-            else:
-                return True, (
-                    f"{self.current_profile.description}\n"
-                    f"Import tips:  {self.current_profile.import_tips}"
-                )
+        if self.current_profile is None:
+            return True, 'Create empty profile'
 
-        return True, 'Create empty profile'
+        if (
+            self.current_profile.desktop_entries_paths
+            and self.current_profile.find_desktop_entry() is None
+        ):
+            warn_text = (
+                '⚠ WARNING \n'
+                'Desktop entry does not exist\n'
+                'Maybe you don\'t have application installed?'
+            )
+            return False, warn_text
+        else:
+            return True, (
+                f"{self.current_profile.description}\n"
+                f"Import tips:  {self.current_profile.import_tips}"
+            )
 
     def refresh_create_button(self) -> None:
         is_allowed, new_text = self.can_be_created()
@@ -603,10 +605,12 @@ class CreateInstanceWidget(CentralWidgets):
             self.current_profile = None
         else:
             self.current_profile = BubblejailDirectories.profile_get(new_text)
-            if self.current_profile is not None and \
-                    self.current_profile.dot_desktop_path is not None:
+            if (
+                self.current_profile is not None
+                and self.current_profile.desktop_entries_paths
+            ):
                 self.name_widget.line_edit.setText(
-                    self.current_profile.dot_desktop_path.stem
+                    self.current_profile.desktop_entries_paths[0].stem
                 )
 
         self.refresh_create_button()
