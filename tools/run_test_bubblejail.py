@@ -49,13 +49,16 @@ def setup_test_env() -> None:
         custom_datadirs,
     )
 
-    def disable_desktop_entry(*args: Any, **kwargs: Any) -> None:
-        ...
+    custom_desktop_entries_dir = BUILD_DIR / "bubblejail_test_desktop_entries"
+    custom_desktop_entries_dir.mkdir(exist_ok=True)
+
+    def custom_desktop_entries_dir_get(*args: Any) -> Path:
+        return custom_desktop_entries_dir
 
     setattr(
         BubblejailDirectories,
-        'overwrite_desktop_entry_for_profile',
-        disable_desktop_entry,
+        'desktop_entries_dir_get',
+        custom_desktop_entries_dir_get,
     )
 
     helper_path = PROJECT_ROOT_PATH / 'src/bubblejail/bubblejail_helper.py'
