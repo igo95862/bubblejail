@@ -2,7 +2,6 @@
 # SPDX-FileCopyrightText: 2020 igo95862
 from __future__ import annotations
 
-from os import environ
 from pathlib import Path
 from tomllib import load as toml_load
 from unittest import TestCase
@@ -11,11 +10,13 @@ from unittest import main as unittest_main
 from bubblejail.bubblejail_instance import BubblejailProfile
 
 
+PROJECT_ROOT_PATH = Path(__file__).parent.parent
+
+
 class TestProfiles(TestCase):
     def test_profiles(self) -> None:
-        meson_source_root = Path(environ['MESON_SOURCE_ROOT'])
         profiles_str_path = (
-            meson_source_root / 'data/usr-share/bubblejail/profiles'
+            PROJECT_ROOT_PATH / 'data/usr-share/bubblejail/profiles'
         )
 
         for profile_path in profiles_str_path.iterdir():
