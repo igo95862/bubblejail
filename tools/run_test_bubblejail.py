@@ -4,17 +4,12 @@
 from __future__ import annotations
 
 from argparse import ArgumentParser
+from os import environ
 from pathlib import Path
 from readline import read_history_file, set_history_length, write_history_file
 from shlex import split as shelx_split
 from traceback import print_exc
-from typing import Any, Generator
-
-from bubblejail.bubblejail_cli import bubblejail_main
-from bubblejail.bubblejail_directories import BubblejailDirectories
-from bubblejail.bubblejail_gui_qt import run_gui
-from bubblejail.bubblejail_instance import BubblejailInstance
-
+from typing import Any
 
 # How to run testing bubblejail
 # 1. Create venv:
@@ -34,32 +29,23 @@ from bubblejail.bubblejail_instance import BubblejailInstance
 
 PROJECT_ROOT_PATH = Path(__file__).parent.parent
 BUILD_DIR = PROJECT_ROOT_PATH / "build"
+TEST_DIR = BUILD_DIR / "bubblejail_test"
 
 
 def setup_test_env() -> None:
-    custom_data_dir = BUILD_DIR / 'bubblejail_test_datadir'
-    custom_data_dir.mkdir(exist_ok=True)
+    TEST_DIR.mkdir(exist_ok=True)
 
-    def custom_datadirs() -> Generator[Path, None, None]:
-        yield custom_data_dir
+    test_data_dir = TEST_DIR / "data"
+    test_data_dir.mkdir(exist_ok=True)
+    environ["XDG_DATA_HOME"] = str(test_data_dir)
 
-    setattr(
-        BubblejailDirectories,
-        'iter_bubblejail_data_directories',
-        custom_datadirs,
-    )
+    test_config_dir = TEST_DIR / "config"
+    test_config_dir.mkdir(exist_ok=True)
+    environ["XDG_CONFIG_HOME"] = str(test_config_dir)
 
-    custom_desktop_entries_dir = BUILD_DIR / "bubblejail_test_desktop_entries"
-    custom_desktop_entries_dir.mkdir(exist_ok=True)
 
-    def custom_desktop_entries_dir_get(*args: Any) -> Path:
-        return custom_desktop_entries_dir
-
-    setattr(
-        BubblejailDirectories,
-        'desktop_entries_dir_get',
-        custom_desktop_entries_dir_get,
-    )
+def setup_mocks() -> None:
+    from bubblejail.bubblejail_instance import BubblejailInstance
 
     helper_path = PROJECT_ROOT_PATH / 'src/bubblejail/bubblejail_helper.py'
     original_run = BubblejailInstance.async_run_init
@@ -82,18 +68,16 @@ def setup_test_env() -> None:
         run_with_helper_script,
     )
 
-    import bubblejail.bubblejail_instance
+    runtime_dir_path = TEST_DIR / "run"
+    runtime_dir_path.mkdir(exist_ok=True)
 
-    custom_run_dir = BUILD_DIR / "bubblejail_test_rundir"
-    custom_run_dir.mkdir(exist_ok=True)
-
-    def custom_runtime_dir() -> str:
-        return str(custom_run_dir)
+    def runtime_dir(self: BubblejailInstance) -> Path:
+        return runtime_dir_path / f'bubblejail/{self.name}'
 
     setattr(
-        bubblejail.bubblejail_instance,
-        "get_runtime_dir",
-        custom_runtime_dir,
+        BubblejailInstance,
+        'runtime_dir',
+        property(fget=runtime_dir),
     )
 
 
@@ -102,6 +86,10 @@ def shell_main() -> None:
     history_file.touch(exist_ok=True)
     read_history_file(history_file)
     set_history_length(1000)
+
+    setup_mocks()
+
+    from bubblejail.bubblejail_cli import bubblejail_main
 
     while True:
         try:
@@ -123,6 +111,10 @@ def shell_main() -> None:
 
 
 def gui_main() -> None:
+    setup_mocks()
+
+    from bubblejail.bubblejail_gui_qt import run_gui
+
     run_gui()
 
 
