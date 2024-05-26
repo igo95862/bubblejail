@@ -8,6 +8,7 @@ from asyncio import (
     open_unix_connection,
     wait_for,
 )
+from contextlib import AsyncExitStack
 from functools import cached_property
 from os import environ, stat
 from pathlib import Path
@@ -221,12 +222,9 @@ class BubblejailInstance:
             print(' '.join(runner.dbus_proxy_args))
             return
 
-        async with runner:
-            bwrap_process = (
-                await runner.create_bubblewrap_subprocess(args_to_run)
-            )
-            if __debug__:
-                print(f"Bubblewrap started. PID: {repr(bwrap_process)}")
+        async with AsyncExitStack() as exit_stack:
+            bwrap_process = await runner.setup_runtime(exit_stack, args_to_run)
+            print(f"Bubblewrap started. PID: {repr(bwrap_process)}")
 
             task_bwrap_main = bwrap_process.wait()
 
@@ -242,8 +240,7 @@ class BubblejailInstance:
                     "exact error."
                 ))
 
-            if __debug__:
-                print("Bubblewrap terminated")
+            print("Bubblewrap terminated")
 
     async def edit_config_in_editor(self) -> None:
         # Create temporary directory

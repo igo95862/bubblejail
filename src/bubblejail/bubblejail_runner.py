@@ -9,6 +9,7 @@ from asyncio import (
     get_running_loop,
     wait_for,
 )
+from contextlib import asynccontextmanager, contextmanager
 from contextlib import suppress as exc_suppress
 from json import load as json_load
 from os import O_CLOEXEC, O_NONBLOCK, environ, kill, pipe2
@@ -34,8 +35,15 @@ from .services import ServiceWantsDbusSessionBind, ServiceWantsHomeBind
 if TYPE_CHECKING:
     from asyncio import Task
     from asyncio.subprocess import Process
-    from collections.abc import Awaitable, Callable, Iterable, Iterator
-    from typing import IO, Any, Type
+    from collections.abc import (
+        AsyncIterator,
+        Awaitable,
+        Callable,
+        Iterable,
+        Iterator,
+    )
+    from contextlib import AsyncExitStack
+    from typing import IO
 
     from .bubblejail_instance import BubblejailInstance
     from .services import ServiceContainer as BubblejailInstanceConfig
@@ -307,70 +315,6 @@ class BubblejailRunner:
 
         return args_tempfile_fileno
 
-    async def setup_dbus_proxy(self) -> None:
-        running_loop = get_running_loop()
-        dbus_proxy_ready_future: Future[bool] = Future()
-
-        def proxy_ready_callback() -> None:
-            try:
-                with open(self.dbus_proxy_pipe_read, closefd=False) as f:
-                    f.read()
-            except Exception as e:
-                dbus_proxy_ready_future.set_exception(e)
-            else:
-                dbus_proxy_ready_future.set_result(True)
-
-            running_loop.remove_reader(self.dbus_proxy_pipe_read)
-
-        running_loop.add_reader(
-            self.dbus_proxy_pipe_read,
-            proxy_ready_callback,
-        )
-
-        self.dbus_proxy_process = await create_subprocess_exec(
-            *self.dbus_proxy_args,
-            pass_fds=[self.dbus_proxy_pipe_write],
-        )
-
-        await wait_for(dbus_proxy_ready_future, timeout=1)
-
-        if self.dbus_proxy_process.returncode is not None:
-            raise ValueError(
-                f"dbus proxy error code: {self.dbus_proxy_process.returncode}")
-
-    async def create_bubblewrap_subprocess(
-        self,
-        run_args: Iterable[str] | None = None,
-    ) -> Process:
-        bwrap_args = ['/usr/bin/bwrap']
-        # Pass option args file descriptor
-        bwrap_args.append('--args')
-        bwrap_args.append(str(self.get_args_file_descriptor()))
-        bwrap_args.append("--")
-
-        bwrap_args.extend(self.helper_arguments())
-
-        if run_args:
-            bwrap_args.extend(run_args)
-        else:
-            bwrap_args.extend(self.executable_args)
-
-        self.bubblewrap_process = await create_subprocess_exec(
-            *bwrap_args,
-            pass_fds=self.file_descriptors_to_pass,
-        )
-
-        self.bubblewrap_pid = self.bubblewrap_process.pid
-
-        loop = get_running_loop()
-
-        loop.add_signal_handler(SIGTERM, self.sigterm_handler)
-        self.task_post_init = loop.create_task(self._run_post_init_hooks())
-
-        await self.task_post_init
-
-        return self.bubblewrap_process
-
     async def _run_post_init_hooks(self) -> None:
         sandboxed_pid = await self.sandboxed_pid
         if __debug__:
@@ -412,71 +356,135 @@ class BubblejailRunner:
         kill(pid_to_kill, SIGTERM)
         # No need to wait as the bwrap should terminate when helper exits
 
-    async def __aenter__(self) -> None:
-        # Generate args
-        self.genetate_args()
+    @contextmanager
+    def setup_runtime_dir(self) -> Iterator[None]:
+        try:
+            # Create runtime dir
+            # If the dir exists exception will be raised indicating that
+            # instance is already running or did not clean-up properly.
+            self.runtime_dir.mkdir(mode=0o700, parents=True, exist_ok=False)
+            yield None
+        finally:
+            with exc_suppress(FileNotFoundError, OSError):
+                self.runtime_dir.rmdir()
 
-        # Create runtime dir
-        # If the dir exists exception will be raised indicating that
-        # instance is already running or did not clean-up properly.
-        self.runtime_dir.mkdir(mode=0o700, parents=True, exist_ok=False)
-        # Create helper directory
-        self.helper_runtime_dir.mkdir(mode=0o700)
-        self.helper_socket.bind(bytes(self.helper_socket_path))
+    @contextmanager
+    def setup_helper_runtime_dir(self) -> Iterator[None]:
+        try:
+            # Create helper directory
+            self.helper_runtime_dir.mkdir(mode=0o700)
+            yield None
+        finally:
+            with exc_suppress(FileNotFoundError, OSError):
+                self.helper_runtime_dir.rmdir()
 
-        await self.setup_dbus_proxy()
+    @contextmanager
+    def setup_helper_socket(self) -> Iterator[None]:
+        try:
+            self.helper_socket.bind(bytes(self.helper_socket_path))
+            yield None
+        finally:
+            with exc_suppress(FileNotFoundError):
+                self.helper_socket_path.unlink()
 
-    async def __aexit__(
+    @asynccontextmanager
+    async def setup_dbus_proxy(self) -> AsyncIterator[None]:
+        running_loop = get_running_loop()
+        dbus_proxy_ready_future: Future[bool] = Future()
+
+        def proxy_ready_callback() -> None:
+            try:
+                with open(self.dbus_proxy_pipe_read, closefd=False) as f:
+                    f.read()
+            except Exception as e:
+                dbus_proxy_ready_future.set_exception(e)
+            else:
+                dbus_proxy_ready_future.set_result(True)
+
+            running_loop.remove_reader(self.dbus_proxy_pipe_read)
+
+        try:
+            running_loop.add_reader(
+                self.dbus_proxy_pipe_read,
+                proxy_ready_callback,
+            )
+            dbus_proxy_process = await create_subprocess_exec(
+                *self.dbus_proxy_args,
+                pass_fds=[self.dbus_proxy_pipe_write],
+            )
+            self.dbus_proxy_process = dbus_proxy_process
+            await wait_for(dbus_proxy_ready_future, timeout=1)
+            if dbus_proxy_process.returncode is not None:
+                raise ValueError(
+                    "dbus proxy error code: "
+                    f"{self.dbus_proxy_process.returncode}"
+                )
+            yield None
+        finally:
+            with exc_suppress(ProcessLookupError, TimeoutError):
+                dbus_proxy_process.terminate()
+                await wait_for(dbus_proxy_process.wait(), timeout=3)
+
+            with exc_suppress(FileNotFoundError):
+                self.dbus_session_socket_path.unlink()
+
+            with exc_suppress(FileNotFoundError):
+                self.dbus_system_socket_path.unlink()
+
+    @asynccontextmanager
+    async def setup_bubblewrap_subprocess(
         self,
-        exc_type: Type[BaseException],
-        exc: BaseException,
-        traceback: Any,  # ???: What type is traceback
-    ) -> None:
-        # Cleanup
-        try:
-            if self.bubblewrap_process is not None:
-                self.bubblewrap_process.terminate()
-                await wait_for(self.bubblewrap_process.wait(), timeout=3)
-        except ProcessLookupError:
-            ...
+        run_args: Iterable[str] | None = None,
+    ) -> AsyncIterator[Process]:
+        bwrap_args = ['/usr/bin/bwrap']
+        # Pass option args file descriptor
+        bwrap_args.append('--args')
+        bwrap_args.append(str(self.get_args_file_descriptor()))
+        bwrap_args.append("--")
 
-        await self._run_post_shutdown_hooks()
+        bwrap_args.extend(self.helper_arguments())
 
-        try:
-            if self.dbus_proxy_process is not None:
-                self.dbus_proxy_process.terminate()
-                await wait_for(self.dbus_proxy_process.wait(), timeout=3)
-        except ProcessLookupError:
-            ...
+        if run_args:
+            bwrap_args.extend(run_args)
+        else:
+            bwrap_args.extend(self.executable_args)
 
         try:
-            self.helper_socket_path.unlink()
-        except FileNotFoundError:
-            ...
+            self.bubblewrap_process = await create_subprocess_exec(
+                *bwrap_args,
+                pass_fds=self.file_descriptors_to_pass,
+            )
 
-        try:
-            self.helper_runtime_dir.rmdir()
-        except FileNotFoundError:
-            ...
-        except OSError:
-            ...
+            self.bubblewrap_pid = self.bubblewrap_process.pid
 
-        try:
-            self.dbus_session_socket_path.unlink()
-        except FileNotFoundError:
-            ...
+            loop = get_running_loop()
 
-        try:
-            self.dbus_system_socket_path.unlink()
-        except FileNotFoundError:
-            ...
+            loop.add_signal_handler(SIGTERM, self.sigterm_handler)
+            self.task_post_init = loop.create_task(self._run_post_init_hooks())
 
-        try:
-            self.runtime_dir.rmdir()
-        except FileNotFoundError:
-            ...
-        except OSError:
-            ...
+            await self.task_post_init
+
+            yield self.bubblewrap_process
+        finally:
+            with exc_suppress(ProcessLookupError, TimeoutError):
+                if self.bubblewrap_process is not None:
+                    self.bubblewrap_process.terminate()
+                    await wait_for(self.bubblewrap_process.wait(), timeout=3)
+
+    async def setup_runtime(
+        self,
+        exit_stack: AsyncExitStack,
+        run_args: Iterable[str] | None = None,
+    ) -> Process:
+        self.genetate_args()
+        exit_stack.enter_context(self.setup_runtime_dir())
+        exit_stack.enter_context(self.setup_helper_runtime_dir())
+        exit_stack.enter_context(self.setup_helper_socket())
+        await exit_stack.enter_async_context(self.setup_dbus_proxy())
+        exit_stack.push_async_callback(self._run_post_shutdown_hooks)
+        return await exit_stack.enter_async_context(
+            self.setup_bubblewrap_subprocess(run_args)
+        )
 
     def __del__(self) -> None:
         try:
