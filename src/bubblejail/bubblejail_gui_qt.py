@@ -669,6 +669,7 @@ class SelectInstanceWidget:
 class BubblejailConfigApp:
     def __init__(self) -> None:
         self.q_app = QApplication(argv)
+        self.q_app.setDesktopFileName("bubblejail-config")
         self.window = QMainWindow()
         self.window.resize(600, 400)
         self.switch_to_selector()
