@@ -22,6 +22,7 @@ from os import O_CLOEXEC, O_NONBLOCK, environ, getpid, getuid, pipe2, readlink
 from pathlib import Path
 from shutil import which
 from typing import TYPE_CHECKING, TypedDict
+from contextlib import ExitStack
 
 from xdg import BaseDirectory
 
@@ -888,71 +889,78 @@ class Slirp4netns(BubblejailService):
         disable_host_loopback = settings.disable_host_loopback
 
         from lxns.namespaces import NetworkNamespace
-        target_namespace = NetworkNamespace.from_pid(pid)
-        parent_ns = target_namespace.get_user_namespace()
-        parent_ns_fd = parent_ns.fileno()
-        parent_ns_path = f"/proc/{getpid()}/fd/{parent_ns_fd}"
 
-        ready_pipe_read, ready_pipe_write = (
-            pipe2(O_NONBLOCK | O_CLOEXEC)
-        )
+        with ExitStack() as exit_stack:
+            target_namespace = exit_stack.enter_context(
+                NetworkNamespace.from_pid(pid)
+            )
+            parent_ns = exit_stack.enter_context(
+                target_namespace.get_user_namespace()
+            )
+            parent_ns_fd = parent_ns.fileno()
+            parent_ns_path = f"/proc/{getpid()}/fd/{parent_ns_fd}"
 
-        loop = get_running_loop()
-        slirp_ready_event = Event()
-        loop.add_reader(ready_pipe_read, slirp_ready_event.set)
+            ready_pipe_read, ready_pipe_write = (
+                pipe2(O_NONBLOCK | O_CLOEXEC)
+            )
+            exit_stack.enter_context(open(ready_pipe_write))
+            ready_pipe = exit_stack.enter_context(open(ready_pipe_read))
 
-        slirp_bin_path = which("slirp4netns")
-        if not slirp_bin_path:
-            raise BubblejailDependencyError("slirp4netns binary not found")
+            loop = get_running_loop()
+            slirp_ready_event = Event()
+            loop.add_reader(ready_pipe_read, slirp_ready_event.set)
 
-        slirp4netns_args = [
-            slirp_bin_path,
-            f"--ready={ready_pipe_write}",
-            '--configure',
-            f"--userns-path={parent_ns_path}",
-        ]
+            slirp_bin_path = which("slirp4netns")
+            if not slirp_bin_path:
+                raise BubblejailDependencyError("slirp4netns binary not found")
 
-        if outbound_addr:
-            slirp4netns_args.append(
-                (f"--outbound-addr={outbound_addr}")
+            slirp4netns_args = [
+                slirp_bin_path,
+                f"--ready={ready_pipe_write}",
+                '--configure',
+                f"--userns-path={parent_ns_path}",
+            ]
+
+            if outbound_addr:
+                slirp4netns_args.append(
+                    (f"--outbound-addr={outbound_addr}")
+                )
+
+            if disable_host_loopback:
+                slirp4netns_args.append('--disable-host-loopback')
+
+            slirp4netns_args.append(str(pid))
+            slirp4netns_args.append('tap0')
+
+            self.slirp_process = await create_subprocess_exec(
+                *slirp4netns_args,
+                pass_fds=[ready_pipe_write],
             )
 
-        if disable_host_loopback:
-            slirp4netns_args.append('--disable-host-loopback')
-
-        slirp4netns_args.append(str(pid))
-        slirp4netns_args.append('tap0')
-
-        self.slirp_process = await create_subprocess_exec(
-            *slirp4netns_args,
-            pass_fds=[ready_pipe_write],
-        )
-
-        slirp_ready_task = loop.create_task(
-            slirp_ready_event.wait(),
-            name="slirp4netns ready",
-        )
-
-        early_process_end_task = loop.create_task(
-            self.slirp_process.wait(),
-            name="Early slirp4netns process end"
-        )
-        early_process_end_task.add_done_callback(
-            lambda _: slirp_ready_task.cancel()
-        )
-
-        try:
-            await wait_for(slirp_ready_task, timeout=3)
-        except CancelledError:
-            raise BubblejailInitializationError(
-                "Slirp4netns initialization failed"
+            slirp_ready_task = loop.create_task(
+                slirp_ready_event.wait(),
+                name="slirp4netns ready",
             )
-        finally:
-            loop.remove_reader(ready_pipe_read)
-            early_process_end_task.cancel()
 
-        with open(ready_pipe_write), open(ready_pipe_read) as f:
-            f.read()
+            early_process_end_task = loop.create_task(
+                self.slirp_process.wait(),
+                name="Early slirp4netns process end"
+            )
+            early_process_end_task.add_done_callback(
+                lambda _: slirp_ready_task.cancel()
+            )
+
+            try:
+                await wait_for(slirp_ready_task, timeout=3)
+            except CancelledError:
+                raise BubblejailInitializationError(
+                    "Slirp4netns initialization failed"
+                )
+            finally:
+                loop.remove_reader(ready_pipe_read)
+                early_process_end_task.cancel()
+
+            ready_pipe.read()
 
     async def post_shutdown_hook(self) -> None:
         try:
