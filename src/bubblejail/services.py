@@ -1063,10 +1063,17 @@ class NamespacesLimits(BubblejailService):
         namespace_files_to_limits: dict[str, int],
     ) -> None:
         from lxns.namespaces import UserNamespace
-        target_namespace = UserNamespace.from_pid(pid)
-        parent_ns = target_namespace.get_user_namespace()
-        parent_ns.setns()
-        target_namespace.setns()
+
+        with (
+            UserNamespace.from_pid(pid) as target_namespace,
+            target_namespace.get_user_namespace() as parent_ns,
+        ):
+            if parent_ns.ns_id != UserNamespace.get_current_ns_id():
+                parent_ns.setns()
+            else:
+                print("Already in parent user namespace")
+
+            target_namespace.setns()
 
         for proc_file, limit_to_set in namespace_files_to_limits.items():
             with open("/proc/sys/user/" + proc_file, mode="w") as f:
