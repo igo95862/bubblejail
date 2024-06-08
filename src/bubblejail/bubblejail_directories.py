@@ -292,7 +292,7 @@ class BubblejailDirectories:
                                     / f"bubble_{instance_name}.desktop")
 
         new_dot_desktop.write(
-            filename=new_dot_desktop_path
+            filename=str(new_dot_desktop_path)
         )
 
         # Update desktop MIME database
