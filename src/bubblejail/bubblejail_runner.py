@@ -15,6 +15,7 @@ from json import load as json_load
 from os import O_CLOEXEC, O_NONBLOCK, environ, kill, pipe2
 from signal import SIGTERM
 from socket import AF_UNIX, socket
+from sys import stderr
 from tempfile import TemporaryFile
 from traceback import print_exc
 from typing import TYPE_CHECKING
@@ -302,8 +303,7 @@ class BubblejailRunner:
 
     async def _run_post_init_hooks(self) -> None:
         sandboxed_pid = await self.sandboxed_pid
-        if __debug__:
-            print(f"Sandboxed PID: {sandboxed_pid}")
+        print(f"Sandboxed PID: {sandboxed_pid}", file=stderr)
 
         for hook in self.post_init_hooks:
             await hook(sandboxed_pid)
@@ -324,8 +324,8 @@ class BubblejailRunner:
             try:
                 await hook()
             except Exception:
-                print("Failed to run post shutdown hook: ", hook)
-                print_exc()
+                print("Failed to run post shutdown hook: ", hook, file=stderr)
+                print_exc(file=stderr)
 
     def sigterm_handler(self) -> None:
         try:
@@ -337,7 +337,7 @@ class BubblejailRunner:
 
             pid_to_kill = self.bubblewrap_pid
 
-        print("Terminating PID: ", pid_to_kill)
+        print("Terminating PID: ", pid_to_kill, file=stderr)
         kill(pid_to_kill, SIGTERM)
         # No need to wait as the bwrap should terminate when helper exits
 

@@ -15,6 +15,7 @@ from multiprocessing import Process
 from os import O_CLOEXEC, O_NONBLOCK, environ, getpid, getuid, pipe2, readlink
 from pathlib import Path
 from shutil import which
+from sys import stderr
 from typing import TYPE_CHECKING, TypedDict
 
 from xdg import BaseDirectory
@@ -427,7 +428,7 @@ class Wayland(BubblejailService):
         try:
             wayland_display_env = environ["WAYLAND_DISPLAY"]
         except KeyError:
-            print("No wayland display.")
+            print("wayland: No wayland display.", file=stderr)
 
         for x in XDG_DESKTOP_VARS:
             if x in environ:
@@ -1063,7 +1064,9 @@ class NamespacesLimits(BubblejailService):
             if parent_ns.ns_id != UserNamespace.get_current_ns_id():
                 parent_ns.setns()
             else:
-                print("Already in parent user namespace")
+                print(
+                    "namespaces_limits: Already in parent user namespace", file=stderr
+                )
 
             target_namespace.setns()
 

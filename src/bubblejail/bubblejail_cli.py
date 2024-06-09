@@ -5,7 +5,7 @@ from __future__ import annotations
 from argparse import ArgumentParser
 from asyncio import run as async_run
 from pathlib import Path
-from sys import argv, stderr
+from sys import argv, stderr, stdout
 from typing import TYPE_CHECKING
 
 from .bubblejail_cli_metadata import BUBBLEJAIL_CMD
@@ -86,8 +86,8 @@ def run_bjail(
                     wait_for_response=wait,
                 )
             )
-            if wait:
-                print(command_return_text)
+            if wait and command_return_text is not None:
+                stdout.write(command_return_text)
         else:
             extra_bwrap_args: Optional[list[str]]
             if debug_bwrap_args is not None:
@@ -145,7 +145,7 @@ def bjail_list(list_what: str) -> None:
         str_iterator = iter_subcommands()
 
     for string in str_iterator:
-        print(string)
+        print(string, file=stdout)
 
 
 def bjail_create(

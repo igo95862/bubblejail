@@ -20,6 +20,7 @@ from os import WNOHANG, kill, wait3, waitpid
 from pathlib import Path
 from signal import SIGCHLD, SIGKILL, SIGTERM
 from socket import AF_UNIX, socket
+from sys import stderr
 from time import sleep as sync_sleep
 from typing import TYPE_CHECKING
 
@@ -148,8 +149,7 @@ def handle_children() -> None:
             if exit_pid == 0:
                 return
 
-            if __debug__:
-                print("Reaped: ", exit_pid, " Exit code: ", exit_code, flush=True)
+            print("Reaped: ", exit_pid, " Exit code: ", exit_code, file=stderr)
 
     except ChildProcessError:
         ...
@@ -268,11 +268,11 @@ class BubblejailHelper(Awaitable[bool]):
         return False
 
     async def termninator_watcher(self) -> None:
-        if __debug__:
-            print(
-                "self.terminator_look_for_command: ",
-                repr(self.terminator_look_for_command),
-            )
+        print(
+            "self.terminator_look_for_command: ",
+            repr(self.terminator_look_for_command),
+            file=stderr,
+        )
 
         while True:
             try:
@@ -286,8 +286,7 @@ class BubblejailHelper(Awaitable[bool]):
                     )
 
                 if is_time_to_termniate:
-                    if __debug__:
-                        print("No children found. Terminating.")
+                    print("No children found. Terminating.", file=stderr)
                     create_task(self.stop_async())
                     return
             except CancelledError:
@@ -328,14 +327,12 @@ class BubblejailHelper(Awaitable[bool]):
 
     async def client_handler(self, reader: StreamReader, writer: StreamWriter) -> None:
 
-        if __debug__:
-            print("Client connected", flush=True)
+        print("Client connected", file=stderr)
 
         while True:
             line = await reader.readline()
             if not line:
-                if __debug__:
-                    print("Reached end of reader. Returning", flush=True)
+                print("Reached end of reader. Returning", file=stderr)
                 writer.close()
                 await writer.wait_closed()
                 return
@@ -357,7 +354,7 @@ class BubblejailHelper(Awaitable[bool]):
                         text=run_stdout,
                     )
                 case _:
-                    print("Unknown request")
+                    print("Unknown request", file=stderr)
                     continue
 
             writer.write(response)
@@ -368,8 +365,7 @@ class BubblejailHelper(Awaitable[bool]):
             self.client_handler,
             sock=self.socket,
         )
-        if __debug__:
-            print("Started unix server", flush=True)
+        print("Started unix server", file=stderr)
         self.termninator_watcher_task = create_task(self.termninator_watcher())
 
         if self.startup_args:
@@ -380,7 +376,7 @@ class BubblejailHelper(Awaitable[bool]):
     async def stop_async(self) -> None:
         self.terminated.set()
 
-        print("Terminated", flush=True)
+        print("Terminated", file=stderr)
 
     async def __aenter__(self) -> None: ...
 
@@ -463,7 +459,7 @@ def bubblejail_helper_main() -> None:
     try:
         event_loop.run_until_complete(run_helper_task)
     except CancelledError:
-        print("Termninated by CancelledError")
+        print("Termninated by CancelledError", file=stderr)
     finally:
         event_loop.close()
 

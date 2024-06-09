@@ -12,6 +12,7 @@ from contextlib import AsyncExitStack
 from functools import cached_property
 from os import environ, stat
 from pathlib import Path
+from sys import stderr
 from tempfile import TemporaryDirectory
 from tomllib import loads as toml_loads
 from typing import Any, cast
@@ -212,29 +213,29 @@ class BubblejailInstance:
 
         if dry_run:
             runner.genetate_args()
-            print("Bwrap options:")
-            print(" ".join(runner.bwrap_options_args))
+            print("Bwrap options:", file=stderr)
+            print(" ".join(runner.bwrap_options_args), file=stderr)
 
-            print("Helper options:")
-            print(" ".join(runner.helper_arguments()))
+            print("Helper options:", file=stderr)
+            print(" ".join(runner.helper_arguments()), file=stderr)
 
-            print("Run args:")
-            print(" ".join(args_to_run))
+            print("Run args:", file=stderr)
+            print(" ".join(args_to_run), file=stderr)
 
-            print("D-Bus session args:")
-            print(" ".join(runner.dbus_proxy_args))
+            print("D-Bus session args:", file=stderr)
+            print(" ".join(runner.dbus_proxy_args), file=stderr)
             return
 
         async with AsyncExitStack() as exit_stack:
             bwrap_process = await runner.setup_runtime(exit_stack, args_to_run)
-            print(f"Bubblewrap started. PID: {repr(bwrap_process)}")
+            print(f"Bubblewrap started. PID: {repr(bwrap_process)}", file=stderr)
 
             task_bwrap_main = bwrap_process.wait()
 
             try:
                 await task_bwrap_main
             except CancelledError:
-                print("Bwrap cancelled")
+                print("Bwrap cancelled", file=stderr)
 
             if bwrap_process.returncode != 0:
                 raise BubblewrapRunError(
@@ -245,7 +246,7 @@ class BubblejailInstance:
                     )
                 )
 
-            print("Bubblewrap terminated")
+            print("Bubblewrap terminated", file=stderr)
 
     async def edit_config_in_editor(self) -> None:
         # Create temporary directory
@@ -263,7 +264,7 @@ class BubblejailInstance:
 
             # If file was not modified do nothing
             if initial_modification_time >= stat(temp_file_path).st_mtime:
-                print("File not modified. Not overwriting config")
+                print("File not modified. Not overwriting config", file=stderr)
                 return
 
             # Verify that the new config is valid and save to variable

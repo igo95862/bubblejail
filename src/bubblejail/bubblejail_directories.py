@@ -5,6 +5,7 @@ from __future__ import annotations
 from os import environ
 from pathlib import Path
 from subprocess import run as subprocess_run
+from sys import stderr
 from tomllib import load as toml_load
 from typing import Any, Dict, Generator, Optional
 
@@ -33,7 +34,7 @@ def convert_old_conf_to_new() -> None:
         if (instance_directory / FILE_NAME_SERVICES).is_file():
             continue
 
-        print(f"Converting {instance_directory.stem}")
+        print(f"Converting {instance_directory.stem}", file=stderr)
 
         old_conf_path = instance_directory / "config.toml"
         with open(old_conf_path, mode="rb") as old_conf_file:
@@ -163,7 +164,7 @@ class BubblejailDirectories:
             instance.metadata_creation_profile_name = profile_name
 
         if profile_name is not None and print_import_tips:
-            print("Import tips: ", profile.import_tips)
+            print("Import tips: ", profile.import_tips, file=stderr)
 
         return instance
 
@@ -294,7 +295,7 @@ class BubblejailDirectories:
         # Update desktop MIME database
         # Requires `update-desktop-database` binary
         # Arch package desktop-file-utils
-        print("Updating desktop MIME database")
+        print("Updating desktop MIME database", file=stderr)
         cls.update_mime_database()
 
     @classmethod
