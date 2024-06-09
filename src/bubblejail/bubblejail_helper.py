@@ -214,9 +214,6 @@ class BubblejailHelper(Awaitable[bool]):
         # Event terminated
         self.terminated = Event()
 
-        # Terminator variables
-        self.terminator_look_for_command: str | None = None
-
         self.terminator_pool_timer = reaper_pool_timer
         self.termninator_watcher_task: Task[None] | None = None
 
@@ -268,22 +265,12 @@ class BubblejailHelper(Awaitable[bool]):
         return False
 
     async def termninator_watcher(self) -> None:
-        print(
-            "self.terminator_look_for_command: ",
-            repr(self.terminator_look_for_command),
-            file=stderr,
-        )
 
         while True:
             try:
                 await sleep(self.terminator_pool_timer)  # wait timer
 
-                if self.terminator_look_for_command is None:
-                    is_time_to_termniate = not self.process_has_child()
-                else:
-                    is_time_to_termniate = not self.proc_has_process_command(
-                        self.terminator_look_for_command
-                    )
+                is_time_to_termniate = not self.process_has_child()
 
                 if is_time_to_termniate:
                     print("No children found. Terminating.", file=stderr)
