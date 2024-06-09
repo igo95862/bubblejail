@@ -22,6 +22,7 @@ jobs:
           python-pyflakes reuse
           mypy python-pyqt6 python-tomli-w
           python-black python-isort
+          codespell
       - name: Checkout
         uses: actions/checkout@v4
       - name: Add safe git directory

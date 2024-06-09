@@ -3,7 +3,7 @@
 from __future__ import annotations
 
 from pathlib import Path
-from subprocess import CalledProcessError, run
+from subprocess import PIPE, CalledProcessError, Popen, run
 from sys import stderr
 
 from .base import BUILD_DIR, PROJECT_ROOT_PATH, PYTHON_SOURCES
@@ -71,6 +71,61 @@ def run_isort() -> bool:
     return False
 
 
+def run_codespell() -> bool:
+    print("Running: codespell", file=stderr)
+    try:
+        list_of_files = run(
+            args=("git", "ls-files", "-z"),
+            cwd=PROJECT_ROOT_PATH,
+            stdout=PIPE,
+            text=True,
+            check=True,
+        ).stdout.split("\0")
+        run(
+            args=[
+                "codespell",
+                "--check-filenames",
+                "--enable-colors",
+                "--context",
+                "3",
+                *list_of_files,
+            ],
+            check=True,
+        )
+    except CalledProcessError:
+        return True
+
+    return False
+
+
+def run_codespell_on_commits() -> bool:
+    print("Running: git log to codespell", file=stderr)
+    try:
+        git_log = Popen(
+            args=(
+                "git",
+                "log",
+                "--max-count=50",
+                "--no-merges",
+                r"--format='%H%n%n%s%n%n%b'",
+            ),
+            cwd=PROJECT_ROOT_PATH,
+            stdout=PIPE,
+        )
+
+        run(
+            args=("codespell", "--enable-colors", "--context", "3", "-"),
+            cwd=PROJECT_ROOT_PATH,
+            check=True,
+            stdin=git_log.stdout,
+            timeout=5,
+        )
+    except CalledProcessError:
+        return True
+
+    return bool(git_log.wait(3))
+
+
 def main() -> None:
     BUILD_DIR.mkdir(exist_ok=True)
 
@@ -81,6 +136,8 @@ def main() -> None:
     has_failed |= run_reuse()
     has_failed |= run_black()
     has_failed |= run_isort()
+    has_failed |= run_codespell()
+    has_failed |= run_codespell_on_commits()
 
     if has_failed:
         raise SystemExit(1)

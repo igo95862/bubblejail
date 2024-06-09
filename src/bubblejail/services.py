@@ -857,7 +857,7 @@ class Slirp4netns(BubblejailService):
         outbound_addr: str = field(
             default="",
             metadata=SettingFieldMetadata(
-                pretty_name="Outbound address or deivce",
+                pretty_name="Outbound address or device",
                 description=(
                     "Address or device to bind to. "
                     "If not set the default address would be used."

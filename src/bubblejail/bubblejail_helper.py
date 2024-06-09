@@ -335,7 +335,7 @@ class BubblejailHelper(Awaitable[bool]):
             line = await reader.readline()
             if not line:
                 if __debug__:
-                    print("Reached end of reader. Returnning", flush=True)
+                    print("Reached end of reader. Returning", flush=True)
                 writer.close()
                 await writer.wait_closed()
                 return
