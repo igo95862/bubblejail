@@ -4,22 +4,16 @@ from __future__ import annotations
 
 from pathlib import Path
 from subprocess import CalledProcessError, run
+from sys import stderr
 
-PROJECT_ROOT_PATH = Path(__file__).parent.parent
-BUILD_DIR = PROJECT_ROOT_PATH / "build"
-PYTHON_SOURCES: list[Path] = [
-    PROJECT_ROOT_PATH / "src",
-    PROJECT_ROOT_PATH / "tools",
-    PROJECT_ROOT_PATH / "test",
-    PROJECT_ROOT_PATH / "docs/man_generator.py",
-]
-LXNS_SUBPROJECT_PYTHON_SOURCE = (
-    PROJECT_ROOT_PATH / "subprojects/python-lxns/src/"
-)
+from .base import BUILD_DIR, PROJECT_ROOT_PATH, PYTHON_SOURCES
+from .run_format import format_with_black, format_with_isort
+
+LXNS_SUBPROJECT_PYTHON_SOURCE = PROJECT_ROOT_PATH / "subprojects/python-lxns/src/"
 
 
 def run_linter(args: list[str | Path]) -> bool:
-    print("Running:", args[0])
+    print("Running:", args[0], file=stderr)
     try:
         run(
             args=args,
@@ -42,20 +36,39 @@ def run_mypy() -> bool:
         "mypy",
         "--pretty",
         "--strict",
-        "--cache-dir", cache_dir,
+        "--cache-dir",
+        cache_dir,
         "--ignore-missing-imports",
-        *PYTHON_SOURCES
+        *PYTHON_SOURCES,
     ]
     if LXNS_SUBPROJECT_PYTHON_SOURCE.exists():
         mypy_args.append(LXNS_SUBPROJECT_PYTHON_SOURCE)
 
-    return run_linter(
-        mypy_args
-    )
+    return run_linter(mypy_args)
 
 
 def run_reuse() -> bool:
     return run_linter(["reuse", "lint"])
+
+
+def run_black() -> bool:
+    print("Running: black", file=stderr)
+    try:
+        format_with_black(check=True)
+    except CalledProcessError:
+        return True
+
+    return False
+
+
+def run_isort() -> bool:
+    print("Running: isort", file=stderr)
+    try:
+        format_with_isort(check=True)
+    except CalledProcessError:
+        return True
+
+    return False
 
 
 def main() -> None:
@@ -66,6 +79,8 @@ def main() -> None:
     has_failed |= run_pyflakes()
     has_failed |= run_mypy()
     has_failed |= run_reuse()
+    has_failed |= run_black()
+    has_failed |= run_isort()
 
     if has_failed:
         raise SystemExit(1)

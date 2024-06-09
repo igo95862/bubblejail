@@ -35,13 +35,7 @@ from .services import ServiceWantsDbusSessionBind, ServiceWantsHomeBind
 if TYPE_CHECKING:
     from asyncio import Task
     from asyncio.subprocess import Process
-    from collections.abc import (
-        AsyncIterator,
-        Awaitable,
-        Callable,
-        Iterable,
-        Iterator,
-    )
+    from collections.abc import AsyncIterator, Awaitable, Callable, Iterable, Iterator
     from contextlib import AsyncExitStack
     from typing import IO
 
@@ -71,8 +65,7 @@ class BubblejailRunner:
         self.bwrap_temp_files: list[IO[bytes]] = []
         self.file_descriptors_to_pass: list[int] = []
         # Helper
-        self.helper_executable: list[str] = [
-            BubblejailSettings.HELPER_PATH_STR]
+        self.helper_executable: list[str] = [BubblejailSettings.HELPER_PATH_STR]
         self.helper_runtime_dir = parent.path_runtime_helper_dir
         self.helper_socket_path = parent.path_runtime_helper_socket
         self.helper_socket = socket(AF_UNIX)
@@ -131,35 +124,31 @@ class BubblejailRunner:
         dbus_system_opts: set[str] = set()
         seccomp_state: SeccompState | None = None
         # Unshare all
-        self.bwrap_options_args.append('--unshare-all')
+        self.bwrap_options_args.append("--unshare-all")
         # Die with parent
-        self.bwrap_options_args.append('--die-with-parent')
+        self.bwrap_options_args.append("--die-with-parent")
         # We have our own reaper
-        self.bwrap_options_args.append('--as-pid-1')
+        self.bwrap_options_args.append("--as-pid-1")
 
         if not self.is_shell_debug:
             # Set new session
-            self.bwrap_options_args.append('--new-session')
+            self.bwrap_options_args.append("--new-session")
 
         # Proc
-        self.bwrap_options_args.extend(('--proc', '/proc'))
+        self.bwrap_options_args.extend(("--proc", "/proc"))
         # Devtmpfs
-        self.bwrap_options_args.extend(('--dev', '/dev'))
+        self.bwrap_options_args.extend(("--dev", "/dev"))
 
         # Unset all variables
-        self.bwrap_options_args.append('--clearenv')
+        self.bwrap_options_args.append("--clearenv")
 
         # Pass terminal variables if debug shell activated
         if self.is_shell_debug:
             if term_env := environ.get("TERM"):
-                self.bwrap_options_args.extend(
-                    ("--setenv", "TERM", term_env)
-                )
+                self.bwrap_options_args.extend(("--setenv", "TERM", term_env))
 
             if colorterm_env := environ.get("COLORTERM"):
-                self.bwrap_options_args.extend(
-                    ("--setenv", "COLORTERM", colorterm_env)
-                )
+                self.bwrap_options_args.extend(("--setenv", "COLORTERM", colorterm_env))
 
         for service in self.instance_config.iter_services():
             config_iterator = service.iter_bwrap_options()
@@ -174,8 +163,7 @@ class BubblejailRunner:
                 if isinstance(config, ServiceWantsHomeBind):
                     config = config_iterator.send(self.home_bind_path)
                 elif isinstance(config, ServiceWantsDbusSessionBind):
-                    config = config_iterator.send(
-                        self.dbus_session_socket_path)
+                    config = config_iterator.send(self.dbus_session_socket_path)
 
                 if isinstance(config, BwrapConfigBase):
                     self.bwrap_options_args.extend(config.to_args())
@@ -184,11 +172,10 @@ class BubblejailRunner:
                     temp_f = copy_data_to_temp_file(config.content)
                     self.bwrap_temp_files.append(temp_f)
                     temp_file_descriptor = temp_f.fileno()
-                    self.file_descriptors_to_pass.append(
-                        temp_file_descriptor)
+                    self.file_descriptors_to_pass.append(temp_file_descriptor)
                     self.bwrap_options_args.extend(
                         (
-                            '--ro-bind-data',
+                            "--ro-bind-data",
                             str(temp_file_descriptor),
                             config.dest,
                         )
@@ -206,72 +193,70 @@ class BubblejailRunner:
                     # TODO: implement priority
                     self.executable_args.extend(config.launch_args)
                 else:
-                    raise TypeError('Unknown bwrap config.')
+                    raise TypeError("Unknown bwrap config.")
 
         if seccomp_state is not None:
             seccomp_temp_file = seccomp_state.export_to_temp_file()
             seccomp_fd = seccomp_temp_file.fileno()
             self.file_descriptors_to_pass.append(seccomp_fd)
             self.bwrap_temp_files.append(seccomp_temp_file)
-            self.bwrap_options_args.extend(('--seccomp', str(seccomp_fd)))
+            self.bwrap_options_args.extend(("--seccomp", str(seccomp_fd)))
 
-        self.post_init_hooks.extend(
-            self.instance_config.iter_post_init_hooks()
-        )
-        self.post_shutdown_hooks.extend(
-            self.instance_config.iter_post_shutdown_hooks()
-        )
+        self.post_init_hooks.extend(self.instance_config.iter_post_init_hooks())
+        self.post_shutdown_hooks.extend(self.instance_config.iter_post_shutdown_hooks())
 
         # region dbus
         # Session dbus
-        self.dbus_proxy_args.extend((
-            'xdg-dbus-proxy',
-            environ['DBUS_SESSION_BUS_ADDRESS'],
-            str(self.dbus_session_socket_path),
-        ))
+        self.dbus_proxy_args.extend(
+            (
+                "xdg-dbus-proxy",
+                environ["DBUS_SESSION_BUS_ADDRESS"],
+                str(self.dbus_session_socket_path),
+            )
+        )
 
-        self.dbus_proxy_pipe_read, self.dbus_proxy_pipe_write \
-            = pipe2(O_NONBLOCK | O_CLOEXEC)
+        self.dbus_proxy_pipe_read, self.dbus_proxy_pipe_write = pipe2(
+            O_NONBLOCK | O_CLOEXEC
+        )
 
         self.dbus_proxy_args.append(f"--fd={self.dbus_proxy_pipe_write}")
 
         self.dbus_proxy_args.extend(dbus_session_opts)
-        self.dbus_proxy_args.append('--filter')
+        self.dbus_proxy_args.append("--filter")
         if self.is_log_dbus:
-            self.dbus_proxy_args.append('--log')
+            self.dbus_proxy_args.append("--log")
 
         # System dbus
-        self.dbus_proxy_args.extend((
-            'unix:path=/run/dbus/system_bus_socket',
-            str(self.dbus_system_socket_path),
-        ))
+        self.dbus_proxy_args.extend(
+            (
+                "unix:path=/run/dbus/system_bus_socket",
+                str(self.dbus_system_socket_path),
+            )
+        )
 
         self.dbus_proxy_args.extend(dbus_system_opts)
-        self.dbus_proxy_args.append('--filter')
+        self.dbus_proxy_args.append("--filter")
         if self.is_log_dbus:
-            self.dbus_proxy_args.append('--log')
+            self.dbus_proxy_args.append("--log")
 
         # Bind twice, in /var and /run
         self.bwrap_options_args.extend(
             Bind(
-                str(self.dbus_system_socket_path),
-                '/var/run/dbus/system_bus_socket').to_args()
+                str(self.dbus_system_socket_path), "/var/run/dbus/system_bus_socket"
+            ).to_args()
         )
 
         self.bwrap_options_args.extend(
             Bind(
-                str(self.dbus_system_socket_path),
-                '/run/dbus/system_bus_socket').to_args()
+                str(self.dbus_system_socket_path), "/run/dbus/system_bus_socket"
+            ).to_args()
         )
         # endregion dbus
 
         # Info fd pipe
-        self.info_fd_pipe_read, self.info_fd_pipe_write = (
-            pipe2(O_NONBLOCK | O_CLOEXEC)
-        )
+        self.info_fd_pipe_read, self.info_fd_pipe_write = pipe2(O_NONBLOCK | O_CLOEXEC)
         self.file_descriptors_to_pass.append(self.info_fd_pipe_write)
-        self.bwrap_options_args.extend(
-            ("--info-fd", f"{self.info_fd_pipe_write}"))
+        self.bwrap_options_args.extend(("--info-fd", f"{self.info_fd_pipe_write}"))
         running_loop = get_running_loop()
         running_loop.add_reader(
             self.info_fd_pipe_read,
@@ -279,8 +264,8 @@ class BubblejailRunner:
         )
 
         if self.post_init_hooks:
-            self.ready_fd_pipe_read, self.ready_fd_pipe_write = (
-                pipe2(O_NONBLOCK | O_CLOEXEC)
+            self.ready_fd_pipe_read, self.ready_fd_pipe_write = pipe2(
+                O_NONBLOCK | O_CLOEXEC
             )
             self.file_descriptors_to_pass.append(self.ready_fd_pipe_read)
 
@@ -306,7 +291,7 @@ class BubblejailRunner:
             self.sandboxed_pid.set_result(info_dict["child-pid"])
 
     def get_args_file_descriptor(self) -> int:
-        options_null = '\0'.join(self.bwrap_options_args)
+        options_null = "\0".join(self.bwrap_options_args)
 
         args_tempfile = copy_data_to_temp_file(options_null.encode())
         args_tempfile_fileno = args_tempfile.fileno()
@@ -326,7 +311,7 @@ class BubblejailRunner:
         if self.ready_fd_pipe_read and self.ready_fd_pipe_write:
             with (
                 open(self.ready_fd_pipe_read),
-                open(self.ready_fd_pipe_write, mode="w") as f
+                open(self.ready_fd_pipe_write, mode="w") as f,
             ):
                 f.write("bubblejail-ready")
 
@@ -416,8 +401,7 @@ class BubblejailRunner:
             await wait_for(dbus_proxy_ready_future, timeout=1)
             if dbus_proxy_process.returncode is not None:
                 raise ValueError(
-                    "dbus proxy error code: "
-                    f"{self.dbus_proxy_process.returncode}"
+                    "dbus proxy error code: " f"{self.dbus_proxy_process.returncode}"
                 )
             yield None
         finally:
@@ -436,9 +420,9 @@ class BubblejailRunner:
         self,
         run_args: Iterable[str] | None = None,
     ) -> AsyncIterator[Process]:
-        bwrap_args = ['/usr/bin/bwrap']
+        bwrap_args = ["/usr/bin/bwrap"]
         # Pass option args file descriptor
-        bwrap_args.append('--args')
+        bwrap_args.append("--args")
         bwrap_args.append(str(self.get_args_file_descriptor()))
         bwrap_args.append("--")
 

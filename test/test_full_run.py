@@ -92,9 +92,7 @@ class TestFullRun(IsolatedAsyncioTestCase):
         self.assertTrue(self.bubblejail_data_dir.exists())
 
         with self.subTest("Validate desktop entry"):
-            for desktop_entry_file in (
-                self.data_dir / "applications"
-            ).iterdir():
+            for desktop_entry_file in (self.data_dir / "applications").iterdir():
                 subprocess_run(
                     ("desktop-file-validate", str(desktop_entry_file)),
                     check=True,

@@ -27,10 +27,10 @@ class AutoCompleteParser:
         self.last_auto_complete = iter_subcommands()
 
         if current_cmd[-1].isspace():
-            words.append('')
+            words.append("")
 
-        want_instance_set = {'edit', 'run', 'generate-desktop-entry'}
-        base_options = {'--help', '--version'}
+        want_instance_set = {"edit", "run", "generate-desktop-entry"}
+        base_options = {"--help", "--version"}
 
         # enumerate words to allow LL parser lookahead
         enumer_words = enumerate(words)
@@ -39,7 +39,7 @@ class AutoCompleteParser:
         while True:
             index, token = next(enumer_words)
             # If its an option autocomplete to base options
-            if token.startswith('-'):
+            if token.startswith("-"):
                 self.last_auto_complete = base_options
                 continue
             else:
@@ -74,21 +74,19 @@ class AutoCompleteParser:
                 self.last_auto_complete = tuple()
                 return
 
-            if token.startswith('-'):
+            if token.startswith("-"):
                 # Parse base options and subcommands
                 self.last_auto_complete = subcommand_options
                 continue
 
-            if subcommand == 'list':
+            if subcommand == "list":
                 self.last_auto_complete = iter_list_choices()
                 subject_set = True
                 continue
 
-            if words[index - 1] == '--profile':
+            if words[index - 1] == "--profile":
                 # Wants profile
-                self.last_auto_complete = (
-                    BubblejailDirectories.iter_profile_names()
-                )
+                self.last_auto_complete = BubblejailDirectories.iter_profile_names()
                 continue
 
             if subcommand in want_instance_set:
@@ -111,8 +109,8 @@ class AutoCompleteParser:
 
 def run_autocomplete() -> None:
     parser = ArgumentParser()
-    parser.add_argument('auto_complete')
-    parser.add_argument('current_cmd')
+    parser.add_argument("auto_complete")
+    parser.add_argument("current_cmd")
     args = parser.parse_args()
 
     for x in AutoCompleteParser().auto_complete(args.current_cmd):

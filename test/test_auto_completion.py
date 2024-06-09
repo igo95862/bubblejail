@@ -15,26 +15,26 @@ class TestAutocomplete(TestCase):
 
     def test_second_arg(self) -> None:
         self.assertEqual(
-            tuple(self.parser.auto_complete('bubblejail ')),
-            tuple(BUBBLEJAIL_CMD.keys())
+            tuple(self.parser.auto_complete("bubblejail ")),
+            tuple(BUBBLEJAIL_CMD.keys()),
         )
 
         self.assertEqual(
-            tuple(self.parser.auto_complete('bubblejail lis')),
-            tuple(BUBBLEJAIL_CMD.keys())
+            tuple(self.parser.auto_complete("bubblejail lis")),
+            tuple(BUBBLEJAIL_CMD.keys()),
         )
 
         self.assertEqual(
-            tuple(self.parser.auto_complete('bubblejail asd ')),
+            tuple(self.parser.auto_complete("bubblejail asd ")),
             tuple(),
         )
 
     def test_subcommand(self) -> None:
         self.assertEqual(
-            tuple(self.parser.auto_complete('bubblejail list ')),
+            tuple(self.parser.auto_complete("bubblejail list ")),
             tuple(iter_list_choices()),
         )
 
 
-if __name__ == '__main__':
+if __name__ == "__main__":
     main()

@@ -41,7 +41,7 @@ class BubblejailInstance:
     # region Paths
     @cached_property
     def runtime_dir(self) -> Path:
-        return Path(get_runtime_dir() + f'/bubblejail/{self.name}')
+        return Path(get_runtime_dir() + f"/bubblejail/{self.name}")
 
     @cached_property
     def path_config_file(self) -> Path:
@@ -53,24 +53,24 @@ class BubblejailInstance:
 
     @cached_property
     def path_home_directory(self) -> Path:
-        return self.instance_directory / 'home'
+        return self.instance_directory / "home"
 
     @cached_property
     def path_runtime_helper_dir(self) -> Path:
         """Helper run-time directory"""
-        return self.runtime_dir / 'helper'
+        return self.runtime_dir / "helper"
 
     @cached_property
     def path_runtime_helper_socket(self) -> Path:
-        return self.path_runtime_helper_dir / 'helper.socket'
+        return self.path_runtime_helper_dir / "helper.socket"
 
     @cached_property
     def path_runtime_dbus_session_socket(self) -> Path:
-        return self.runtime_dir / 'dbus_session_proxy'
+        return self.runtime_dir / "dbus_session_proxy"
 
     @cached_property
     def path_runtime_dbus_system_socket(self) -> Path:
-        return self.runtime_dir / 'dbus_system_proxy'
+        return self.runtime_dir / "dbus_system_proxy"
 
     # endregion Paths
 
@@ -87,7 +87,7 @@ class BubblejailInstance:
         toml_dict = self._get_metadata_dict()
         toml_dict[key] = value
 
-        with open(self.path_metadata_file, mode='wb') as metadata_file:
+        with open(self.path_metadata_file, mode="wb") as metadata_file:
             toml_dump(toml_dict, metadata_file)
 
     def _get_metadata_value(self, key: str) -> str | None:
@@ -102,23 +102,23 @@ class BubblejailInstance:
 
     @property
     def metadata_creation_profile_name(self) -> str | None:
-        return self._get_metadata_value('creation_profile_name')
+        return self._get_metadata_value("creation_profile_name")
 
     @metadata_creation_profile_name.setter
     def metadata_creation_profile_name(self, profile_name: str) -> None:
         self._save_metadata_key(
-            key='creation_profile_name',
+            key="creation_profile_name",
             value=profile_name,
         )
 
     @property
     def metadata_desktop_entry_name(self) -> str | None:
-        return self._get_metadata_value('desktop_entry_name')
+        return self._get_metadata_value("desktop_entry_name")
 
     @metadata_desktop_entry_name.setter
     def metadata_desktop_entry_name(self, desktop_entry_name: str) -> None:
         self._save_metadata_key(
-            key='desktop_entry_name',
+            key="desktop_entry_name",
             value=desktop_entry_name,
         )
 
@@ -129,8 +129,8 @@ class BubblejailInstance:
             return f.read()
 
     def _read_config(
-            self,
-            config_contents: str | None = None) -> BubblejailInstanceConfig:
+        self, config_contents: str | None = None
+    ) -> BubblejailInstanceConfig:
 
         if config_contents is None:
             config_contents = self._read_config_file()
@@ -140,7 +140,7 @@ class BubblejailInstance:
         return BubblejailInstanceConfig(conf_dict)
 
     def save_config(self, config: BubblejailInstanceConfig) -> None:
-        with open(self.path_config_file, mode='wb') as conf_file:
+        with open(self.path_config_file, mode="wb") as conf_file:
             toml_dump(config.get_service_conf_dict(), conf_file)
 
     async def send_run_rpc(
@@ -203,23 +203,26 @@ class BubblejailInstance:
         if debug_helper_script is not None:
             with open(debug_helper_script) as f:
                 runner.helper_executable = [
-                    'python', '-X', 'dev',
-                    '-c', f.read(),
+                    "python",
+                    "-X",
+                    "dev",
+                    "-c",
+                    f.read(),
                 ]
 
         if dry_run:
             runner.genetate_args()
-            print('Bwrap options:')
-            print(' '.join(runner.bwrap_options_args))
+            print("Bwrap options:")
+            print(" ".join(runner.bwrap_options_args))
 
-            print('Helper options:')
-            print(' '.join(runner.helper_arguments()))
+            print("Helper options:")
+            print(" ".join(runner.helper_arguments()))
 
-            print('Run args:')
-            print(' '.join(args_to_run))
+            print("Run args:")
+            print(" ".join(args_to_run))
 
-            print('D-Bus session args:')
-            print(' '.join(runner.dbus_proxy_args))
+            print("D-Bus session args:")
+            print(" ".join(runner.dbus_proxy_args))
             return
 
         async with AsyncExitStack() as exit_stack:
@@ -231,14 +234,16 @@ class BubblejailInstance:
             try:
                 await task_bwrap_main
             except CancelledError:
-                print('Bwrap cancelled')
+                print("Bwrap cancelled")
 
             if bwrap_process.returncode != 0:
-                raise BubblewrapRunError((
-                    "Bubblewrap failed. "
-                    "Try running bubblejail in terminal to see the "
-                    "exact error."
-                ))
+                raise BubblewrapRunError(
+                    (
+                        "Bubblewrap failed. "
+                        "Try running bubblejail in terminal to see the "
+                        "exact error."
+                    )
+                )
 
             print("Bubblewrap terminated")
 
@@ -246,19 +251,19 @@ class BubblejailInstance:
         # Create temporary directory
         with TemporaryDirectory() as tempdir:
             # Create path to temporary file and write exists config
-            temp_file_path = Path(tempdir + 'temp.toml')
-            with open(temp_file_path, mode='w') as tempfile:
+            temp_file_path = Path(tempdir + "temp.toml")
+            with open(temp_file_path, mode="w") as tempfile:
                 tempfile.write(self._read_config_file())
 
             initial_modification_time = stat(temp_file_path).st_mtime
             # Launch EDITOR on the temporary file
-            run_args = [environ['EDITOR'], str(temp_file_path)]
+            run_args = [environ["EDITOR"], str(temp_file_path)]
             p = await create_subprocess_exec(*run_args)
             await p.wait()
 
             # If file was not modified do nothing
             if initial_modification_time >= stat(temp_file_path).st_mtime:
-                print('File not modified. Not overwriting config')
+                print("File not modified. Not overwriting config")
                 return
 
             # Verify that the new config is valid and save to variable
@@ -268,7 +273,7 @@ class BubblejailInstance:
                     cast(ServicesConfDictType, toml_loads(new_config_toml))
                 )
             # Write to instance config file
-            with open(self.path_config_file, mode='w') as conf_file:
+            with open(self.path_config_file, mode="w") as conf_file:
                 conf_file.write(new_config_toml)
 
 
@@ -277,16 +282,14 @@ class BubblejailProfile:
         self,
         dot_desktop_path: list[str] | str | None = None,
         is_gtk_application: bool = False,
-        services:  ServicesConfDictType | None = None,
-        description: str = 'No description',
-        import_tips: str = 'None',
+        services: ServicesConfDictType | None = None,
+        description: str = "No description",
+        import_tips: str = "None",
     ) -> None:
 
         match dot_desktop_path:
             case list():
-                self.desktop_entries_paths = [
-                    Path(x) for x in dot_desktop_path
-                ]
+                self.desktop_entries_paths = [Path(x) for x in dot_desktop_path]
             case str():
                 self.desktop_entries_paths = [Path(dot_desktop_path)]
             case None:

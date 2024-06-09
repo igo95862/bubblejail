@@ -28,7 +28,7 @@ if TYPE_CHECKING:
     from collections.abc import Generator
     from typing import Any, Literal, Type
 
-    RpcMethods = Literal['ping', 'run']
+    RpcMethods = Literal["ping", "run"]
     RpcData = dict[str, bool | str | list[str]] | list[str]
     RpcType = dict[str, str | RpcData | RpcMethods | None]
 
@@ -36,23 +36,24 @@ if TYPE_CHECKING:
 class JsonRpcRequest:
     @staticmethod
     def _dict_to_json_byte_line(rpc_dict: dict[Any, Any]) -> bytes:
-        string_form = json_dumps(rpc_dict) + '\n'
+        string_form = json_dumps(rpc_dict) + "\n"
         return string_form.encode()
 
     @staticmethod
     def _json_byte_line_to_dict(data: bytes) -> dict[Any, Any]:
         decoded_dict: dict[Any, Any] = json_loads(data)
         # Replace 'id' with 'request_id'
-        decoded_dict['request_id'] = decoded_dict['id']
-        decoded_dict.pop('id')
+        decoded_dict["request_id"] = decoded_dict["id"]
+        decoded_dict.pop("id")
 
         return decoded_dict
 
-    def __init__(self,
-                 method: RpcMethods,
-                 request_id: str | None = None,
-                 params: RpcData | None = None,
-                 ):
+    def __init__(
+        self,
+        method: RpcMethods,
+        request_id: str | None = None,
+        params: RpcData | None = None,
+    ):
         self.request_id = request_id
         self.method = method
         self.params = params
@@ -76,12 +77,12 @@ class JsonRpcRequest:
 class RequestPing(JsonRpcRequest):
     def __init__(self, request_id: str | None = None) -> None:
         super().__init__(
-            method='ping',
+            method="ping",
             request_id=request_id,
         )
 
     def response_ping(self) -> bytes:
-        return self._get_reponse_bytes(['pong'])
+        return self._get_reponse_bytes(["pong"])
 
 
 class RequestRun(JsonRpcRequest):
@@ -89,29 +90,29 @@ class RequestRun(JsonRpcRequest):
         self,
         args_to_run: list[str],
         wait_response: bool = False,
-        request_id: str | None = None
+        request_id: str | None = None,
     ) -> None:
         super().__init__(
-            method='run',
+            method="run",
             request_id=request_id,
             params={
-                'args_to_run': args_to_run,
-                'wait_response': wait_response,
+                "args_to_run": args_to_run,
+                "wait_response": wait_response,
             },
         )
         self.args_to_run = args_to_run
         self.wait_response = wait_response
 
     def response_run(self, text: str) -> bytes:
-        return self._get_reponse_bytes({'return': text})
+        return self._get_reponse_bytes({"return": text})
 
     def decode_response(self, text: bytes) -> str:
-        possible_str = json_loads(text)['result']['return']
+        possible_str = json_loads(text)["result"]["return"]
 
         if isinstance(possible_str, str):
             return possible_str
         else:
-            raise TypeError('Expected str in response.')
+            raise TypeError("Expected str in response.")
 
 
 if TYPE_CHECKING:
@@ -121,20 +122,17 @@ if TYPE_CHECKING:
 def request_selector(data: bytes) -> RpcRequests:
     decoded_dict = JsonRpcRequest._json_byte_line_to_dict(data)
 
-    method = decoded_dict['method']
-    request_id = decoded_dict['request_id']
-    params = decoded_dict['params']
+    method = decoded_dict["method"]
+    request_id = decoded_dict["request_id"]
+    params = decoded_dict["params"]
 
     match method:
-        case 'ping':
+        case "ping":
             return RequestPing(request_id=request_id)
-        case 'run':
-            return RequestRun(
-                request_id=request_id,
-                **params
-            )
+        case "run":
+            return RequestRun(request_id=request_id, **params)
         case _:
-            raise TypeError('Unknown rpc method.')
+            raise TypeError("Unknown rpc method.")
 
 
 def handle_children() -> None:
@@ -151,9 +149,7 @@ def handle_children() -> None:
                 return
 
             if __debug__:
-                print('Reaped: ', exit_pid,
-                      ' Exit code: ', exit_code,
-                      flush=True)
+                print("Reaped: ", exit_pid, " Exit code: ", exit_code, flush=True)
 
     except ChildProcessError:
         ...
@@ -168,9 +164,9 @@ def terminate_children(run_helper_task: Task[None]) -> None:
         nonlocal signal_counter
         signal_counter += 1
         # Send SIGTERM to all our children
-        for task_dir in Path('/proc/self/task/').iterdir():
+        for task_dir in Path("/proc/self/task/").iterdir():
             # Open task
-            with open(task_dir / 'children') as children_file:
+            with open(task_dir / "children") as children_file:
                 children_file_pids = children_file.read().split()
                 for pid in (int(pid_str) for pid_str in children_file_pids):
                     if signal_counter > 20:
@@ -230,7 +226,7 @@ class BubblejailHelper(Awaitable[bool]):
 
     @classmethod
     def iter_proc_process_directories(cls) -> Generator[Path, None, None]:
-        proc_path = Path('/proc')
+        proc_path = Path("/proc")
         # Iterate over items in /proc
         for proc_item in proc_path.iterdir():
             # If we found something without number as name
@@ -243,7 +239,7 @@ class BubblejailHelper(Awaitable[bool]):
         for process_dir in cls.iter_proc_process_directories():
             # read cmdline file containing cmd arguments
             try:
-                with open(process_dir / 'stat') as stat_file:
+                with open(process_dir / "stat") as stat_file:
                     # Read file and split by white space
                     # The command argument is a second white space
                     # separated argument so we only need to split 2 times
@@ -260,10 +256,10 @@ class BubblejailHelper(Awaitable[bool]):
 
     @classmethod
     def process_has_child(cls) -> bool:
-        for task_dir in Path('/proc/self/task/').iterdir():
+        for task_dir in Path("/proc/self/task/").iterdir():
 
             # Open task
-            with open(task_dir / 'children') as children_file:
+            with open(task_dir / "children") as children_file:
                 children_file_contents = children_file.read()
                 if children_file_contents:
                     # Children file will be empty if there are not children
@@ -274,8 +270,9 @@ class BubblejailHelper(Awaitable[bool]):
     async def termninator_watcher(self) -> None:
         if __debug__:
             print(
-                'self.terminator_look_for_command: ',
-                repr(self.terminator_look_for_command))
+                "self.terminator_look_for_command: ",
+                repr(self.terminator_look_for_command),
+            )
 
         while True:
             try:
@@ -290,7 +287,7 @@ class BubblejailHelper(Awaitable[bool]):
 
                 if is_time_to_termniate:
                     if __debug__:
-                        print('No children found. Terminating.')
+                        print("No children found. Terminating.")
                     create_task(self.stop_async())
                     return
             except CancelledError:
@@ -329,19 +326,16 @@ class BubblejailHelper(Awaitable[bool]):
 
         return None
 
-    async def client_handler(
-            self,
-            reader: StreamReader,
-            writer: StreamWriter) -> None:
+    async def client_handler(self, reader: StreamReader, writer: StreamWriter) -> None:
 
         if __debug__:
-            print('Client connected', flush=True)
+            print("Client connected", flush=True)
 
         while True:
             line = await reader.readline()
             if not line:
                 if __debug__:
-                    print('Reached end of reader. Returnning', flush=True)
+                    print("Reached end of reader. Returnning", flush=True)
                 writer.close()
                 await writer.wait_closed()
                 return
@@ -351,8 +345,7 @@ class BubblejailHelper(Awaitable[bool]):
             match request:
                 case RequestPing():
                     response = request.response_ping()
-                case RequestRun(args_to_run=args_to_run,
-                                wait_response=wait_response):
+                case RequestRun(args_to_run=args_to_run, wait_response=wait_response):
                     run_stdout = await self.run_command(
                         args_to_run=args_to_run,
                         std_in_out_mode=PIPE if wait_response else None,
@@ -376,7 +369,7 @@ class BubblejailHelper(Awaitable[bool]):
             sock=self.socket,
         )
         if __debug__:
-            print('Started unix server', flush=True)
+            print("Started unix server", flush=True)
         self.termninator_watcher_task = create_task(self.termninator_watcher())
 
         if self.startup_args:
@@ -387,14 +380,13 @@ class BubblejailHelper(Awaitable[bool]):
     async def stop_async(self) -> None:
         self.terminated.set()
 
-        print('Terminated', flush=True)
+        print("Terminated", flush=True)
 
-    async def __aenter__(self) -> None:
-        ...
+    async def __aenter__(self) -> None: ...
 
     async def __aexit__(
-            self, exc_type: Type[Exception],
-            exc: Exception, tb: Any) -> None:
+        self, exc_type: Type[Exception], exc: Exception, tb: Any
+    ) -> None:
         if (
             self.termninator_watcher_task is not None
             and not self.termninator_watcher_task.done()
@@ -417,13 +409,13 @@ def get_helper_argument_parser() -> ArgumentParser:
     parser = ArgumentParser()
 
     parser.add_argument(
-        '--helper-socket',
+        "--helper-socket",
         type=int,
         required=True,
     )
     parser.add_argument(
-        '--shell',
-        action='store_true',
+        "--shell",
+        action="store_true",
     )
     parser.add_argument(
         "--ready-fd",
@@ -431,7 +423,7 @@ def get_helper_argument_parser() -> ArgumentParser:
     )
 
     parser.add_argument(
-        'args_to_run',
+        "args_to_run",
         nargs="*",
     )
 
@@ -446,14 +438,12 @@ def bubblejail_helper_main() -> None:
     if parsed_args.ready_fd is not None:
         with open(parsed_args.ready_fd) as f:
             if "bubblejail-ready" != f.read():
-                raise RuntimeError(
-                    "Could not read 'bubblejail-ready' from ready fd."
-                )
+                raise RuntimeError("Could not read 'bubblejail-ready' from ready fd.")
 
     if not parsed_args.shell:
         startup_args = parsed_args.args_to_run
     else:
-        startup_args = ['/bin/sh']
+        startup_args = ["/bin/sh"]
 
     helper = BubblejailHelper(
         socket(AF_UNIX, fileno=parsed_args.helper_socket),
@@ -466,17 +456,17 @@ def bubblejail_helper_main() -> None:
             await helper
 
     event_loop = new_event_loop()
-    run_helper_task = event_loop.create_task(run_helper(), name='Run helper')
+    run_helper_task = event_loop.create_task(run_helper(), name="Run helper")
     event_loop.add_signal_handler(SIGCHLD, handle_children)
     event_loop.add_signal_handler(SIGTERM, terminate_children, run_helper_task)
 
     try:
         event_loop.run_until_complete(run_helper_task)
     except CancelledError:
-        print('Termninated by CancelledError')
+        print("Termninated by CancelledError")
     finally:
         event_loop.close()
 
 
-if __name__ == '__main__':
+if __name__ == "__main__":
     bubblejail_helper_main()

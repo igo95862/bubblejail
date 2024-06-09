@@ -16,11 +16,12 @@ jobs:
       image: docker.io/archlinux:latest
     steps:
       - name: Install linters and Python dependencies
-        run: |
-          pacman --noconfirm -Syu \
-            git \
-            python-pyflakes reuse \
-            mypy python-pyqt6 python-tomli-w
+        run: >
+          pacman --noconfirm -Syu
+          git
+          python-pyflakes reuse
+          mypy python-pyqt6 python-tomli-w
+          python-black python-isort
       - name: Checkout
         uses: actions/checkout@v4
       - name: Add safe git directory
@@ -28,7 +29,7 @@ jobs:
           git config --global --add safe.directory "$GITHUB_WORKSPACE"
       - name: Run linters
         run: |
-          python3 tools/run_linters.py
+          python3 -m tools.run_linters
 
   build:
     name: Build
@@ -37,9 +38,9 @@ jobs:
       image: docker.io/archlinux:latest
     steps:
       - name: Install build dependencies
-        run: |
-          pacman --noconfirm -Syu \
-            git python python-jinja scdoc meson
+        run: >
+          pacman --noconfirm -Syu
+          git python python-jinja scdoc meson
       - name: Checkout
         uses: actions/checkout@v4
       - name: Run meson

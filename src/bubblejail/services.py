@@ -9,20 +9,13 @@ from asyncio import (
     get_running_loop,
     wait_for,
 )
-from dataclasses import (
-    asdict,
-    dataclass,
-    field,
-    fields,
-    is_dataclass,
-    make_dataclass,
-)
+from contextlib import ExitStack
+from dataclasses import asdict, dataclass, field, fields, is_dataclass, make_dataclass
 from multiprocessing import Process
 from os import O_CLOEXEC, O_NONBLOCK, environ, getpid, getuid, pipe2, readlink
 from pathlib import Path
 from shutil import which
 from typing import TYPE_CHECKING, TypedDict
-from contextlib import ExitStack
 
 from xdg import BaseDirectory
 
@@ -66,23 +59,23 @@ if TYPE_CHECKING:
 # region Service Typing
 
 
-class ServiceWantsSend:
-    ...
+class ServiceWantsSend: ...
 
 
-class ServiceWantsHomeBind(ServiceWantsSend):
-    ...
+class ServiceWantsHomeBind(ServiceWantsSend): ...
 
 
-class ServiceWantsDbusSessionBind(ServiceWantsSend):
-    ...
+class ServiceWantsDbusSessionBind(ServiceWantsSend): ...
 
 
 if TYPE_CHECKING:
     ServiceIterTypes = (
-        BwrapConfigBase | FileTransfer |
-        SeccompDirective | LaunchArguments |
-        ServiceWantsSend | DbusCommon
+        BwrapConfigBase
+        | FileTransfer
+        | SeccompDirective
+        | LaunchArguments
+        | ServiceWantsSend
+        | DbusCommon
     )
 
     ServiceSendType = Path
@@ -103,33 +96,38 @@ class SettingFieldMetadata(TypedDict):
     description: str
     is_deprecated: bool
 
+
 # endregion Service Options
 
 
 # region HelperFunctions
-XDG_DESKTOP_VARS: frozenset[str] = frozenset({
-    'XDG_CURRENT_DESKTOP', 'DESKTOP_SESSION',
-    'XDG_SESSION_TYPE', 'XDG_SESSION_DESKTOP'})
+XDG_DESKTOP_VARS: frozenset[str] = frozenset(
+    {
+        "XDG_CURRENT_DESKTOP",
+        "DESKTOP_SESSION",
+        "XDG_SESSION_TYPE",
+        "XDG_SESSION_DESKTOP",
+    }
+)
 
 
 def generate_path_var() -> str:
     """Filters PATH variable to locations with /usr prefix"""
 
     # Split by semicolon
-    paths = environ['PATH'].split(':')
+    paths = environ["PATH"].split(":")
     # Filter by /usr and /tmp then join by semicolon
-    return ':'.join(filter(
-        lambda s: s.startswith('/usr/')
-        or s == '/bin'
-        or s == '/sbin',
-        paths))
+    return ":".join(
+        filter(lambda s: s.startswith("/usr/") or s == "/bin" or s == "/sbin", paths)
+    )
 
 
 def generate_toolkits() -> Generator[ServiceIterTypes, None, None]:
     config_home_path = Path(BaseDirectory.xdg_config_home)
-    kde_globals_conf = config_home_path / 'kdeglobals'
+    kde_globals_conf = config_home_path / "kdeglobals"
     if kde_globals_conf.exists():
         yield ReadOnlyBind(kde_globals_conf)
+
 
 # endregion HelperFunctions
 
@@ -145,11 +143,9 @@ class BubblejailService:
     def iter_bwrap_options(self) -> ServiceGeneratorType:
         yield from ()
 
-    async def post_init_hook(self, pid: int) -> None:
-        ...
+    async def post_init_hook(self, pid: int) -> None: ...
 
-    async def post_shutdown_hook(self) -> None:
-        ...
+    async def post_shutdown_hook(self) -> None: ...
 
     @classmethod
     def has_settings(cls) -> bool:
@@ -170,32 +166,33 @@ class BubblejailService:
 
 
 # Pre version 0.6.0 home bind path
-OLD_HOME_BIND = Path('/home/user')
+OLD_HOME_BIND = Path("/home/user")
 
 
 class BubblejailDefaults(BubblejailService):
 
     def iter_bwrap_options(self) -> ServiceGeneratorType:
         # Distro packaged libraries and binaries
-        yield ReadOnlyBind('/usr')
-        yield ReadOnlyBind('/opt')
+        yield ReadOnlyBind("/usr")
+        yield ReadOnlyBind("/opt")
         # Recreate symlinks in / or mount them read-only if its not a symlink.
         # Should be portable between distros.
-        for root_path in Path('/').iterdir():
+        for root_path in Path("/").iterdir():
             if (
-                    root_path.name.startswith('lib')  # /lib /lib64 /lib32
-                    or root_path.name == 'bin'
-                    or root_path.name == 'sbin'):
+                root_path.name.startswith("lib")  # /lib /lib64 /lib32
+                or root_path.name == "bin"
+                or root_path.name == "sbin"
+            ):
                 if root_path.is_symlink():
                     yield Symlink(readlink(root_path), root_path)
                 else:
                     yield ReadOnlyBind(root_path)
 
-        yield ReadOnlyBind('/etc')
+        yield ReadOnlyBind("/etc")
 
         # Temporary directories
-        yield DirCreate('/tmp')
-        yield DirCreate('/var')
+        yield DirCreate("/tmp")
+        yield DirCreate("/var")
 
         yield DirCreate(self.xdg_runtime_dir, permissions=0o700)
 
@@ -203,7 +200,7 @@ class BubblejailDefaults(BubblejailService):
         real_home = Path.home()
         home_path = yield ServiceWantsHomeBind()
         yield Bind(home_path, real_home)
-        yield EnvrimentalVar('HOME', str(real_home))
+        yield EnvrimentalVar("HOME", str(real_home))
         # Compatibility symlink
         if real_home != OLD_HOME_BIND:
             yield Symlink(real_home, OLD_HOME_BIND)
@@ -212,44 +209,64 @@ class BubblejailDefaults(BubblejailService):
 
         # Set environmental variables
         from getpass import getuser
-        yield EnvrimentalVar('USER', getuser())
-        yield EnvrimentalVar('USERNAME', getuser())
-        yield EnvrimentalVar('PATH', generate_path_var())
-        yield EnvrimentalVar('XDG_RUNTIME_DIR', str(self.xdg_runtime_dir))
 
-        yield EnvrimentalVar('LANG')
+        yield EnvrimentalVar("USER", getuser())
+        yield EnvrimentalVar("USERNAME", getuser())
+        yield EnvrimentalVar("PATH", generate_path_var())
+        yield EnvrimentalVar("XDG_RUNTIME_DIR", str(self.xdg_runtime_dir))
 
-        if not environ.get('BUBBLEJAIL_DISABLE_SECCOMP_DEFAULTS'):
+        yield EnvrimentalVar("LANG")
+
+        if not environ.get("BUBBLEJAIL_DISABLE_SECCOMP_DEFAULTS"):
             for blocked_syscal in (
-                "bdflush", "io_pgetevents",
-                "kexec_file_load", "kexec_load",
-                "migrate_pages", "move_pages",
-                "nfsservctl", "nice", "oldfstat",
-                "oldlstat", "oldolduname", "oldstat",
-                "olduname", "pciconfig_iobase", "pciconfig_read",
-                "pciconfig_write", "sgetmask", "ssetmask", "swapcontext",
-                "swapoff", "swapon", "sysfs", "uselib", "userfaultfd",
-                "ustat", "vm86", "vm86old", "vmsplice",
-
-                "bpf", "fanotify_init", "lookup_dcookie",
-                "perf_event_open", "quotactl", "setdomainname",
+                "bdflush",
+                "io_pgetevents",
+                "kexec_file_load",
+                "kexec_load",
+                "migrate_pages",
+                "move_pages",
+                "nfsservctl",
+                "nice",
+                "oldfstat",
+                "oldlstat",
+                "oldolduname",
+                "oldstat",
+                "olduname",
+                "pciconfig_iobase",
+                "pciconfig_read",
+                "pciconfig_write",
+                "sgetmask",
+                "ssetmask",
+                "swapcontext",
+                "swapoff",
+                "swapon",
+                "sysfs",
+                "uselib",
+                "userfaultfd",
+                "ustat",
+                "vm86",
+                "vm86old",
+                "vmsplice",
+                "bpf",
+                "fanotify_init",
+                "lookup_dcookie",
+                "perf_event_open",
+                "quotactl",
+                "setdomainname",
                 "sethostname",
-
                 # "chroot",
                 # Firefox and Chromium fails if chroot is not available
-
-                "delete_module", "init_module",
-                "finit_module", "query_module",
-
+                "delete_module",
+                "init_module",
+                "finit_module",
+                "query_module",
                 "acct",
-
-                "iopl", "ioperm",
-
-                "settimeofday", "stime",
-                "clock_settime", "clock_settime64"
-
-                "vhangup",
-
+                "iopl",
+                "ioperm",
+                "settimeofday",
+                "stime",
+                "clock_settime",
+                "clock_settime64" "vhangup",
             ):
                 yield SeccompSyscallErrno(
                     blocked_syscal,
@@ -258,11 +275,11 @@ class BubblejailDefaults(BubblejailService):
                 )
 
         # Bind session socket inside the sandbox
-        dbus_session_inside_path = self.xdg_runtime_dir / 'bus'
+        dbus_session_inside_path = self.xdg_runtime_dir / "bus"
         dbus_session_outside_path = yield ServiceWantsDbusSessionBind()
         yield EnvrimentalVar(
-            'DBUS_SESSION_BUS_ADDRESS',
-            f"unix:path={dbus_session_inside_path}")
+            "DBUS_SESSION_BUS_ADDRESS", f"unix:path={dbus_session_inside_path}"
+        )
         yield Bind(
             dbus_session_outside_path,
             dbus_session_inside_path,
@@ -271,9 +288,9 @@ class BubblejailDefaults(BubblejailService):
     def __repr__(self) -> str:
         return "Bubblejail defaults."
 
-    name = 'default'
-    pretty_name = 'Default settings'
-    description = ('Settings that must be present in any instance')
+    name = "default"
+    pretty_name = "Default settings"
+    description = "Settings that must be present in any instance"
 
 
 class CommonSettings(BubblejailService):
@@ -281,42 +298,42 @@ class CommonSettings(BubblejailService):
     @dataclass
     class Settings:
         executable_name: str | list[str] = field(
-            default='',
+            default="",
             metadata=SettingFieldMetadata(
-                pretty_name='Default arguments',
+                pretty_name="Default arguments",
                 description=(
-                    'Default arguments to run when no arguments were provided'
+                    "Default arguments to run when no arguments were provided"
                 ),
                 is_deprecated=False,
-            )
+            ),
         )
         share_local_time: bool = field(
             default=False,
             metadata=SettingFieldMetadata(
-                pretty_name='Share local time',
-                description='This option has no effect since version 0.6.0',
+                pretty_name="Share local time",
+                description="This option has no effect since version 0.6.0",
                 is_deprecated=True,
-            )
+            ),
         )
         filter_disk_sync: bool = field(
             default=False,
             metadata=SettingFieldMetadata(
-                pretty_name='Filter disk sync',
+                pretty_name="Filter disk sync",
                 description=(
-                    'Do not allow flushing disk. '
-                    'Useful for EA Origin client that tries to flush '
-                    'to disk too often.'
+                    "Do not allow flushing disk. "
+                    "Useful for EA Origin client that tries to flush "
+                    "to disk too often."
                 ),
                 is_deprecated=False,
-            )
+            ),
         )
         dbus_name: str = field(
-            default='',
+            default="",
             metadata=SettingFieldMetadata(
-                pretty_name='Application\'s D-Bus name',
-                description='D-Bus name allowed to acquire and own',
+                pretty_name="Application's D-Bus name",
+                description="D-Bus name allowed to acquire and own",
                 is_deprecated=False,
-            )
+            ),
         )
 
     def iter_bwrap_options(self) -> ServiceGeneratorType:
@@ -330,14 +347,14 @@ class CommonSettings(BubblejailService):
                 yield LaunchArguments(settings.executable_name)
 
         if settings.filter_disk_sync:
-            yield SeccompSyscallErrno('sync', 0)
-            yield SeccompSyscallErrno('fsync', 0)
+            yield SeccompSyscallErrno("sync", 0)
+            yield SeccompSyscallErrno("fsync", 0)
 
         if dbus_name := settings.dbus_name:
             yield DbusSessionOwn(dbus_name)
 
-    name = 'common'
-    pretty_name = 'Common Settings'
+    name = "common"
+    pretty_name = "Common Settings"
     description = "Settings that don't fit in any particular category"
 
 
@@ -384,29 +401,31 @@ class X11(BubblejailService):
             if x in environ:
                 yield EnvrimentalVar(x)
 
-        yield EnvrimentalVar('DISPLAY')
+        yield EnvrimentalVar("DISPLAY")
 
         if x11_socket_path := self.x11_socket_path(environ["DISPLAY"]):
             yield ReadOnlyBind(x11_socket_path)
 
-        x_authority_path_str = environ.get('XAUTHORITY')
+        x_authority_path_str = environ.get("XAUTHORITY")
         if x_authority_path_str is not None:
-            yield ReadOnlyBind(x_authority_path_str, '/tmp/.Xauthority')
-            yield EnvrimentalVar('XAUTHORITY', '/tmp/.Xauthority')
+            yield ReadOnlyBind(x_authority_path_str, "/tmp/.Xauthority")
+            yield EnvrimentalVar("XAUTHORITY", "/tmp/.Xauthority")
 
         yield from generate_toolkits()
 
-    name = 'x11'
-    pretty_name = 'X11 windowing system'
-    description = ('Gives access to X11 socket.\n'
-                   'This is generally the default Linux windowing system.')
+    name = "x11"
+    pretty_name = "X11 windowing system"
+    description = (
+        "Gives access to X11 socket.\n"
+        "This is generally the default Linux windowing system."
+    )
 
 
 class Wayland(BubblejailService):
     def iter_bwrap_options(self) -> ServiceGeneratorType:
 
         try:
-            wayland_display_env = environ['WAYLAND_DISPLAY']
+            wayland_display_env = environ["WAYLAND_DISPLAY"]
         except KeyError:
             print("No wayland display.")
 
@@ -414,23 +433,24 @@ class Wayland(BubblejailService):
             if x in environ:
                 yield EnvrimentalVar(x)
 
-        yield EnvrimentalVar('GDK_BACKEND', 'wayland')
-        yield EnvrimentalVar('MOZ_DBUS_REMOTE', '1')
-        yield EnvrimentalVar('MOZ_ENABLE_WAYLAND', '1')
+        yield EnvrimentalVar("GDK_BACKEND", "wayland")
+        yield EnvrimentalVar("MOZ_DBUS_REMOTE", "1")
+        yield EnvrimentalVar("MOZ_ENABLE_WAYLAND", "1")
 
-        yield EnvrimentalVar('WAYLAND_DISPLAY', 'wayland-0')
-        original_socket_path = (Path(BaseDirectory.get_runtime_dir())
-                                / wayland_display_env)
+        yield EnvrimentalVar("WAYLAND_DISPLAY", "wayland-0")
+        original_socket_path = (
+            Path(BaseDirectory.get_runtime_dir()) / wayland_display_env
+        )
 
-        new_socket_path = self.xdg_runtime_dir / 'wayland-0'
+        new_socket_path = self.xdg_runtime_dir / "wayland-0"
         yield Bind(original_socket_path, new_socket_path)
         yield from generate_toolkits()
 
-    name = 'wayland'
-    pretty_name = 'Wayland windowing system'
+    name = "wayland"
+    pretty_name = "Wayland windowing system"
     description = (
-        'Make sure you are running Wayland session\n'
-        'and your application supports Wayland'
+        "Make sure you are running Wayland session\n"
+        "and your application supports Wayland"
     )
 
 
@@ -446,10 +466,10 @@ class Network(BubblejailService):
 
         yield ShareNetwork()
 
-    name = 'network'
-    pretty_name = 'Network access'
-    description = 'Gives access to network.'
-    conflicts = frozenset(('slirp4netns', ))
+    name = "network"
+    pretty_name = "Network access"
+    description = "Gives access to network."
+    conflicts = frozenset(("slirp4netns",))
 
 
 class PulseAudio(BubblejailService):
@@ -457,12 +477,12 @@ class PulseAudio(BubblejailService):
 
         yield Bind(
             f"{BaseDirectory.get_runtime_dir()}/pulse/native",
-            self.xdg_runtime_dir / 'pulse/native',
+            self.xdg_runtime_dir / "pulse/native",
         )
 
-    name = 'pulse_audio'
-    pretty_name = 'Pulse Audio'
-    description = 'Default audio system in most distros'
+    name = "pulse_audio"
+    pretty_name = "Pulse Audio"
+    description = "Default audio system in most distros"
 
 
 class HomeShare(BubblejailService):
@@ -472,10 +492,10 @@ class HomeShare(BubblejailService):
         home_paths: list[str] = field(
             default_factory=list,
             metadata=SettingFieldMetadata(
-                pretty_name='List of paths',
-                description='Path to share with sandbox',
+                pretty_name="List of paths",
+                description="Path to share with sandbox",
                 is_deprecated=False,
-            )
+            ),
         )
 
     def iter_bwrap_options(self) -> ServiceGeneratorType:
@@ -487,9 +507,9 @@ class HomeShare(BubblejailService):
                 Path.home() / path_relative_to_home,
             )
 
-    name = 'home_share'
-    pretty_name = 'Home Share'
-    description = 'Share directories or files relative to home'
+    name = "home_share"
+    pretty_name = "Home Share"
+    description = "Share directories or files relative to home"
 
 
 class DirectRendering(BubblejailService):
@@ -499,14 +519,14 @@ class DirectRendering(BubblejailService):
         enable_aco: bool = field(
             default=False,
             metadata=SettingFieldMetadata(
-                pretty_name='Enable ACO',
+                pretty_name="Enable ACO",
                 description=(
-                    'Enables high performance vulkan shader '
-                    'compiler for AMD GPUs. Enabled by default '
-                    'since mesa 20.02'
+                    "Enables high performance vulkan shader "
+                    "compiler for AMD GPUs. Enabled by default "
+                    "since mesa 20.02"
                 ),
                 is_deprecated=True,
-            )
+            ),
         )
 
     def iter_bwrap_options(self) -> ServiceGeneratorType:
@@ -515,14 +535,14 @@ class DirectRendering(BubblejailService):
 
         # Bind /dev/dri and /sys/dev/char and /sys/devices
         # Get names of cardX and renderX in /dev/dri
-        dev_dri_path = Path('/dev/dri/')
+        dev_dri_path = Path("/dev/dri/")
         device_names = set()
         for x in dev_dri_path.iterdir():
             if x.is_char_device():
                 device_names.add(x.stem)
 
         # Resolve links in /sys/dev/char/
-        sys_dev_char_path = Path('/sys/dev/char/')
+        sys_dev_char_path = Path("/sys/dev/char/")
         # For each symlink in /sys/dev/char/ resolve
         # and see if they point to cardX or renderX
         for x in sys_dev_char_path.iterdir():
@@ -537,16 +557,16 @@ class DirectRendering(BubblejailService):
                 # We want to bind the /sys/devices/..pcie_id../
                 yield DevBind(x_resolved.parents[1])
 
-        yield DevBind('/dev/dri')
+        yield DevBind("/dev/dri")
 
         # Nvidia specific binds
-        for x in Path('/dev/').iterdir():
-            if x.name.startswith('nvidia'):
+        for x in Path("/dev/").iterdir():
+            if x.name.startswith("nvidia"):
                 yield DevBind(x)
 
-    name = 'direct_rendering'
-    pretty_name = 'Direct Rendering'
-    description = 'Provides access to GPU'
+    name = "direct_rendering"
+    pretty_name = "Direct Rendering"
+    description = "Provides access to GPU"
 
 
 class Systray(BubblejailService):
@@ -556,12 +576,12 @@ class Systray(BubblejailService):
             object_path="/StatusNotifierWatcher",
         )
 
-    name = 'systray'
-    pretty_name = 'System tray icons'
+    name = "systray"
+    pretty_name = "System tray icons"
     description = (
-        'Provides access to D-Bus API for creating tray icons\n'
-        'This is not the only way to create tray icons but\n'
-        'the most common one.'
+        "Provides access to D-Bus API for creating tray icons\n"
+        "This is not the only way to create tray icons but\n"
+        "the most common one."
     )
 
 
@@ -569,8 +589,8 @@ class Joystick(BubblejailService):
     def iter_bwrap_options(self) -> ServiceGeneratorType:
         look_for_names: set[str] = set()
 
-        dev_input_path = Path('/dev/input')
-        sys_class_input_path = Path('/sys/class/input')
+        dev_input_path = Path("/dev/input")
+        sys_class_input_path = Path("/sys/class/input")
         js_names: set[str] = set()
         for input_dev in dev_input_path.iterdir():
             if not input_dev.is_char_device():
@@ -595,7 +615,7 @@ class Joystick(BubblejailService):
             js_reloved = sys_class_input_js.resolve()
             js_input_path = js_reloved.parents[0]
             for input_element in js_input_path.iterdir():
-                if input_element.name.startswith('event'):
+                if input_element.name.startswith("event"):
                     look_for_names.add(input_element.name)
 
         # Find the *-joystick in /dev/input/by-path/
@@ -613,12 +633,12 @@ class Joystick(BubblejailService):
             pci_path = sys_class_path.resolve()
             yield DevBind(pci_path.parents[2])
 
-    name = 'joystick'
-    pretty_name = 'Joysticks and gamepads'
+    name = "joystick"
+    pretty_name = "Joysticks and gamepads"
     description = (
-        'Windowing systems (x11 and wayland) do not support gamepads.\n'
-        'Every game has to read from device files directly.\n'
-        'This service provides access to them.'
+        "Windowing systems (x11 and wayland) do not support gamepads.\n"
+        "Every game has to read from device files directly.\n"
+        "This service provides access to them."
     )
 
 
@@ -629,18 +649,18 @@ class RootShare(BubblejailService):
         paths: list[str] = field(
             default_factory=list,
             metadata=SettingFieldMetadata(
-                pretty_name='Read/Write paths',
-                description='Path to share with sandbox',
+                pretty_name="Read/Write paths",
+                description="Path to share with sandbox",
                 is_deprecated=False,
-            )
+            ),
         )
         read_only_paths: list[str] = field(
             default_factory=list,
             metadata=SettingFieldMetadata(
-                pretty_name='Read only paths',
-                description='Path to share read-only with sandbox',
+                pretty_name="Read only paths",
+                description="Path to share read-only with sandbox",
                 is_deprecated=False,
-            )
+            ),
         )
 
     def iter_bwrap_options(self) -> ServiceGeneratorType:
@@ -652,20 +672,15 @@ class RootShare(BubblejailService):
         for x in settings.read_only_paths:
             yield ReadOnlyBind(x)
 
-    name = 'root_share'
-    pretty_name = 'Root share'
-    description = (
-        'Share directories or files relative to root /'
-    )
+    name = "root_share"
+    pretty_name = "Root share"
+    description = "Share directories or files relative to root /"
 
 
 class OpenJDK(BubblejailService):
-    name = 'openjdk'
-    pretty_name = 'Java'
-    description = (
-        'Enable for applications that require Java\n'
-        'Example: Minecraft'
-    )
+    name = "openjdk"
+    pretty_name = "Java"
+    description = "Enable for applications that require Java\n" "Example: Minecraft"
 
     display_in_gui = False
 
@@ -677,9 +692,9 @@ class Notifications(BubblejailService):
             object_path="/org/freedesktop/Notifications",
         )
 
-    name = 'notify'
-    pretty_name = 'Notifications'
-    description = 'Ability to send notifications to desktop'
+    name = "notify"
+    pretty_name = "Notifications"
+    description = "Ability to send notifications to desktop"
 
 
 class GnomeToolkit(BubblejailService):
@@ -689,79 +704,80 @@ class GnomeToolkit(BubblejailService):
         gnome_portal: bool = field(
             default=False,
             metadata=SettingFieldMetadata(
-                pretty_name='GNOME Portal',
-                description='Access to GNOME Portal D-Bus API',
+                pretty_name="GNOME Portal",
+                description="Access to GNOME Portal D-Bus API",
                 is_deprecated=False,
-            )
+            ),
         )
         dconf_dbus: bool = field(
             default=False,
             metadata=SettingFieldMetadata(
-                pretty_name='Dconf D-Bus',
-                description='Access to dconf D-Bus API',
+                pretty_name="Dconf D-Bus",
+                description="Access to dconf D-Bus API",
                 is_deprecated=False,
-            )
+            ),
         )
         gnome_vfs_dbus: bool = field(
             default=False,
             metadata=SettingFieldMetadata(
-                pretty_name='GNOME VFS',
-                description='Access to GNOME Virtual File System D-Bus API',
+                pretty_name="GNOME VFS",
+                description="Access to GNOME Virtual File System D-Bus API",
                 is_deprecated=False,
-            )
+            ),
         )
 
     def iter_bwrap_options(self) -> ServiceGeneratorType:
         settings = self.context.get_settings(GnomeToolkit.Settings)
 
         if settings.gnome_portal:
-            yield EnvrimentalVar('GTK_USE_PORTAL', '1')
-            yield DbusSessionTalkTo('org.freedesktop.portal.*')
+            yield EnvrimentalVar("GTK_USE_PORTAL", "1")
+            yield DbusSessionTalkTo("org.freedesktop.portal.*")
 
         if settings.dconf_dbus:
-            yield DbusSessionTalkTo('ca.desrt.dconf')
+            yield DbusSessionTalkTo("ca.desrt.dconf")
 
         if settings.gnome_vfs_dbus:
-            yield DbusSessionTalkTo('org.gtk.vfs.*')
+            yield DbusSessionTalkTo("org.gtk.vfs.*")
 
         # TODO: org.a11y.Bus accessibility services
         # Needs both dbus and socket, socket is address is
         # acquired from dbus
 
-    name = 'gnome_toolkit'
-    pretty_name = 'GNOME toolkit'
-    description = 'Access to GNOME APIs'
+    name = "gnome_toolkit"
+    pretty_name = "GNOME toolkit"
+    description = "Access to GNOME APIs"
     display_in_gui = False
 
 
 class Pipewire(BubblejailService):
     def iter_bwrap_options(self) -> ServiceGeneratorType:
-        PIPEWIRE_SOCKET_NAME = 'pipewire-0'
-        original_socket_path = (Path(BaseDirectory.get_runtime_dir())
-                                / PIPEWIRE_SOCKET_NAME)
+        PIPEWIRE_SOCKET_NAME = "pipewire-0"
+        original_socket_path = (
+            Path(BaseDirectory.get_runtime_dir()) / PIPEWIRE_SOCKET_NAME
+        )
 
-        new_socket_path = self.xdg_runtime_dir / 'pipewire-0'
+        new_socket_path = self.xdg_runtime_dir / "pipewire-0"
 
         yield ReadOnlyBind(original_socket_path, new_socket_path)
 
-    name = 'pipewire'
-    pretty_name = 'Pipewire'
-    description = 'Pipewire sound and screencapture system'
+    name = "pipewire"
+    pretty_name = "Pipewire"
+    description = "Pipewire sound and screencapture system"
 
 
 class VideoForLinux(BubblejailService):
     def iter_bwrap_options(self) -> ServiceGeneratorType:
 
-        yield DevBindTry('/dev/v4l')
-        yield DevBindTry('/sys/class/video4linux')
-        yield DevBindTry('/sys/bus/media/')
+        yield DevBindTry("/dev/v4l")
+        yield DevBindTry("/sys/class/video4linux")
+        yield DevBindTry("/sys/bus/media/")
 
         try:
-            sys_v4l_iterator = Path('/sys/class/video4linux').iterdir()
+            sys_v4l_iterator = Path("/sys/class/video4linux").iterdir()
             for sys_path in sys_v4l_iterator:
                 pcie_path = sys_path.resolve()
 
-                for char_path in Path('/sys/dev/char/').iterdir():
+                for char_path in Path("/sys/dev/char/").iterdir():
                     if char_path.resolve() == pcie_path:
                         yield Symlink(readlink(char_path), char_path)
 
@@ -769,11 +785,11 @@ class VideoForLinux(BubblejailService):
         except FileNotFoundError:
             ...
 
-        for dev_path in Path('/dev').iterdir():
+        for dev_path in Path("/dev").iterdir():
 
             name = dev_path.name
 
-            if not (name.startswith('video') or name.startswith('media')):
+            if not (name.startswith("video") or name.startswith("media")):
                 continue
 
             if not name[5:].isnumeric():
@@ -781,47 +797,47 @@ class VideoForLinux(BubblejailService):
 
             yield DevBind(dev_path)
 
-    name = 'v4l'
-    pretty_name = 'Video4Linux'
-    description = 'Video capture. (webcams and etc.)'
+    name = "v4l"
+    pretty_name = "Video4Linux"
+    description = "Video capture. (webcams and etc.)"
 
 
 class IBus(BubblejailService):
     def iter_bwrap_options(self) -> ServiceGeneratorType:
-        yield EnvrimentalVar('IBUS_USE_PORTAL', '1')
-        yield EnvrimentalVar('GTK_IM_MODULE', 'ibus')
-        yield EnvrimentalVar('QT_IM_MODULE', 'ibus')
-        yield EnvrimentalVar('XMODIFIERS', '@im=ibus')
-        yield EnvrimentalVar('GLFW_IM_MODULE', 'ibus')
-        yield DbusSessionTalkTo('org.freedesktop.portal.IBus.*')
+        yield EnvrimentalVar("IBUS_USE_PORTAL", "1")
+        yield EnvrimentalVar("GTK_IM_MODULE", "ibus")
+        yield EnvrimentalVar("QT_IM_MODULE", "ibus")
+        yield EnvrimentalVar("XMODIFIERS", "@im=ibus")
+        yield EnvrimentalVar("GLFW_IM_MODULE", "ibus")
+        yield DbusSessionTalkTo("org.freedesktop.portal.IBus.*")
 
-    name = 'ibus'
-    pretty_name = 'IBus input method'
+    name = "ibus"
+    pretty_name = "IBus input method"
     description = (
-        'Gives access to IBus input method.\n'
-        'This is generally the default input method for multilingual input.'
+        "Gives access to IBus input method.\n"
+        "This is generally the default input method for multilingual input."
     )
-    conflicts = frozenset(('fcitx', ))
+    conflicts = frozenset(("fcitx",))
 
 
 class Fcitx(BubblejailService):
 
     def iter_bwrap_options(self) -> ServiceGeneratorType:
-        yield EnvrimentalVar('GTK_IM_MODULE', 'fcitx')
-        yield EnvrimentalVar('QT_IM_MODULE', 'fcitx')
-        yield EnvrimentalVar('XMODIFIERS', '@im=fcitx')
-        yield EnvrimentalVar('SDL_IM_MODULE', 'fcitx')
-        yield EnvrimentalVar('GLFW_IM_MODULE', 'ibus')
-        yield DbusSessionTalkTo('org.freedesktop.portal.Fcitx.*')
-        yield DbusSessionTalkTo('org.freedesktop.portal.IBus.*')
+        yield EnvrimentalVar("GTK_IM_MODULE", "fcitx")
+        yield EnvrimentalVar("QT_IM_MODULE", "fcitx")
+        yield EnvrimentalVar("XMODIFIERS", "@im=fcitx")
+        yield EnvrimentalVar("SDL_IM_MODULE", "fcitx")
+        yield EnvrimentalVar("GLFW_IM_MODULE", "ibus")
+        yield DbusSessionTalkTo("org.freedesktop.portal.Fcitx.*")
+        yield DbusSessionTalkTo("org.freedesktop.portal.IBus.*")
 
-    name = 'fcitx'
-    pretty_name = 'Fcitx/Fcitx5 input method'
+    name = "fcitx"
+    pretty_name = "Fcitx/Fcitx5 input method"
     description = (
-        'Gives access to Fcitx/Fcitx5 input method.\n'
-        'This is another popular input method framework.'
+        "Gives access to Fcitx/Fcitx5 input method.\n"
+        "This is another popular input method framework."
     )
-    conflicts = frozenset(('ibus', ))
+    conflicts = frozenset(("ibus",))
 
 
 class Slirp4netns(BubblejailService):
@@ -831,34 +847,31 @@ class Slirp4netns(BubblejailService):
         dns_servers: list[str] = field(
             default_factory=list,
             metadata=SettingFieldMetadata(
-                pretty_name='DNS servers',
+                pretty_name="DNS servers",
                 description=(
-                    'DNS servers used. '
-                    'Internal DNS server is always used.'
+                    "DNS servers used. " "Internal DNS server is always used."
                 ),
                 is_deprecated=False,
-            )
+            ),
         )
         outbound_addr: str = field(
-            default='',
+            default="",
             metadata=SettingFieldMetadata(
-                pretty_name='Outbound address or deivce',
+                pretty_name="Outbound address or deivce",
                 description=(
-                    'Address or device to bind to. '
-                    'If not set the default address would be used.'
+                    "Address or device to bind to. "
+                    "If not set the default address would be used."
                 ),
                 is_deprecated=False,
-            )
+            ),
         )
         disable_host_loopback: bool = field(
             default=True,
             metadata=SettingFieldMetadata(
-                pretty_name='Disable host loopback access',
-                description=(
-                    'Prohibit connecting to host\'s loopback interface'
-                ),
+                pretty_name="Disable host loopback access",
+                description=("Prohibit connecting to host's loopback interface"),
                 is_deprecated=False,
-            )
+            ),
         )
 
     def __init__(self, context: BubblejailRunContext) -> None:
@@ -875,11 +888,8 @@ class Slirp4netns(BubblejailService):
         dns_servers.append("10.0.2.3")
 
         yield FileTransfer(
-            b"\n".join(
-                f"nameserver {x}".encode()
-                for x in dns_servers
-            ),
-            '/etc/resolv.conf'
+            b"\n".join(f"nameserver {x}".encode() for x in dns_servers),
+            "/etc/resolv.conf",
         )
 
     async def post_init_hook(self, pid: int) -> None:
@@ -891,18 +901,12 @@ class Slirp4netns(BubblejailService):
         from lxns.namespaces import NetworkNamespace
 
         with ExitStack() as exit_stack:
-            target_namespace = exit_stack.enter_context(
-                NetworkNamespace.from_pid(pid)
-            )
-            parent_ns = exit_stack.enter_context(
-                target_namespace.get_user_namespace()
-            )
+            target_namespace = exit_stack.enter_context(NetworkNamespace.from_pid(pid))
+            parent_ns = exit_stack.enter_context(target_namespace.get_user_namespace())
             parent_ns_fd = parent_ns.fileno()
             parent_ns_path = f"/proc/{getpid()}/fd/{parent_ns_fd}"
 
-            ready_pipe_read, ready_pipe_write = (
-                pipe2(O_NONBLOCK | O_CLOEXEC)
-            )
+            ready_pipe_read, ready_pipe_write = pipe2(O_NONBLOCK | O_CLOEXEC)
             exit_stack.enter_context(open(ready_pipe_write))
             ready_pipe = exit_stack.enter_context(open(ready_pipe_read))
 
@@ -917,20 +921,18 @@ class Slirp4netns(BubblejailService):
             slirp4netns_args = [
                 slirp_bin_path,
                 f"--ready={ready_pipe_write}",
-                '--configure',
+                "--configure",
                 f"--userns-path={parent_ns_path}",
             ]
 
             if outbound_addr:
-                slirp4netns_args.append(
-                    (f"--outbound-addr={outbound_addr}")
-                )
+                slirp4netns_args.append((f"--outbound-addr={outbound_addr}"))
 
             if disable_host_loopback:
-                slirp4netns_args.append('--disable-host-loopback')
+                slirp4netns_args.append("--disable-host-loopback")
 
             slirp4netns_args.append(str(pid))
-            slirp4netns_args.append('tap0')
+            slirp4netns_args.append("tap0")
 
             self.slirp_process = await create_subprocess_exec(
                 *slirp4netns_args,
@@ -943,8 +945,7 @@ class Slirp4netns(BubblejailService):
             )
 
             early_process_end_task = loop.create_task(
-                self.slirp_process.wait(),
-                name="Early slirp4netns process end"
+                self.slirp_process.wait(), name="Early slirp4netns process end"
             )
             early_process_end_task.add_done_callback(
                 lambda _: slirp_ready_task.cancel()
@@ -953,9 +954,7 @@ class Slirp4netns(BubblejailService):
             try:
                 await wait_for(slirp_ready_task, timeout=3)
             except CancelledError:
-                raise BubblejailInitializationError(
-                    "Slirp4netns initialization failed"
-                )
+                raise BubblejailInitializationError("Slirp4netns initialization failed")
             finally:
                 loop.remove_reader(ready_pipe_read)
                 early_process_end_task.cancel()
@@ -970,13 +969,12 @@ class Slirp4netns(BubblejailService):
         except ProcessLookupError:
             ...
 
-    name = 'slirp4netns'
-    pretty_name = 'Slirp4netns networking'
+    name = "slirp4netns"
+    pretty_name = "Slirp4netns networking"
     description = (
-        "Independent networking stack for sandbox. "
-        "Requires slirp4netns executable."
+        "Independent networking stack for sandbox. " "Requires slirp4netns executable."
     )
-    conflicts = frozenset(('network', ))
+    conflicts = frozenset(("network",))
 
 
 class NamespacesLimits(BubblejailService):
@@ -986,83 +984,69 @@ class NamespacesLimits(BubblejailService):
         user: int = field(
             default=0,
             metadata=SettingFieldMetadata(
-                pretty_name='Max number of user namespaces',
+                pretty_name="Max number of user namespaces",
                 description=(
-                    'Limiting user namespaces blocks acquiring new '
-                    'capabilities and privileges inside namespaces.'
+                    "Limiting user namespaces blocks acquiring new "
+                    "capabilities and privileges inside namespaces."
                 ),
                 is_deprecated=False,
-            )
+            ),
         )
         mount: int = field(
             default=0,
             metadata=SettingFieldMetadata(
-                pretty_name='Max number of mount namespaces',
-                description=(
-                    'Limits number mount namespaces.'
-                ),
+                pretty_name="Max number of mount namespaces",
+                description=("Limits number mount namespaces."),
                 is_deprecated=False,
-            )
+            ),
         )
         pid: int = field(
             default=0,
             metadata=SettingFieldMetadata(
-                pretty_name='Max number of PID namespaces',
-                description=(
-                    'Limits number PID namespaces.'
-                ),
+                pretty_name="Max number of PID namespaces",
+                description=("Limits number PID namespaces."),
                 is_deprecated=False,
-            )
+            ),
         )
         ipc: int = field(
             default=0,
             metadata=SettingFieldMetadata(
-                pretty_name='Max number of IPC namespaces',
-                description=(
-                    'Limits number IPC namespaces.'
-                ),
+                pretty_name="Max number of IPC namespaces",
+                description=("Limits number IPC namespaces."),
                 is_deprecated=False,
-            )
+            ),
         )
         net: int = field(
             default=0,
             metadata=SettingFieldMetadata(
-                pretty_name='Max number of net namespaces',
-                description=(
-                    'Limits number net namespaces.'
-                ),
+                pretty_name="Max number of net namespaces",
+                description=("Limits number net namespaces."),
                 is_deprecated=False,
-            )
+            ),
         )
         time: int = field(
             default=0,
             metadata=SettingFieldMetadata(
-                pretty_name='Max number of time namespaces',
-                description=(
-                    'Limits number time namespaces.'
-                ),
+                pretty_name="Max number of time namespaces",
+                description=("Limits number time namespaces."),
                 is_deprecated=False,
-            )
+            ),
         )
         uts: int = field(
             default=0,
             metadata=SettingFieldMetadata(
-                pretty_name='Max number of UTS namespaces',
-                description=(
-                    'Limits number UTS namespaces.'
-                ),
+                pretty_name="Max number of UTS namespaces",
+                description=("Limits number UTS namespaces."),
                 is_deprecated=False,
-            )
+            ),
         )
         cgroup: int = field(
             default=0,
             metadata=SettingFieldMetadata(
-                pretty_name='Max number of cgroups namespaces',
-                description=(
-                    'Limits number cgroups namespaces.'
-                ),
+                pretty_name="Max number of cgroups namespaces",
+                description=("Limits number cgroups namespaces."),
                 is_deprecated=False,
-            )
+            ),
         )
 
     @staticmethod
@@ -1093,19 +1077,23 @@ class NamespacesLimits(BubblejailService):
         namespace_files_to_limits: dict[str, int] = {}
         if (user_ns_limit := settings.user) >= 0:
             namespace_files_to_limits["max_user_namespaces"] = (
-                user_ns_limit and user_ns_limit + 1)
+                user_ns_limit and user_ns_limit + 1
+            )
 
         if (mount_ns_limit := settings.mount) >= 0:
             namespace_files_to_limits["max_mnt_namespaces"] = (
-                mount_ns_limit and mount_ns_limit + 1)
+                mount_ns_limit and mount_ns_limit + 1
+            )
 
         if (pid_ns_limit := settings.pid) >= 0:
             namespace_files_to_limits["max_pid_namespaces"] = (
-                pid_ns_limit and pid_ns_limit + 1)
+                pid_ns_limit and pid_ns_limit + 1
+            )
 
         if (ipc_ns_limit := settings.ipc) >= 0:
             namespace_files_to_limits["max_ipc_namespaces"] = (
-                ipc_ns_limit and ipc_ns_limit + 1)
+                ipc_ns_limit and ipc_ns_limit + 1
+            )
 
         if (net_ns_limit := settings.net) >= 0:
             if not self.context.is_service_enabled(Network):
@@ -1118,15 +1106,16 @@ class NamespacesLimits(BubblejailService):
 
         if (uts_ns_limit := settings.uts) >= 0:
             namespace_files_to_limits["max_uts_namespaces"] = (
-                uts_ns_limit and uts_ns_limit + 1)
+                uts_ns_limit and uts_ns_limit + 1
+            )
 
         if (cgroup_ns_limit := settings.cgroup) >= 0:
             namespace_files_to_limits["max_cgroup_namespaces"] = (
-                cgroup_ns_limit and cgroup_ns_limit + 1)
+                cgroup_ns_limit and cgroup_ns_limit + 1
+            )
 
         setter_process = Process(
-            target=self.set_namespaces_limits,
-            args=(pid, namespace_files_to_limits)
+            target=self.set_namespaces_limits, args=(pid, namespace_files_to_limits)
         )
         try:
             setter_process.start()
@@ -1160,35 +1149,35 @@ class Debug(BubblejailService):
         raw_bwrap_args: list[str] = field(
             default_factory=list,
             metadata=SettingFieldMetadata(
-                pretty_name='Raw bwrap args',
+                pretty_name="Raw bwrap args",
                 description=(
-                    'Raw arguments to add to bwrap invocation. '
-                    'See bubblewrap documentation.'
+                    "Raw arguments to add to bwrap invocation. "
+                    "See bubblewrap documentation."
                 ),
                 is_deprecated=False,
-            )
+            ),
         )
         raw_dbus_session_args: list[str] = field(
             default_factory=list,
             metadata=SettingFieldMetadata(
-                pretty_name='Raw xdg-dbus-proxy session args',
+                pretty_name="Raw xdg-dbus-proxy session args",
                 description=(
-                    'Raw arguments to add to xdg-dbus-proxy session '
-                    'invocation. See xdg-dbus-proxy documentation.'
+                    "Raw arguments to add to xdg-dbus-proxy session "
+                    "invocation. See xdg-dbus-proxy documentation."
                 ),
                 is_deprecated=False,
-            )
+            ),
         )
         raw_dbus_system_args: list[str] = field(
             default_factory=list,
             metadata=SettingFieldMetadata(
-                pretty_name='Raw xdg-dbus-proxy system args',
+                pretty_name="Raw xdg-dbus-proxy system args",
                 description=(
-                    'Raw arguments to add to xdg-dbus-proxy system '
-                    'invocation. See xdg-dbus-proxy documentation.'
+                    "Raw arguments to add to xdg-dbus-proxy system "
+                    "invocation. See xdg-dbus-proxy documentation."
                 ),
                 is_deprecated=False,
-            )
+            ),
         )
 
     def iter_bwrap_options(self) -> ServiceGeneratorType:
@@ -1213,11 +1202,26 @@ class Debug(BubblejailService):
 
 
 SERVICES_CLASSES: tuple[Type[BubblejailService], ...] = (
-    CommonSettings, X11, Wayland,
-    Network, PulseAudio, HomeShare, DirectRendering,
-    Systray, Joystick, RootShare, OpenJDK, Notifications,
-    GnomeToolkit, Pipewire, VideoForLinux, IBus, Fcitx,
-    Slirp4netns, NamespacesLimits, Debug,
+    CommonSettings,
+    X11,
+    Wayland,
+    Network,
+    PulseAudio,
+    HomeShare,
+    DirectRendering,
+    Systray,
+    Joystick,
+    RootShare,
+    OpenJDK,
+    Notifications,
+    GnomeToolkit,
+    Pipewire,
+    VideoForLinux,
+    IBus,
+    Fcitx,
+    Slirp4netns,
+    NamespacesLimits,
+    Debug,
 )
 
 SERVICES_MAP: dict[str, Type[BubblejailService]] = {
@@ -1226,7 +1230,7 @@ SERVICES_MAP: dict[str, Type[BubblejailService]] = {
 
 
 if TYPE_CHECKING:
-    T = TypeVar('T', bound="object")
+    T = TypeVar("T", bound="object")
 
 
 class BubblejailRunContext:
@@ -1262,9 +1266,7 @@ class ServiceContainer:
         if conf_dict is not None:
             self.set_services(conf_dict)
 
-    def set_services(
-            self,
-            new_services_datas: ServicesConfDictType) -> None:
+    def set_services(self, new_services_datas: ServicesConfDictType) -> None:
 
         declared_services: set[str] = set()
         self.services.clear()
@@ -1279,15 +1281,12 @@ class ServiceContainer:
 
             service_settings = service_settings_class(**service_options_dict)
 
-            self.service_settings_to_type[service_settings_class] = (
-                service_settings
-            )
+            self.service_settings_to_type[service_settings_class] = service_settings
             self.service_settings[service_name] = service_settings
 
             declared_services.add(service_name)
 
-            if conflicting_services := (
-                    declared_services & service_class.conflicts):
+            if conflicting_services := (declared_services & service_class.conflicts):
                 raise ServiceConflictError(
                     f"Service conflict between {service_name} and "
                     f"{', '.join(conflicting_services)}"
@@ -1314,22 +1313,19 @@ class ServiceContainer:
 
         yield from self.services.values()
 
-    def iter_post_init_hooks(
-        self
-    ) -> Iterator[Callable[[int], Awaitable[None]]]:
+    def iter_post_init_hooks(self) -> Iterator[Callable[[int], Awaitable[None]]]:
         for service in self.services.values():
-            if (service.__class__.post_init_hook
-               is BubblejailService.post_init_hook):
+            if service.__class__.post_init_hook is BubblejailService.post_init_hook:
                 continue
 
             yield service.post_init_hook
 
-    def iter_post_shutdown_hooks(
-        self
-    ) -> Iterator[Callable[[], Awaitable[None]]]:
+    def iter_post_shutdown_hooks(self) -> Iterator[Callable[[], Awaitable[None]]]:
         for service in self.services.values():
-            if (service.__class__.post_shutdown_hook
-               is BubblejailService.post_shutdown_hook):
+            if (
+                service.__class__.post_shutdown_hook
+                is BubblejailService.post_shutdown_hook
+            ):
                 continue
 
             yield service.post_shutdown_hook

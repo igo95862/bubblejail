@@ -47,7 +47,7 @@ def setup_test_env() -> None:
 def setup_mocks() -> None:
     from bubblejail.bubblejail_instance import BubblejailInstance
 
-    helper_path = PROJECT_ROOT_PATH / 'src/bubblejail/bubblejail_helper.py'
+    helper_path = PROJECT_ROOT_PATH / "src/bubblejail/bubblejail_helper.py"
     original_run = BubblejailInstance.async_run_init
 
     async def run_with_helper_script(
@@ -64,7 +64,7 @@ def setup_mocks() -> None:
 
     setattr(
         BubblejailInstance,
-        'async_run_init',
+        "async_run_init",
         run_with_helper_script,
     )
 
@@ -72,17 +72,17 @@ def setup_mocks() -> None:
     runtime_dir_path.mkdir(exist_ok=True)
 
     def runtime_dir(self: BubblejailInstance) -> Path:
-        return runtime_dir_path / f'bubblejail/{self.name}'
+        return runtime_dir_path / f"bubblejail/{self.name}"
 
     setattr(
         BubblejailInstance,
-        'runtime_dir',
+        "runtime_dir",
         property(fget=runtime_dir),
     )
 
 
 def shell_main() -> None:
-    history_file = BUILD_DIR / 'bubblejail_cmd_history'
+    history_file = BUILD_DIR / "bubblejail_cmd_history"
     history_file.touch(exist_ok=True)
     read_history_file(history_file)
     set_history_length(1000)
@@ -93,7 +93,7 @@ def shell_main() -> None:
 
     while True:
         try:
-            input_line = input('bubblejail>> ')
+            input_line = input("bubblejail>> ")
         except EOFError:
             print()
             return
@@ -119,15 +119,15 @@ def gui_main() -> None:
 
 
 TEST_RUNNERS = {
-    'shell': shell_main,
-    'gui': gui_main,
+    "shell": shell_main,
+    "gui": gui_main,
 }
 
 
 def main() -> None:
     arg_parser = ArgumentParser()
     arg_parser.add_argument(
-        'runner',
+        "runner",
         choices=TEST_RUNNERS.keys(),
     )
     args = arg_parser.parse_args()
@@ -135,5 +135,5 @@ def main() -> None:
     TEST_RUNNERS[args.runner]()
 
 
-if __name__ == '__main__':
+if __name__ == "__main__":
     main()

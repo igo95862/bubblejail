@@ -28,14 +28,14 @@ class BwrapOptionWithPermissions(BwrapConfigBase):
 
     def to_args(self) -> Generator[str, None, None]:
         if self.permissions is not None:
-            yield '--perms'
-            yield oct(self.permissions).lstrip('0o')
+            yield "--perms"
+            yield oct(self.permissions).lstrip("0o")
 
         yield from super().to_args()
 
 
 class DirCreate(BwrapOptionWithPermissions):
-    arg_word = '--dir'
+    arg_word = "--dir"
 
     def __init__(self, dest: Pathlike, permissions: Optional[int] = None):
         super().__init__(permissions)
@@ -47,7 +47,7 @@ class DirCreate(BwrapOptionWithPermissions):
 
 
 class Symlink(BwrapConfigBase):
-    arg_word = '--symlink'
+    arg_word = "--symlink"
 
     def __init__(self, source: Pathlike, dest: Pathlike):
         super().__init__()
@@ -61,7 +61,7 @@ class Symlink(BwrapConfigBase):
 
 
 class EnvrimentalVar(BwrapConfigBase):
-    arg_word = '--setenv'
+    arg_word = "--setenv"
 
     def __init__(self, var_name: str, var_value: Optional[str] = None):
         super().__init__()
@@ -72,12 +72,11 @@ class EnvrimentalVar(BwrapConfigBase):
         yield from super().to_args()
 
         yield self.var_name
-        yield (self.var_value if self.var_value is not None
-               else environ[self.var_name])
+        yield (self.var_value if self.var_value is not None else environ[self.var_name])
 
 
 class ReadOnlyBind(BwrapConfigBase):
-    arg_word = '--ro-bind'
+    arg_word = "--ro-bind"
 
     def __init__(self, source: Pathlike, dest: Optional[Pathlike] = None):
         super().__init__()
@@ -92,27 +91,27 @@ class ReadOnlyBind(BwrapConfigBase):
 
 
 class ReadOnlyBindTry(ReadOnlyBind):
-    arg_word = '--ro-bind-try'
+    arg_word = "--ro-bind-try"
 
 
 class Bind(ReadOnlyBind):
-    arg_word = '--bind'
+    arg_word = "--bind"
 
 
 class BindTry(ReadOnlyBind):
-    arg_word = '--bind-try'
+    arg_word = "--bind-try"
 
 
 class DevBind(ReadOnlyBind):
-    arg_word = '--dev-bind'
+    arg_word = "--dev-bind"
 
 
 class DevBindTry(ReadOnlyBind):
-    arg_word = '--dev-bind-try'
+    arg_word = "--dev-bind-try"
 
 
 class ChangeDir(BwrapConfigBase):
-    arg_word = '--chdir'
+    arg_word = "--chdir"
 
     def __init__(self, dest: Pathlike):
         super().__init__()
@@ -141,7 +140,7 @@ class FileTransfer:
 
 
 class DbusCommon:
-    arg_word: str = 'ERROR'
+    arg_word: str = "ERROR"
 
     def __init__(self, bus_name: str):
         self.bus_name = bus_name
@@ -150,20 +149,18 @@ class DbusCommon:
         return f"{self.arg_word}={self.bus_name}"
 
 
-class DbusSessionArgs(DbusCommon):
-    ...
+class DbusSessionArgs(DbusCommon): ...
 
 
-class DbusSystemArgs(DbusCommon):
-    ...
+class DbusSystemArgs(DbusCommon): ...
 
 
 class DbusSessionTalkTo(DbusSessionArgs):
-    arg_word = '--talk'
+    arg_word = "--talk"
 
 
 class DbusSessionOwn(DbusSessionArgs):
-    arg_word = '--own'
+    arg_word = "--own"
 
 
 class DbusSessionRule(DbusSessionArgs):
@@ -202,8 +199,7 @@ class DbusSystemRawArg(DbusSystemArgs):
         return self.bus_name
 
 
-class SeccompDirective:
-    ...
+class SeccompDirective: ...
 
 
 class SeccompSyscallErrno(SeccompDirective):
@@ -220,8 +216,9 @@ class SeccompSyscallErrno(SeccompDirective):
 
 class LaunchArguments:
     def __init__(
-            self,
-            launch_args: List[str],
-            priority: int = 0,) -> None:
+        self,
+        launch_args: List[str],
+        priority: int = 0,
+    ) -> None:
         self.launch_args = launch_args
         self.priority = priority

@@ -6,14 +6,8 @@ from tomllib import loads as toml_loads
 from unittest import TestCase
 from unittest import main as unittest_main
 
-
 from bubblejail.exceptions import ServiceConflictError
-from bubblejail.services import (
-    SERVICES_CLASSES,
-    SERVICES_MAP,
-    X11,
-    ServiceContainer,
-)
+from bubblejail.services import SERVICES_CLASSES, SERVICES_MAP, X11, ServiceContainer
 
 
 class TestServices(TestCase):
@@ -41,13 +35,9 @@ class TestServices(TestCase):
             "/tmp/.X11-unix/X1",
         )
 
-        self.assertIsNone(
-            X11.x11_socket_path("tcp/localhost:1")
-        )
+        self.assertIsNone(X11.x11_socket_path("tcp/localhost:1"))
 
-        self.assertIsNone(
-            X11.x11_socket_path("unix/localhost:1")
-        )
+        self.assertIsNone(X11.x11_socket_path("unix/localhost:1"))
 
     def test_service_conflict_relationship(self) -> None:
         # Test that conflict points to existing service
@@ -56,7 +46,8 @@ class TestServices(TestCase):
             for conflict in service.conflicts:
                 conflict_service = SERVICES_MAP[conflict]
                 self.assertIn(
-                    service.name, conflict_service.conflicts,
+                    service.name,
+                    conflict_service.conflicts,
                     msg=(
                         f"Reverse conflict of {service.name} "
                         f"to {conflict_service.name} not found"
@@ -78,5 +69,5 @@ class TestServices(TestCase):
         ServiceContainer(test_good_config)
 
 
-if __name__ == '__main__':
+if __name__ == "__main__":
     unittest_main()

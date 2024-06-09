@@ -31,18 +31,18 @@ def execute_template(
 def main() -> None:
     arg_parse = ArgumentParser()
     arg_parse.add_argument(
-        '--define',
-        action='append',
+        "--define",
+        action="append",
         nargs=2,
         default=[],
     )
     arg_parse.add_argument(
-        '--template-dir',
+        "--template-dir",
         required=True,
         type=Path,
     )
     arg_parse.add_argument(
-        'template_name',
+        "template_name",
     )
 
     execute_template(**vars(arg_parse.parse_args()))

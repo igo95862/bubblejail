@@ -30,7 +30,7 @@ class HelperTests(IsolatedAsyncioTestCase):
         self.temp_dir = TemporaryDirectory()
         self.addCleanup(self.temp_dir.cleanup)
         self.temp_dir_path = Path(self.temp_dir.name)
-        self.test_socket_path = self.temp_dir_path / 'test_socket'
+        self.test_socket_path = self.temp_dir_path / "test_socket"
 
         self.test_socket = socket(AF_UNIX)
         self.test_socket.bind(bytes(self.test_socket_path))
@@ -55,14 +55,14 @@ class HelperTests(IsolatedAsyncioTestCase):
 
     async def test_ping(self) -> None:
         """Test pinging helper over unix socket"""
-        ping_request = RequestPing('test')
+        ping_request = RequestPing("test")
         self.writer.write(ping_request.to_json_byte_line())
         await self.writer.drain()
 
         response = await self.reader.readline()
 
-        print('Response bytes:', response)
-        self.assertIn(b'pong', response, 'No pong in response')
+        print("Response bytes:", response)
+        self.assertIn(b"pong", response, "No pong in response")
 
     async def asyncTearDown(self) -> None:
         create_task(self.helper.stop_async())
@@ -78,38 +78,34 @@ class HelperParserTests(TestCase):
 
     def test_parser(self) -> None:
         """Test how helper argument parser works"""
-        required_args = ['--helper-socket', '0', '--']
+        required_args = ["--helper-socket", "0", "--"]
 
-        with self.subTest('No shell'):
+        with self.subTest("No shell"):
             no_shell_example_args = [
-                '/bin/true',
-                '--long-opt', '-e', '-test',
-                '/bin/false', '--shell',
+                "/bin/true",
+                "--long-opt",
+                "-e",
+                "-test",
+                "/bin/false",
+                "--shell",
             ]
-            parsed_args = self.parser.parse_args(
-                required_args + no_shell_example_args
-            )
+            parsed_args = self.parser.parse_args(required_args + no_shell_example_args)
 
             self.assertFalse(parsed_args.shell)
             self.assertEqual(parsed_args.args_to_run, no_shell_example_args)
 
-        with self.subTest('Shell plus args'):
-            with_shell_example_args = [
-                 '/bin/ls', '-l'
-            ]
+        with self.subTest("Shell plus args"):
+            with_shell_example_args = ["/bin/ls", "-l"]
 
             parsed_args = self.parser.parse_args(
-                ['--shell'] + required_args + with_shell_example_args
+                ["--shell"] + required_args + with_shell_example_args
             )
 
             self.assertTrue(parsed_args.shell)
-            self.assertEqual(
-                parsed_args.args_to_run, with_shell_example_args)
+            self.assertEqual(parsed_args.args_to_run, with_shell_example_args)
 
-        with self.subTest('Only shell'):
-            parsed_args = self.parser.parse_args(
-                ['--shell'] + required_args
-            )
+        with self.subTest("Only shell"):
+            parsed_args = self.parser.parse_args(["--shell"] + required_args)
 
             self.assertTrue(parsed_args.shell)
             self.assertEqual(parsed_args.args_to_run, [])
@@ -120,33 +116,34 @@ class PidTrackerTest(IsolatedAsyncioTestCase):
     async def test_process_detection(self) -> None:
         """Test process detection"""
 
-        with self.subTest('PID tracking: no child of this process'):
+        with self.subTest("PID tracking: no child of this process"):
             self.assertFalse(BubblejailHelper.process_has_child())
 
         child_process = await create_subprocess_exec(
-            'sleep', '1d',
+            "sleep",
+            "1d",
         )
 
-        with self.subTest('PID tracking: has child method'):
-            self.assertTrue(
-                BubblejailHelper.process_has_child())
+        with self.subTest("PID tracking: has child method"):
+            self.assertTrue(BubblejailHelper.process_has_child())
 
-        with self.subTest('PID tracking by command: right command'):
+        with self.subTest("PID tracking by command: right command"):
             # WARN: This will give false positive if you have
             # sleep running anywhere on the system
             # Maybein the future we can setup quick pid namespace
-            self.assertTrue(
-                BubblejailHelper.proc_has_process_command('sleep'))
+            self.assertTrue(BubblejailHelper.proc_has_process_command("sleep"))
 
-        with self.subTest('PID tracking by command: wrong command'):
+        with self.subTest("PID tracking by command: wrong command"):
             self.assertFalse(
                 BubblejailHelper.proc_has_process_command(
-                    'asdjhaikefrasendiklfnsmzkjledf'))
+                    "asdjhaikefrasendiklfnsmzkjledf"
+                )
+            )
 
         # Cleanup
         child_process.terminate()
         await child_process.wait()
 
 
-if __name__ == '__main__':
+if __name__ == "__main__":
     unittest_main()

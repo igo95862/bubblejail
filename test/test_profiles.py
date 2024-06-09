@@ -9,21 +9,18 @@ from unittest import main as unittest_main
 
 from bubblejail.bubblejail_instance import BubblejailProfile
 
-
 PROJECT_ROOT_PATH = Path(__file__).parent.parent
 
 
 class TestProfiles(TestCase):
     def test_profiles(self) -> None:
-        profiles_str_path = (
-            PROJECT_ROOT_PATH / 'data/usr-share/bubblejail/profiles'
-        )
+        profiles_str_path = PROJECT_ROOT_PATH / "data/usr-share/bubblejail/profiles"
 
         for profile_path in profiles_str_path.iterdir():
             with self.subTest(profile_path.stem):
-                with open(profile_path, mode='rb') as f:
+                with open(profile_path, mode="rb") as f:
                     BubblejailProfile(**toml_load(f))
 
 
-if __name__ == '__main__':
+if __name__ == "__main__":
     unittest_main()

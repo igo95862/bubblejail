@@ -4,9 +4,9 @@
 from __future__ import annotations
 
 from argparse import ArgumentParser
+from contextlib import contextmanager
 from functools import partial
 from subprocess import run as subprocess_run
-from contextlib import contextmanager
 from typing import TYPE_CHECKING
 
 if TYPE_CHECKING:
@@ -169,8 +169,7 @@ def build_analysis_image(distro: str) -> None:
         install_packages_for_distro(
             container_name,
             distro,
-            DISTRO_CODE_ANALYSIS_TOOLS[distro]
-            + DISTRO_PYTHON_RUNTIME_DEPS[distro],
+            DISTRO_CODE_ANALYSIS_TOOLS[distro] + DISTRO_PYTHON_RUNTIME_DEPS[distro],
         )
 
 

@@ -45,6 +45,7 @@ class BubblejailGuiWidget:
     def __init__(self) -> None:
         self.widget = QWidget()
 
+
 # region Config edit classes
 
 
@@ -91,12 +92,10 @@ class OptionWidgetStrList(OptionWidgetBase):
 
         self.line_edit_widgets: List[QLineEdit] = []
 
-        self.add_button = QPushButton('Add')
+        self.add_button = QPushButton("Add")
         self.add_button.setToolTip(self.description)
         self.vertical_layout.addWidget(self.add_button)
-        self.add_button.clicked.connect(
-            self.add_line_edit
-        )
+        self.add_button.clicked.connect(self.add_line_edit)
         if not data:
             self.add_line_edit()
         else:
@@ -107,9 +106,7 @@ class OptionWidgetStrList(OptionWidgetBase):
 
     def set_data(self, str_list: List[str]) -> None:
         for string in str_list:
-            self.add_line_edit(
-                existing_string=string
-            )
+            self.add_line_edit(existing_string=string)
 
     def remove_line_edit(self, line_edit_widget: QLineEdit) -> None:
         self.line_edit_widgets.remove(line_edit_widget)
@@ -119,29 +116,28 @@ class OptionWidgetStrList(OptionWidgetBase):
         if not self.line_edit_widgets:
             self.add_line_edit()
 
-    def add_line_edit(self, *args: List[Any],
-                      existing_string: Optional[str] = None,) -> None:
+    def add_line_edit(
+        self,
+        *args: List[Any],
+        existing_string: Optional[str] = None,
+    ) -> None:
 
         if isinstance(existing_string, str):
             # HACK: PyQt5 calls this function with bool when callsed by signal
             # to avoid passing bool to init check for str as existing string
             new_line_edit = QLineEdit(existing_string)
         else:
-            new_line_edit = QLineEdit('')
+            new_line_edit = QLineEdit("")
 
         new_line_edit.setToolTip(self.description)
 
         self.line_edit_widgets.append(new_line_edit)
 
-        new_push_button = QPushButton('❌')
+        new_push_button = QPushButton("❌")
 
         self.form_layout.addRow(new_push_button, new_line_edit)
 
-        new_push_button.clicked.connect(
-            partial(
-                self.remove_line_edit, new_line_edit
-            )
-        )
+        new_push_button.clicked.connect(partial(self.remove_line_edit, new_line_edit))
 
     def get_string_list(self) -> list[str]:
         text_list = [x.text() for x in self.line_edit_widgets]
@@ -243,7 +239,7 @@ class OptionWidgetSpaceSeparatedStr(OptionWidgetStr):
         bubblejail_setting_name: str,
     ):
         if isinstance(data, list):
-            data = ' '.join(data)
+            data = " ".join(data)
 
         super().__init__(
             name=name,
@@ -274,7 +270,7 @@ class OptionWidgetCombobox(OptionWidgetBase):
         super().__init__(
             name=name,
             description=description,
-            data='None',
+            data="None",
             bubblejail_setting_name=bubblejail_setting_name,
         )
         self.horizontal_layout = QHBoxLayout()
@@ -287,7 +283,7 @@ class OptionWidgetCombobox(OptionWidgetBase):
         self.combobox = QComboBox()
         self.combobox.setToolTip(description)
         self.horizontal_layout.addWidget(self.combobox)
-        self.combobox.addItem('None')
+        self.combobox.addItem("None")
 
     def add_item(self, new_item: str) -> None:
         self.combobox.addItem(new_item)
@@ -325,13 +321,13 @@ class ServiceWidget:
                 SettingFieldMetadata,
                 setting_field.metadata,
             )
-            if setting_metadata['is_deprecated']:
+            if setting_metadata["is_deprecated"]:
                 continue
 
             match str(setting_field.type):
-                case 'bool':
+                case "bool":
                     widget_class: Type[OptionWidgetBase] = OptionWidgetBool
-                case 'str':
+                case "str":
                     widget_class = OptionWidgetStr
                 case "str | list[str]":
                     widget_class = OptionWidgetSpaceSeparatedStr
@@ -356,8 +352,8 @@ class ServiceWidget:
                 setting_value = default_value
 
             new_widget = widget_class(
-                name=setting_metadata['pretty_name'],
-                description=setting_metadata['description'],
+                name=setting_metadata["pretty_name"],
+                description=setting_metadata["description"],
                 data=setting_value,
                 bubblejail_setting_name=setting_field.name,
             )
@@ -401,6 +397,7 @@ class ServiceWidget:
 
         return new_dict
 
+
 # endregion Config edit classes
 
 # region Central Widgets
@@ -413,9 +410,7 @@ class CentralWidgets:
 
 
 class InstanceEditWidget(CentralWidgets):
-    def __init__(self,
-                 parent: BubblejailConfigApp,
-                 instance_name: str):
+    def __init__(self, parent: BubblejailConfigApp, instance_name: str):
         super().__init__(parent=parent)
 
         self.main_layout = QVBoxLayout()
@@ -423,16 +418,15 @@ class InstanceEditWidget(CentralWidgets):
 
         header = QHBoxLayout()
         # Back button
-        back_button = QPushButton('Back')
+        back_button = QPushButton("Back")
         back_button.clicked.connect(self.parent.switch_to_selector)
         header.addWidget(back_button)
         # Label
         header_label = QLabel(f"Editing {instance_name}")
         header.addWidget(header_label)
         # Save button
-        save_button = QPushButton('Save')
-        save_button.clicked.connect(
-            partial(InstanceEditWidget.set_instance_data, self))
+        save_button = QPushButton("Save")
+        save_button.clicked.connect(partial(InstanceEditWidget.set_instance_data, self))
         header.addWidget(save_button)
 
         self.main_layout.addLayout(header)
@@ -447,17 +441,18 @@ class InstanceEditWidget(CentralWidgets):
         self.scroll_area.setWidget(self.scrolled_widget)
 
         # Instance
-        self.bubblejail_instance = BubblejailDirectories.instance_get(
-            instance_name)
+        self.bubblejail_instance = BubblejailDirectories.instance_get(instance_name)
         self.instance_config = self.bubblejail_instance._read_config()
         services_settings_dicts: ServicesConfDictType = (
-            self.instance_config.get_service_conf_dict())
+            self.instance_config.get_service_conf_dict()
+        )
 
         self.service_widgets: List[ServiceWidget] = []
         for service in SERVICES_CLASSES:
             try:
                 service_settings_dict: None | ServiceSettingsDict = (
-                    services_settings_dicts[service.name])
+                    services_settings_dicts[service.name]
+                )
             except KeyError:
                 service_settings_dict = None
 
@@ -468,7 +463,8 @@ class InstanceEditWidget(CentralWidgets):
 
             new_service_widget.group_widget.clicked.connect(
                 partial(
-                    InstanceEditWidget.refresh_conflicts, self,
+                    InstanceEditWidget.refresh_conflicts,
+                    self,
                 )
             )
 
@@ -509,9 +505,10 @@ class InstanceEditWidget(CentralWidgets):
 
 
 class CreateInstanceWidget(CentralWidgets):
-    def __init__(self,
-                 parent: BubblejailConfigApp,
-                 ):
+    def __init__(
+        self,
+        parent: BubblejailConfigApp,
+    ):
         super().__init__(parent=parent)
 
         self.main_layout = QVBoxLayout()
@@ -519,40 +516,40 @@ class CreateInstanceWidget(CentralWidgets):
 
         header = QHBoxLayout()
         # Back button
-        back_button = QPushButton('Back')
+        back_button = QPushButton("Back")
         back_button.clicked.connect(self.parent.switch_to_selector)
         header.addWidget(back_button)
 
         # Save button
-        self.save_button = QPushButton('Create')
+        self.save_button = QPushButton("Create")
         self.save_button.clicked.connect(
-            partial(CreateInstanceWidget.create_instance, self))
+            partial(CreateInstanceWidget.create_instance, self)
+        )
         header.addWidget(self.save_button)
 
         self.main_layout.addLayout(header)
 
         self.name_widget = OptionWidgetStr(
-            name='Instance name',
-            description='Name with which the instance will be created',
-            data='',
-            bubblejail_setting_name='',
+            name="Instance name",
+            description="Name with which the instance will be created",
+            data="",
+            bubblejail_setting_name="",
         )
         self.main_layout.addWidget(self.name_widget.widget)
 
         self.profile_select_widget = OptionWidgetCombobox(
-            name='Select profile:',
-            description='Select profile to create instance with.',
-            bubblejail_setting_name='',
+            name="Select profile:",
+            description="Select profile to create instance with.",
+            bubblejail_setting_name="",
         )
         self.main_layout.addWidget(self.profile_select_widget.widget)
         self.profile_select_widget.combobox.textActivated.connect(
-            self.selection_changed)
-
-        self.name_widget.line_edit.textChanged.connect(
-            self.refresh_create_button
+            self.selection_changed
         )
 
-        self.profile_text = QLabel('No profile selected')
+        self.name_widget.line_edit.textChanged.connect(self.refresh_create_button)
+
+        self.profile_text = QLabel("No profile selected")
         self.main_layout.addWidget(self.profile_text)
 
         self.current_profile: Optional[BubblejailProfile] = None
@@ -567,25 +564,25 @@ class CreateInstanceWidget(CentralWidgets):
     def can_be_created(self) -> Tuple[bool, str]:
         current_name = self.name_widget.get_str()
         if not current_name:
-            return False, '⚠ Name is empty'
+            return False, "⚠ Name is empty"
         else:
             try:
                 BubblejailDirectories.instance_get(current_name)
-                return False, '⚠ Name is already used'
+                return False, "⚠ Name is already used"
             except BubblejailInstanceNotFoundError:
                 ...
 
         if self.current_profile is None:
-            return True, 'Create empty profile'
+            return True, "Create empty profile"
 
         if (
             self.current_profile.desktop_entries_paths
             and self.current_profile.find_desktop_entry() is None
         ):
             warn_text = (
-                '⚠ WARNING \n'
-                'Desktop entry does not exist\n'
-                'Maybe you don\'t have application installed?'
+                "⚠ WARNING \n"
+                "Desktop entry does not exist\n"
+                "Maybe you don't have application installed?"
             )
             return False, warn_text
         else:
@@ -601,7 +598,7 @@ class CreateInstanceWidget(CentralWidgets):
         self.profile_text.setText(new_text)
 
     def selection_changed(self, new_text: str) -> None:
-        if new_text == 'None':
+        if new_text == "None":
             self.current_profile = None
         else:
             self.current_profile = BubblejailDirectories.profile_get(new_text)
@@ -618,9 +615,9 @@ class CreateInstanceWidget(CentralWidgets):
     def create_instance(self) -> None:
         new_instance_name = self.name_widget.get_str()
         if not new_instance_name:
-            raise RuntimeError('No instance name given')
+            raise RuntimeError("No instance name given")
         profile_name: Optional[str] = self.profile_select_widget.get_selected()
-        if profile_name == 'None':
+        if profile_name == "None":
             profile_name = None
 
         BubblejailDirectories.create_new_instance(
@@ -647,7 +644,8 @@ class SelectInstanceWidget:
         self.layout_vertical.addWidget(self.scroll_area)
 
         self.list_of_instances_widget.clicked.connect(
-            self.parent.switch_to_instance_edit)
+            self.parent.switch_to_instance_edit
+        )
 
         self.widget.setLayout(self.layout_vertical)
 
@@ -657,10 +655,9 @@ class SelectInstanceWidget:
             self.list_of_instances_widget.addItem(new_list_item_widgets)
 
         # Create button
-        self.create_button = QPushButton('Create instance')
+        self.create_button = QPushButton("Create instance")
         self.layout_vertical.addWidget(self.create_button)
-        self.create_button.clicked.connect(
-            self.parent.switch_to_create_instance)
+        self.create_button.clicked.connect(self.parent.switch_to_create_instance)
 
 
 # endregion Central Widgets
