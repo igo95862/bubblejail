@@ -1,7 +1,7 @@
 # SPDX-License-Identifier: GPL-3.0-or-later
 # SPDX-FileCopyrightText: 2020 igo95862
 project('bubblejail',
-    version : '0.8.3',
+    version : '0.9rc1',
     # Patch out these lines to install bubblejail's packages to site-packages
     default_options : {
         'python.purelibdir' : 'lib/bubblejail/python-packages',
