@@ -2,6 +2,40 @@
 SPDX-License-Identifier: GPL-3.0-or-later
 SPDX-FileCopyrightText: 2023 igo95862
 -->
+# 0.9rc1
+
+## Major build changes!
+
+* **New dependency!** [python-lxns](https://github.com/igo95862/python-lxns) is
+  a Python library to control Linux kernel namespaces. For convenience the library
+  is available as a meson subproject and is bundled in source archive. Set `use-vendored-python-lxns`
+  build option to true to enable meson subproject. If you are a distro maintainer
+  it is recommended to package python-lxns independently and mark it as dependency.
+* `allow-site-packages-dir` was removed. Unfortunately it is impossible to control Python
+  packages install dir with meson. If you still want to install bubblejail in to site-pacakges
+  you can either patch `meson.build` or use `meson rewrite kwargs delete project / default_options ""`
+  command in source prepare step.
+* `bytecode-optimization` build option is replaced with meson's
+  native `python.bytecompile`. Most distros meson wrappers already set this
+  option.
+* `tomli` support has been dropped. `tomlib` from Python 3.11
+  standard library is the only supported TOML reading library.
+
+## Features
+
+* Source code licensing is now verified with [REUSE](https://reuse.software/).
+* Log messages now always use stderr.
+
+## Fixes
+
+* Fix bubblejail-config GUI utility not using its icon. (reported by @boredsquirrel and @rusty-snake)
+* Fix Chromium and Firefox profiles not working on certain distros because of
+  diverging desktop entry names. (reported by @@boredsquirrel)
+* Fix instance being left in inoperable state if D-Bus proxy failed to initialize.
+* Fix `namespaces_limits` service sometimes failing because of concurrency races
+  with sandboxed PID.
+* Fixed several typos and added codespell to the CI.
+
 # 0.8.3
 
 ## Features
