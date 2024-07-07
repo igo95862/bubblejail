@@ -2,6 +2,11 @@
 SPDX-License-Identifier: GPL-3.0-or-later
 SPDX-FileCopyrightText: 2023 igo95862
 -->
+
+# 0.9.0
+
+No changes since 0.9rc1.
+
 # 0.9rc1
 
 ## Major build changes!
@@ -20,6 +25,7 @@ SPDX-FileCopyrightText: 2023 igo95862
   option.
 * `tomli` support has been dropped. `tomlib` from Python 3.11
   standard library is the only supported TOML reading library.
+  (note that `tomli-w` is still a requirement)
 
 ## Features
 
@@ -30,7 +36,7 @@ SPDX-FileCopyrightText: 2023 igo95862
 
 * Fix bubblejail-config GUI utility not using its icon. (reported by @boredsquirrel and @rusty-snake)
 * Fix Chromium and Firefox profiles not working on certain distros because of
-  diverging desktop entry names. (reported by @@boredsquirrel)
+  diverging desktop entry names. (reported by @boredsquirrel)
 * Fix instance being left in inoperable state if D-Bus proxy failed to initialize.
 * Fix `namespaces_limits` service sometimes failing because of concurrency races
   with sandboxed PID.
