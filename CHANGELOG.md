@@ -132,7 +132,7 @@ will only create a limited number of namespaces.
 
 Profiles might receive a well tested namespaces limits in the future version.
 
-## Dependenices changes
+## Dependencies changes
 
 * GUI has been ported to PyQt6.
 

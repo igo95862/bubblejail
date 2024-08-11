@@ -71,6 +71,9 @@ def run_isort() -> bool:
     return False
 
 
+IGNORE_CODESPELL_WORDS = ("assertIn",)
+
+
 def run_codespell() -> bool:
     print("Running: codespell", file=stderr)
     try:
@@ -88,6 +91,8 @@ def run_codespell() -> bool:
                 "--enable-colors",
                 "--context",
                 "3",
+                "--ignore-words-list",
+                *IGNORE_CODESPELL_WORDS,
                 *list_of_files,
             ],
             check=True,
@@ -114,7 +119,15 @@ def run_codespell_on_commits() -> bool:
         )
 
         run(
-            args=("codespell", "--enable-colors", "--context", "3", "-"),
+            args=(
+                "codespell",
+                "--enable-colors",
+                "--context",
+                "3",
+                "--ignore-words-list",
+                *IGNORE_CODESPELL_WORDS,
+                "-",
+            ),
             cwd=PROJECT_ROOT_PATH,
             check=True,
             stdin=git_log.stdout,
