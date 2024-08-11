@@ -21,7 +21,6 @@ from typing import Any
 #       --config-settings=setup-args=-Dman=false \
 #       --config-settings=setup-args=-Duse-vendored-python-lxns=enabled \
 #       --config-settings=install-args=--tags=runtime \
-#       --config-settings=setup-args=-Dallow-site-packages-dir=true \
 #       --editable .
 #
 # 3. Run this script with venv:
