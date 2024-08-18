@@ -195,6 +195,17 @@ class BubblejailDefaults(BubblejailService):
         yield DirCreate("/tmp")
         yield DirCreate("/var")
 
+        # Sys directory and its immediate children
+        yield DirCreate("/sys", permissions=0o700)
+        for sysfs_child in (
+            "/sys/block",
+            "/sys/bus",
+            "/sys/class",
+            "/sys/dev",
+            "/sys/devices",
+        ):
+            yield DirCreate(sysfs_child, permissions=0o0755)
+
         yield DirCreate(self.xdg_runtime_dir, permissions=0o700)
 
         # Bind pseudo home
