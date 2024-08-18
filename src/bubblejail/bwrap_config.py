@@ -29,7 +29,7 @@ class BwrapOptionWithPermissions(BwrapConfigBase):
     def to_args(self) -> Generator[str, None, None]:
         if self.permissions is not None:
             yield "--perms"
-            yield oct(self.permissions).lstrip("0o")
+            yield f"{self.permissions:04o}"
 
         yield from super().to_args()
 
