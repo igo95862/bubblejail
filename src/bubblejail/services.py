@@ -267,7 +267,8 @@ class BubblejailDefaults(BubblejailService):
                 "settimeofday",
                 "stime",
                 "clock_settime",
-                "clock_settime64" "vhangup",
+                "clock_settime64",
+                "vhangup",
             ):
                 yield SeccompSyscallErrno(
                     blocked_syscal,
