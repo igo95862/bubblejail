@@ -3,6 +3,18 @@ SPDX-License-Identifier: GPL-3.0-or-later
 SPDX-FileCopyrightText: 2023 igo95862
 -->
 
+# 0.9.1
+
+## Features
+
+* New icon designed by @gelatinbomb
+
+## Fixes
+
+* Fix WebKit built-in sandboxing not working.
+* Fix missing comma in default syscall filter preventing certain filters from working.
+  (contributed by @rusty-snake)
+
 # 0.9.0
 
 No changes since 0.9rc1.
