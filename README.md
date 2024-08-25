@@ -2,7 +2,7 @@
 SPDX-License-Identifier: GPL-3.0-or-later
 SPDX-FileCopyrightText: 2020 igo95862
 -->
-# Bubblejail
+# ![](data/bubblejail-config.svg) Bubblejail
 
 Bubblejail is a [bubblewrap](https://github.com/containers/bubblewrap)-based alternative to Firejail.
 
