@@ -1252,13 +1252,18 @@ class BubblejailRunContext:
     def __init__(
         self,
         services: dict[str, BubblejailService],
-        services_to_type_dict: dict[Type[T], T],
+        services_to_type_dict: dict[Type[Any], Any],
     ):
         self.services = services
         self.services_to_type_dict = services_to_type_dict
 
     def get_settings(self, settings_type: Type[T]) -> T:
-        return self.services_to_type_dict[settings_type]
+        settings = self.services_to_type_dict[settings_type]
+
+        if isinstance(settings, settings_type):
+            return settings
+        else:
+            raise TypeError(f"Expected {settings_type!r} got {type(settings)!r}")
 
     def is_service_enabled(
         self,
