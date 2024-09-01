@@ -38,6 +38,7 @@ from .bwrap_config import (
     FileTransfer,
     LaunchArguments,
     ReadOnlyBind,
+    ReadOnlyBindTry,
     SeccompDirective,
     SeccompSyscallErrno,
     ShareNetwork,
@@ -576,6 +577,9 @@ class DirectRendering(BubblejailService):
         for x in Path("/dev/").iterdir():
             if x.name.startswith("nvidia"):
                 yield DevBind(x)
+
+        # Nvidia driver 500+ requires read access to sysfs
+        yield ReadOnlyBindTry("/sys/module/nvidia")
 
     name = "direct_rendering"
     pretty_name = "Direct Rendering"
