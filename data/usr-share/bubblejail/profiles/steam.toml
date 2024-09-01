@@ -24,6 +24,3 @@ executable_name = "/usr/bin/steam"
 [services.network]
 [services.direct_rendering]
 [services.joystick]
-[services.root_share]
-read_only_paths = ['/sys/devices/system/cpu']
-

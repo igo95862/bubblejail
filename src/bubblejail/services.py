@@ -207,6 +207,9 @@ class BubblejailDefaults(BubblejailService):
         ):
             yield DirCreate(sysfs_child, permissions=0o0755)
 
+        # CPU topology access
+        yield ReadOnlyBind("/sys/devices/system/cpu")
+
         yield DirCreate(self.xdg_runtime_dir, permissions=0o700)
 
         # Bind pseudo home
