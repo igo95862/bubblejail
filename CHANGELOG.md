@@ -3,6 +3,21 @@ SPDX-License-Identifier: GPL-3.0-or-later
 SPDX-FileCopyrightText: 2023 igo95862
 -->
 
+# 0.9.2
+
+## Features
+
+* Access to CPU topology under `/sys/devices/system/cpu` is now provided by default.
+  A lot of modern applications makes use of it. (Chromium, WINE...)
+  Steam profile already used root share service to pass `/sys/devices/system/cpu`.
+  This change should compatible with existing Steam instances.
+
+## Fixes
+
+* Fixed Nvidia graphics not working with `direct_rendering` service.
+  The recent 500+ driver requires access to the `/sys/module/nvidia/initstate` file.
+  (reported by @consolation548 and tested by @gnusenpai)
+
 # 0.9.1
 
 ## Features
