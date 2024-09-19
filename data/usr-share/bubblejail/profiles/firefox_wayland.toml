@@ -5,6 +5,9 @@
 dot_desktop_path = [
     "/usr/share/applications/firefox.desktop",
     "/usr/share/applications/firefox-esr.desktop",
+    "/usr/share/applications/org.mozilla.firefox.desktop",
+    "/usr/share/applications/librewolf.desktop",
+    "/usr/share/applications/io.gitlab.librewolf.desktop"
 ]
 is_gtk_application = true
 description='''
