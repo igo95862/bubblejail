@@ -5,6 +5,10 @@
 dot_desktop_path = [
     "/usr/share/applications/chromium-browser.desktop",
     "/usr/share/applications/chromium.desktop",
+    "/usr/share/applications/brave-browser.desktop",
+    "/usr/share/applications/brave-browser-beta.desktop",
+    "/usr/share/applications/brave-browser-nightly.desktop",
+    "/usr/share/applications/vivaldi-stable.desktop",
 ]
 description='''
 Chromium web browser
