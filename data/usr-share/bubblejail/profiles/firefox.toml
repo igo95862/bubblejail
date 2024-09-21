@@ -5,6 +5,7 @@
 dot_desktop_path = [
     "/usr/share/applications/firefox.desktop",
     "/usr/share/applications/firefox-esr.desktop",
+    "/usr/share/applications/org.mozilla.firefox.desktop",
 ]
 is_gtk_application = true
 description='''
