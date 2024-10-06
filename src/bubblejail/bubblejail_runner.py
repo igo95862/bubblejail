@@ -2,17 +2,14 @@
 # SPDX-FileCopyrightText: 2019-2023 igo95862
 from __future__ import annotations
 
-from asyncio import (
-    Future,
-    InvalidStateError,
-    create_subprocess_exec,
-    get_running_loop,
-    wait_for,
-)
+from asyncio import Future, create_subprocess_exec, get_running_loop, wait_for
 from contextlib import asynccontextmanager, contextmanager
 from contextlib import suppress as exc_suppress
-from json import load as json_load
-from os import O_CLOEXEC, O_NONBLOCK, environ, kill, pipe2
+from io import StringIO
+from json import loads as json_loads
+from os import O_CLOEXEC, O_NONBLOCK
+from os import close as close_fd
+from os import environ, kill, pipe2
 from signal import SIGTERM
 from socket import AF_UNIX, socket
 from sys import stderr
@@ -102,7 +99,7 @@ class BubblejailRunner:
         # Info fd
         self.info_fd_pipe_read: int = -1
         self.info_fd_pipe_write: int = -1
-        self.sandboxed_pid: Future[int] = Future()
+        self.sandboxed_pid: int | None = None
 
         # Tasks
         self.task_post_init: Task[None] | None = None
@@ -258,11 +255,6 @@ class BubblejailRunner:
         self.info_fd_pipe_read, self.info_fd_pipe_write = pipe2(O_NONBLOCK | O_CLOEXEC)
         self.file_descriptors_to_pass.append(self.info_fd_pipe_write)
         self.bwrap_options_args.extend(("--info-fd", f"{self.info_fd_pipe_write}"))
-        running_loop = get_running_loop()
-        running_loop.add_reader(
-            self.info_fd_pipe_read,
-            self.read_info_fd,
-        )
 
         if self.post_init_hooks:
             self.ready_fd_pipe_read, self.ready_fd_pipe_write = pipe2(
@@ -286,10 +278,30 @@ class BubblejailRunner:
 
         yield "--"
 
-    def read_info_fd(self) -> None:
-        with open(self.info_fd_pipe_read, closefd=False) as f:
-            info_dict = json_load(f)
-            self.sandboxed_pid.set_result(info_dict["child-pid"])
+    async def read_info_fd(self) -> None:
+        close_fd(self.info_fd_pipe_write)
+
+        loop = get_running_loop()
+
+        info_json_future: Future[None] = loop.create_future()
+        info_json_buffer = StringIO()
+
+        with open(self.info_fd_pipe_read) as f:
+
+            def info_json_reader() -> None:
+                json_fragment = f.read()
+                if json_fragment:
+                    info_json_buffer.write(json_fragment)
+                else:
+                    # On EOF empty string is returned
+                    loop.remove_reader(self.info_fd_pipe_read)
+                    info_json_future.set_result(None)
+
+            loop.add_reader(self.info_fd_pipe_read, info_json_reader)
+            await info_json_future
+
+        info_dict = json_loads(info_json_buffer.getvalue())
+        self.sandboxed_pid = info_dict["child-pid"]
 
     def get_args_file_descriptor(self) -> int:
         options_null = "\0".join(self.bwrap_options_args)
@@ -302,7 +314,10 @@ class BubblejailRunner:
         return args_tempfile_fileno
 
     async def _run_post_init_hooks(self) -> None:
-        sandboxed_pid = await self.sandboxed_pid
+        sandboxed_pid = self.sandboxed_pid
+        if sandboxed_pid is None:
+            raise RuntimeError("Sandboxed PID not acquired!")
+
         print(f"Sandboxed PID: {sandboxed_pid}", file=stderr)
 
         for hook in self.post_init_hooks:
@@ -328,10 +343,9 @@ class BubblejailRunner:
                 print_exc(file=stderr)
 
     def sigterm_handler(self) -> None:
-        try:
-            pid_to_kill = self.sandboxed_pid.result()
-        except InvalidStateError:
-            # Bubblewrap did not finish initializing
+        if self.sandboxed_pid is not None:
+            pid_to_kill = self.sandboxed_pid
+        else:
             if self.bubblewrap_pid is None:
                 return
 
@@ -440,6 +454,8 @@ class BubblejailRunner:
             )
 
             self.bubblewrap_pid = self.bubblewrap_process.pid
+
+            await wait_for(self.read_info_fd(), timeout=3)
 
             loop = get_running_loop()
 
