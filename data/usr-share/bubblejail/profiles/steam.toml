@@ -18,6 +18,7 @@ Share the steam libraries with "Root share" or "Home share" service.
 
 [services.common]
 executable_name = "/usr/bin/steam"
+dbus_name = "com.steampowered.*"
 
 [services.x11]
 [services.pulse_audio]
