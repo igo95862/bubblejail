@@ -3,6 +3,21 @@ SPDX-License-Identifier: GPL-3.0-or-later
 SPDX-FileCopyrightText: 2023 igo95862
 -->
 
+# 0.9.3
+
+## Fixes
+
+* Steam profile now allows it to acquire any D-Bus name starting with `com.steampowered.*`.
+  This fixes several PressureVessel startup errors.
+  Existing Steam instances will **NOT** be retroactively affected and `com.steampowered.*` must be
+  manually added to the "Application's D-Bus name" in the GUI or under `dbus_name` key in `[common]`
+  section in the text config.
+* Firefox desktop entry name specific to Fedora is now supported. (reported by @boredsquirrel)
+* Fixed bubblejail sometimes hanging on startup or shutdown after a JSON decode error is raised.
+  (thanks to @odomingao for providing exception traces)
+* The minimum meson version is now set at 1.3.0. This allows for better error messages
+  then attempting to compile bubblejail on a meson version lower than supported one.
+
 # 0.9.2
 
 ## Features
