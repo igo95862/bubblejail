@@ -9,7 +9,7 @@ dot_desktop_path = [
 ]
 is_gtk_application = true
 description='''
-Firefox using wayland display protocol.
+Firefox using the wayland display protocol.
 '''
 
 import_tips='''
@@ -24,8 +24,12 @@ dbus_name = "org.mozilla.*"
 [services.wayland]
 [services.network]
 [services.pulse_audio]
+[services.pipewire]
 [services.notify]
 [services.direct_rendering]
 
 [services.home_share]
 home_paths = ["Downloads",]
+
+[services.gnome_toolkit]
+gnome_portal = true
