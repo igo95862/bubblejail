@@ -907,9 +907,17 @@ class Slirp4netns(BubblejailService):
         dns_servers = settings.dns_servers.copy()
         dns_servers.append("10.0.2.3")
 
+        # Systemd-resolved makes /etc/resolv.conf a symlink
+        # to /run/systemd/resolve/stub-resolv.conf.
+        # Same do some DHCP clients like NetworkManager.
+        resolv_conf_path = Path("/etc/resolv.conf")
+        actual_resolv_path = resolv_conf_path.resolve()
+        if resolv_conf_path != actual_resolv_path:
+            resolv_conf_path = actual_resolv_path
+
         yield FileTransfer(
             b"\n".join(f"nameserver {x}".encode() for x in dns_servers),
-            "/etc/resolv.conf",
+            resolv_conf_path,
         )
 
     async def post_init_hook(self, pid: int) -> None:
