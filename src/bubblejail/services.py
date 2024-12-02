@@ -12,7 +12,7 @@ from asyncio import (
 from contextlib import ExitStack
 from dataclasses import asdict, dataclass, field, fields, is_dataclass, make_dataclass
 from multiprocessing import Process
-from os import O_CLOEXEC, O_NONBLOCK, environ, getpid, getuid, pipe2, readlink
+from os import O_CLOEXEC, O_NONBLOCK, environ, getpid, getuid, path, pipe2, readlink
 from pathlib import Path
 from shutil import which
 from sys import stderr
@@ -687,10 +687,10 @@ class RootShare(BubblejailService):
         settings = self.context.get_settings(RootShare.Settings)
 
         for x in settings.paths:
-            yield Bind(x)
+            yield Bind(path.expandvars(x))
 
         for x in settings.read_only_paths:
-            yield ReadOnlyBind(x)
+            yield ReadOnlyBind(path.expandvars(x))
 
     name = "root_share"
     pretty_name = "Root share"
