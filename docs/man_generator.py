@@ -56,7 +56,7 @@ _EDITOR_ environmental variable must be set.
 """,
     "list": "\n".join(
         f"- *{x}*"
-        for x in BUBBLEJAIL_CMD["list"]["add_argument"]["list_what"]["choices"]
+        for x in sorted(BUBBLEJAIL_CMD["list"]["add_argument"]["list_what"]["choices"])
     ),
 }
 
