@@ -90,11 +90,11 @@ BUBBLEJAIL_CMD: dict[str, CmdMetaDataDict] = {
     "list": {
         "add_argument": {
             "list_what": {
-                "choices": {
+                "choices": (
                     "instances",
                     "profiles",
                     "services",
-                },
+                ),
                 "default": "instances",
                 "help": "Type of entity to list.",
             },
