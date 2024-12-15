@@ -415,8 +415,21 @@ class X11(BubblejailService):
     def iter_bwrap_options(self) -> ServiceGeneratorType:
 
         for x in XDG_DESKTOP_VARS:
-            if x in environ:
-                yield EnvrimentalVar(x)
+            if x not in environ:
+                continue
+
+            # Override the XDG_SESSION_TYPE on Xwayland to x11.
+            # Otherwise some application will try to use Wayland without
+            # access to socket.
+            if (
+                x == "XDG_SESSION_TYPE"
+                and environ[x] == "wayland"
+                and not self.context.is_service_enabled(Wayland)
+            ):
+                yield EnvrimentalVar(x, "x11")
+                continue
+
+            yield EnvrimentalVar(x)
 
         yield EnvrimentalVar("DISPLAY")
 
