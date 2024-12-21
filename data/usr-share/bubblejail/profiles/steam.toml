@@ -25,3 +25,4 @@ dbus_name = "com.steampowered.*"
 [services.network]
 [services.direct_rendering]
 [services.joystick]
+[services.gamemode]
