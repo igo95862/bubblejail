@@ -1244,6 +1244,22 @@ class Debug(BubblejailService):
     display_in_gui = False
 
 
+class GameMode(BubblejailService):
+    def iter_bwrap_options(self) -> ServiceGeneratorType:
+        yield DbusSessionCall(
+            "com.feralinteractive.GameMode",
+            object_path="/com/feralinteractive/GameMode",
+        )
+
+    name = "gamemode"
+    pretty_name = "GameMode"
+    description = (
+        "Provides D-Bus access to the Feral's GameMode daemon D-Bus API. "
+        "Use `gamemoderun` command to run a specific game with optimizations. "
+        "For example, add `gamemoderun %command%` to Steam game launch options."
+    )
+
+
 SERVICES_CLASSES: tuple[Type[BubblejailService], ...] = (
     CommonSettings,
     X11,
@@ -1265,6 +1281,7 @@ SERVICES_CLASSES: tuple[Type[BubblejailService], ...] = (
     Slirp4netns,
     NamespacesLimits,
     Debug,
+    GameMode,
 )
 
 SERVICES_MAP: dict[str, Type[BubblejailService]] = {
