@@ -3,6 +3,25 @@ SPDX-License-Identifier: GPL-3.0-or-later
 SPDX-FileCopyrightText: 2023 igo95862
 -->
 
+# 0.9.4
+
+## Features
+
+* Added `gamemode` service which provides access to Feral's GameMode D-Bus API.
+  Use `gamemoderun` to run a specific application with optimization tweaks.
+  For example, add `gamemoderun %command%` to Steam game launch options.
+  If GameMode daemon is not running does nothing. Steam profile also enables this
+  service by default. (only affects newly created instances)
+
+## Fixes
+
+* `XDG_SESSION_TYPE` is now set to `x11` when `wayland` service is disabled in Xwayland
+  environments with `x11` service enabled. This fixes certain applications trying to
+  connect to Wayland socket even if was not passed to sandbox.
+* Fix manual pages not being reliably reproducible because certain metadata not having
+  stable order. (reported by @sertonix)
+* Fix `slirp4netns` not working when `/etc/resolv.conf` is a symlink. (reported by @odomingao)
+
 # 0.9.3
 
 ## Fixes
