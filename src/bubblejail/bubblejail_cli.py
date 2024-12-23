@@ -36,9 +36,7 @@ def iter_subcommand_options(
 
 
 def iter_list_choices() -> Iterable[str]:
-    choices = BUBBLEJAIL_CMD["list"]["add_argument"]["list_what"]["choices"]
-    assert isinstance(choices, set)
-    return choices
+    yield from BUBBLEJAIL_CMD["list"]["add_argument"]["list_what"]["choices"]
 
 
 def _extra_args_converter(command_sequence: list[str]) -> Generator[str, None, None]:
