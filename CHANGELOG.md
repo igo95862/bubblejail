@@ -3,6 +3,12 @@ SPDX-License-Identifier: GPL-3.0-or-later
 SPDX-FileCopyrightText: 2023 igo95862
 -->
 
+# 0.9.4.1
+
+## Fixes
+
+* Fixed `list` command autocompletion crashing when running without Python optimization mode. (reported by @lucasmz-dev)
+
 # 0.9.4
 
 ## Features
