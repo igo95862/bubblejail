@@ -9,7 +9,7 @@ dot_desktop_path = [
 ]
 is_gtk_application = true
 description='''
-Firefox web browser.
+Firefox web browser using the legacy X11 display protocol.
 '''
 
 import_tips='''
@@ -24,6 +24,12 @@ executable_name = "/usr/bin/firefox"
 [services.pulse_audio]
 [services.notify]
 [services.direct_rendering]
+[services.v4l]
 
 [services.home_share]
 home_paths = ["Downloads",]
+
+[services.gnome_toolkit]
+gnome_portal = true
+dconf_dbus = false
+gnome_vfs_dbus = false

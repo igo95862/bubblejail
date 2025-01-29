@@ -1,17 +1,16 @@
 # SPDX-License-Identifier: GPL-3.0-or-later
 # SPDX-FileCopyrightText: 2020 igo95862
 
-# Chromium
+# Brave
 dot_desktop_path = [
-    "/usr/share/applications/chromium-browser.desktop",
-    "/usr/share/applications/chromium.desktop",
+    "/usr/share/applications/brave-browser.desktop",
 ]
 description='''
-Chromium web browser
+Brave web browser
 '''
 
 [services.common]
-executable_name = "/usr/bin/chromium"
+executable_name = "/usr/bin/brave-browser"
 [services.wayland]
 [services.network]
 [services.direct_rendering]
