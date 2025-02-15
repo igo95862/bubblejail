@@ -2,7 +2,7 @@
 # SPDX-FileCopyrightText: 2020 igo95862
 install_data(
     'bubblejail-config.png',
-    install_dir : get_option('datadir') / 'icons/hicolor/48x48/apps',
+    install_dir : get_option('datadir') / 'icons/hicolor/128x128/apps',
     install_tag : 'bubblejail-gui',
 )
 
