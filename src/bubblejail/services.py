@@ -590,12 +590,15 @@ class DirectRendering(BubblejailService):
         yield DevBind("/dev/dri")
 
         # Nvidia specific binds
-        for x in Path("/dev/").iterdir():
-            if x.name.startswith("nvidia"):
-                yield DevBind(x)
+        for nv_dev in Path("/dev/").iterdir():
+            if nv_dev.name.startswith("nvidia"):
+                yield DevBind(nv_dev)
 
-        # Nvidia driver 500+ requires read access to sysfs
-        yield ReadOnlyBindTry("/sys/module/nvidia")
+        # Nvidia driver 500+ requires read access to sysfs module directories
+        # and CUDA does not work without them.
+        for nv_mod in Path("/sys/module/").iterdir():
+            if nv_mod.name.startswith("nvidia"):
+                yield ReadOnlyBindTry(nv_mod)
 
     name = "direct_rendering"
     pretty_name = "Direct Rendering"
