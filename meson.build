@@ -1,7 +1,7 @@
 # SPDX-License-Identifier: GPL-3.0-or-later
 # SPDX-FileCopyrightText: 2020 igo95862
 project('bubblejail',
-    version : '0.9.4.1',
+    version : '0.9.5',
     meson_version : '>=1.3.0',
     # Patch out these lines to install bubblejail's packages to site-packages
     default_options : {

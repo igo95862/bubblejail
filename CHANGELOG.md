@@ -3,6 +3,15 @@ SPDX-License-Identifier: GPL-3.0-or-later
 SPDX-FileCopyrightText: 2023 igo95862
 -->
 
+# 0.9.5
+
+## Fixes
+
+* Fixed PNG icon using white background instead of transparent one and also increase its
+  resolution to 128x128. (reported by @boredsquirrel)
+* Fixed Nvidia CUDA not working even when `direct_rendering` service is enabled.
+  (reported, debugged and tested by @silvestron)
+
 # 0.9.4.1
 
 ## Fixes
