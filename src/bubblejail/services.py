@@ -176,7 +176,7 @@ class BubblejailDefaults(BubblejailService):
     def iter_bwrap_options(self) -> ServiceGeneratorType:
         # Distro packaged libraries and binaries
         yield ReadOnlyBind("/usr")
-        yield ReadOnlyBind("/opt")
+        yield ReadOnlyBindTry("/opt")
         # Recreate symlinks in / or mount them read-only if its not a symlink.
         # Should be portable between distros.
         for root_path in Path("/").iterdir():
