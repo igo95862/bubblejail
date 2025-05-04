@@ -46,9 +46,6 @@ class BubblejailGuiWidget:
         self.widget = QWidget()
 
 
-# region Config edit classes
-
-
 class OptionWidgetBase(BubblejailGuiWidget):
     def __init__(
         self,
@@ -398,11 +395,6 @@ class ServiceWidget:
         return new_dict
 
 
-# endregion Config edit classes
-
-# region Central Widgets
-
-
 class CentralWidgets:
     def __init__(self, parent: BubblejailConfigApp):
         self.parent = parent
@@ -658,9 +650,6 @@ class SelectInstanceWidget:
         self.create_button = QPushButton("Create instance")
         self.layout_vertical.addWidget(self.create_button)
         self.create_button.clicked.connect(self.parent.switch_to_create_instance)
-
-
-# endregion Central Widgets
 
 
 class BubblejailConfigApp:

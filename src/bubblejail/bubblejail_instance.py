@@ -39,7 +39,6 @@ class BubblejailInstance:
         if not self.instance_directory.exists():
             raise BubblejailException("Instance directory does not exist")
 
-    # region Paths
     @cached_property
     def runtime_dir(self) -> Path:
         return Path(get_runtime_dir() + f"/bubblejail/{self.name}")
@@ -72,10 +71,6 @@ class BubblejailInstance:
     @cached_property
     def path_runtime_dbus_system_socket(self) -> Path:
         return self.runtime_dir / "dbus_system_proxy"
-
-    # endregion Paths
-
-    # region Metadata
 
     def _get_metadata_dict(self) -> dict[str, Any]:
         try:
@@ -122,8 +117,6 @@ class BubblejailInstance:
             key="desktop_entry_name",
             value=desktop_entry_name,
         )
-
-    # endregion Metadata
 
     def _read_config_file(self) -> str:
         with (self.path_config_file).open() as f:

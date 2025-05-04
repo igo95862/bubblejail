@@ -58,8 +58,6 @@ if TYPE_CHECKING:
 
     from _typeshed import DataclassInstance
 
-# region Service Typing
-
 
 class ServiceWantsSend: ...
 
@@ -84,9 +82,6 @@ if TYPE_CHECKING:
 
     ServiceGeneratorType = Generator[ServiceIterTypes, ServiceSendType, None]
 
-# endregion Service Typing
-
-# region Service Options
 
 ServiceSettingsTypes = str | list[str] | bool | int
 ServiceSettingsDict = dict[str, ServiceSettingsTypes]
@@ -99,10 +94,6 @@ class SettingFieldMetadata(TypedDict):
     is_deprecated: bool
 
 
-# endregion Service Options
-
-
-# region HelperFunctions
 XDG_DESKTOP_VARS: frozenset[str] = frozenset(
     {
         "XDG_CURRENT_DESKTOP",
@@ -129,9 +120,6 @@ def generate_toolkits() -> Generator[ServiceIterTypes, None, None]:
     kde_globals_conf = config_home_path / "kdeglobals"
     if kde_globals_conf.exists():
         yield ReadOnlyBind(kde_globals_conf)
-
-
-# endregion HelperFunctions
 
 
 class BubblejailService:

@@ -203,7 +203,6 @@ class BubblejailRunner:
         self.post_init_hooks.extend(self.instance_config.iter_post_init_hooks())
         self.post_shutdown_hooks.extend(self.instance_config.iter_post_shutdown_hooks())
 
-        # region dbus
         # Session dbus
         self.dbus_proxy_args.extend(
             (
@@ -249,7 +248,6 @@ class BubblejailRunner:
                 str(self.dbus_system_socket_path), "/run/dbus/system_bus_socket"
             ).to_args()
         )
-        # endregion dbus
 
         # Info fd pipe
         self.info_fd_pipe_read, self.info_fd_pipe_write = pipe2(O_NONBLOCK | O_CLOEXEC)
