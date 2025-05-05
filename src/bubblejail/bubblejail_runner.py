@@ -28,6 +28,7 @@ from .bwrap_config import (
     LaunchArguments,
     SeccompDirective,
 )
+from .dbus_proxy import XdgDbusProxy
 from .services import ServiceWantsDbusSessionBind, ServiceWantsHomeBind
 
 if TYPE_CHECKING:
@@ -78,11 +79,12 @@ class BubblejailRunner:
         self.dbus_proxy_pipe_read: int = -1
         self.dbus_proxy_pipe_write: int = -1
 
-        # Dbus session socket
+        # D-Bus proxy
         self.dbus_session_socket_path = parent.path_runtime_dbus_session_socket
-
-        # Dbus system socket
         self.dbus_system_socket_path = parent.path_runtime_dbus_system_socket
+        self.dbus_proxy = XdgDbusProxy(
+            self.dbus_session_socket_path, self.dbus_system_socket_path, is_log_dbus
+        )
 
         # Args to bwrap
         self.bwrap_options_args: list[str] = []
@@ -118,8 +120,6 @@ class BubblejailRunner:
         # TODO: Reorganize the order to allow for
         # better binding multiple resources in same filesystem path
 
-        dbus_session_opts: set[str] = set()
-        dbus_system_opts: set[str] = set()
         seccomp_state: SeccompState | None = None
         # Unshare all
         self.bwrap_options_args.append("--unshare-all")
@@ -178,10 +178,8 @@ class BubblejailRunner:
                             config.dest,
                         )
                     )
-                elif isinstance(config, DbusSessionArgs):
-                    dbus_session_opts.add(config.to_args())
-                elif isinstance(config, DbusSystemArgs):
-                    dbus_system_opts.add(config.to_args())
+                elif isinstance(config, (DbusSessionArgs, DbusSystemArgs)):
+                    self.dbus_proxy.add_dbus_rule(config)
                 elif isinstance(config, SeccompDirective):
                     if seccomp_state is None:
                         seccomp_state = SeccompState()
@@ -202,39 +200,6 @@ class BubblejailRunner:
 
         self.post_init_hooks.extend(self.instance_config.iter_post_init_hooks())
         self.post_shutdown_hooks.extend(self.instance_config.iter_post_shutdown_hooks())
-
-        # Session dbus
-        self.dbus_proxy_args.extend(
-            (
-                "xdg-dbus-proxy",
-                environ["DBUS_SESSION_BUS_ADDRESS"],
-                str(self.dbus_session_socket_path),
-            )
-        )
-
-        self.dbus_proxy_pipe_read, self.dbus_proxy_pipe_write = pipe2(
-            O_NONBLOCK | O_CLOEXEC
-        )
-
-        self.dbus_proxy_args.append(f"--fd={self.dbus_proxy_pipe_write}")
-
-        self.dbus_proxy_args.extend(dbus_session_opts)
-        self.dbus_proxy_args.append("--filter")
-        if self.is_log_dbus:
-            self.dbus_proxy_args.append("--log")
-
-        # System dbus
-        self.dbus_proxy_args.extend(
-            (
-                "unix:path=/run/dbus/system_bus_socket",
-                str(self.dbus_system_socket_path),
-            )
-        )
-
-        self.dbus_proxy_args.extend(dbus_system_opts)
-        self.dbus_proxy_args.append("--filter")
-        if self.is_log_dbus:
-            self.dbus_proxy_args.append("--log")
 
         # Bind twice, in /var and /run
         self.bwrap_options_args.extend(
@@ -385,49 +350,6 @@ class BubblejailRunner:
                 self.helper_socket_path.unlink()
 
     @asynccontextmanager
-    async def setup_dbus_proxy(self) -> AsyncIterator[None]:
-        running_loop = get_running_loop()
-        dbus_proxy_ready_future: Future[bool] = Future()
-
-        def proxy_ready_callback() -> None:
-            try:
-                with open(self.dbus_proxy_pipe_read, closefd=False) as f:
-                    f.read()
-            except Exception as e:
-                dbus_proxy_ready_future.set_exception(e)
-            else:
-                dbus_proxy_ready_future.set_result(True)
-
-            running_loop.remove_reader(self.dbus_proxy_pipe_read)
-
-        try:
-            running_loop.add_reader(
-                self.dbus_proxy_pipe_read,
-                proxy_ready_callback,
-            )
-            dbus_proxy_process = await create_subprocess_exec(
-                *self.dbus_proxy_args,
-                pass_fds=[self.dbus_proxy_pipe_write],
-            )
-            self.dbus_proxy_process = dbus_proxy_process
-            await wait_for(dbus_proxy_ready_future, timeout=1)
-            if dbus_proxy_process.returncode is not None:
-                raise ValueError(
-                    "dbus proxy error code: " f"{self.dbus_proxy_process.returncode}"
-                )
-            yield None
-        finally:
-            with exc_suppress(ProcessLookupError, TimeoutError):
-                dbus_proxy_process.terminate()
-                await wait_for(dbus_proxy_process.wait(), timeout=3)
-
-            with exc_suppress(FileNotFoundError):
-                self.dbus_session_socket_path.unlink()
-
-            with exc_suppress(FileNotFoundError):
-                self.dbus_system_socket_path.unlink()
-
-    @asynccontextmanager
     async def setup_bubblewrap_subprocess(
         self,
         run_args: Iterable[str] | None = None,
@@ -478,7 +400,8 @@ class BubblejailRunner:
         exit_stack.enter_context(self.setup_runtime_dir())
         exit_stack.enter_context(self.setup_helper_runtime_dir())
         exit_stack.enter_context(self.setup_helper_socket())
-        await exit_stack.enter_async_context(self.setup_dbus_proxy())
+        await exit_stack.enter_async_context(self.dbus_proxy.exit_stack)
+        await self.dbus_proxy.start()
         exit_stack.push_async_callback(self._run_post_shutdown_hooks)
         return await exit_stack.enter_async_context(
             self.setup_bubblewrap_subprocess(run_args)

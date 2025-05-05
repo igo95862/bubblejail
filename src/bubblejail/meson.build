@@ -13,8 +13,10 @@ source_files = [
    'bubblejail_seccomp.py',
    'bubblejail_utils.py',
    'bwrap_config.py',
+   'dbus_proxy.py',
    'exceptions.py',
    'services.py',
+   'utils.py',
    'py.typed',
 ]
 
