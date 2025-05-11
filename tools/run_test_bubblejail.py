@@ -12,19 +12,13 @@ from traceback import print_exc
 from typing import Any
 
 # How to run testing bubblejail
-# 1. Create venv:
-#    python -m venv --system-site-packages venv
-#
-# 2. Use meson-python editable installs:
-#     ./venv/bin/pip install \
-#       --no-build-isolation --config-settings=editable-verbose=true \
-#       --config-settings=setup-args=-Dman=false \
-#       --config-settings=setup-args=-Duse-vendored-python-lxns=enabled \
-#       --config-settings=install-args=--tags=runtime \
-#       --editable .
-#
-# 3. Run this script with venv:
-#    ./venv/bin/python ./tools/run_test_bubblejail.py shell
+# 1. Create venv using provided helper script:
+#       python -m tools.venv_setup
+# 2. Run this script with venv.
+#   To run CLI:
+#       ./venv/bin/python ./tools/run_test_bubblejail.py shell
+#   To run GUI:
+#       ./venv/bin/python ./tools/run_test_bubblejail.py gui
 
 PROJECT_ROOT_PATH = Path(__file__).parent.parent
 BUILD_DIR = PROJECT_ROOT_PATH / "build"
