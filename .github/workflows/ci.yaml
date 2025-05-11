@@ -49,3 +49,25 @@ jobs:
           arch-meson -Dman=true build
           meson compile --verbose -C build
           meson install -C build --destdir install
+
+  test:
+    name: Unit tests
+    runs-on: ubuntu-latest
+    container:
+      image: docker.io/archlinux:latest
+    steps:
+      - name: Install test dependencies
+        run: >
+          pacman --noconfirm -Syu
+          git gcc python-jinja meson-python
+          python python-pyxdg python-tomli-w
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          submodules: true
+      - name: Create venv
+        run: |
+          python -m tools.venv_setup
+      - name: Run unit tests
+        run: |
+          ./venv/bin/python -m unittest
