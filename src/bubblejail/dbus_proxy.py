@@ -4,9 +4,11 @@ from __future__ import annotations
 
 from asyncio import create_subprocess_exec, wait_for
 from contextlib import AsyncExitStack, suppress
+from dataclasses import dataclass
 from os import O_CLOEXEC, O_NONBLOCK, environ, pipe2
 from pathlib import Path
 from shutil import which
+from sys import stderr
 from typing import TYPE_CHECKING
 
 from .bwrap_config import DbusSessionArgs, DbusSystemArgs
@@ -15,6 +17,73 @@ from .utils import aread_once
 if TYPE_CHECKING:
     from asyncio.subprocess import Process as AsyncioProcess
     from typing import BinaryIO
+
+
+class DBusProxyLogParser:
+    @dataclass
+    class DBusCall:
+        service_name: str
+        interface_member_name: str
+        object_path: str
+
+    @dataclass
+    class DBusFiltering:
+        dbus_name: str
+        current_policy: str
+        required_policy: str
+
+    def __init__(self) -> None:
+        self.wants_own_names: set[str] = set()
+        self.wants_talk_to: set[str] = set()
+        self.previous_call_line: DBusProxyLogParser.DBusCall | None = None
+
+        import re
+
+        self.filtering_regex = re.compile(
+            r"^Filtering message due to arg0 (?P<dbus_name>[\w.]+), "
+            r"policy: (?P<current_policy>\d) \(required (?P<required_policy>\d)\)"
+        )
+        self.call_regex = re.compile(
+            r"^C\d+: -> (?P<service_name>[\w.]+) call "
+            r"(?P<interface_member_name>[\w.]+) at (?P<object_path>[\w/]+)"
+        )
+
+    def process_log_line(self, line: str) -> None:
+        previous_call_line = self.previous_call_line
+        self.previous_call_line = None
+
+        if filtering_match := self.filtering_regex.match(line):
+            filtering_event = DBusProxyLogParser.DBusFiltering(
+                **filtering_match.groupdict()
+            )
+
+            match previous_call_line:
+                case None:
+                    print(
+                        "Found D-Bus filtering message but no previous line to analyze",
+                        file=stderr,
+                    )
+                    return
+                case DBusProxyLogParser.DBusCall(
+                    service_name="org.freedesktop.DBus",
+                    interface_member_name="org.freedesktop.DBus.RequestName",
+                ):
+                    if filtering_event.required_policy == "3":
+                        self.wants_own_names.add(filtering_event.dbus_name)
+                case DBusProxyLogParser.DBusCall(
+                    service_name="org.freedesktop.DBus",
+                    interface_member_name="org.freedesktop.DBus.GetNameOwner",
+                ) | DBusProxyLogParser.DBusCall(
+                    service_name="org.freedesktop.DBus",
+                    interface_member_name="org.freedesktop.DBus.StartServiceByName",
+                ):
+                    self.wants_talk_to.add(filtering_event.dbus_name)
+        elif call_match := self.call_regex.match(line):
+            self.previous_call_line = DBusProxyLogParser.DBusCall(
+                **call_match.groupdict()
+            )
+        elif line.startswith("*HIDDEN*") and previous_call_line is not None:
+            self.wants_talk_to.add(previous_call_line.service_name)
 
 
 class XdgDbusProxy:
