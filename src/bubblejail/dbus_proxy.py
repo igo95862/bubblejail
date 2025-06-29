@@ -34,6 +34,7 @@ class DBusProxyLogParser:
 
     def __init__(self) -> None:
         self.wants_own_names: set[str] = set()
+        self.wants_own_first_name: str | None = None
         self.wants_talk_to: set[str] = set()
         self.previous_call_line: DBusProxyLogParser.DBusCall | None = None
 
@@ -70,6 +71,8 @@ class DBusProxyLogParser:
                 ):
                     if filtering_event.required_policy == "3":
                         self.wants_own_names.add(filtering_event.dbus_name)
+                        if self.wants_own_first_name is None:
+                            self.wants_own_first_name = filtering_event.dbus_name
                 case DBusProxyLogParser.DBusCall(
                     service_name="org.freedesktop.DBus",
                     interface_member_name="org.freedesktop.DBus.GetNameOwner",
