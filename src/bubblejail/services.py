@@ -49,6 +49,7 @@ from .exceptions import (
     BubblejailInitializationError,
     ServiceConflictError,
 )
+from .utils import aread_once
 
 if TYPE_CHECKING:
     from asyncio.subprocess import Process as AsyncioProcess
@@ -487,7 +488,7 @@ class Network(BubblejailService):
     name = "network"
     pretty_name = "Network access"
     description = "Gives access to network."
-    conflicts = frozenset(("slirp4netns",))
+    conflicts = frozenset(("slirp4netns", "pasta_network"))
 
 
 class PulseAudio(BubblejailService):
@@ -1006,7 +1007,7 @@ class Slirp4netns(BubblejailService):
     description = (
         "Independent networking stack for sandbox. " "Requires slirp4netns executable."
     )
-    conflicts = frozenset(("network",))
+    conflicts = frozenset(("network", "pasta_network"))
 
 
 class NamespacesLimits(BubblejailService):
@@ -1251,6 +1252,69 @@ class GameMode(BubblejailService):
     )
 
 
+class PastaNetwork(BubblejailService):
+    @dataclass
+    class Settings:
+        extra_args: list[str] = field(
+            default_factory=list,
+            metadata=SettingFieldMetadata(
+                pretty_name="Extra arguments",
+                description=(
+                    "Extra arguments to pass to pasta. For example, interface "
+                    "binding, port forwarding... See `passt` man page."
+                ),
+                is_deprecated=False,
+            ),
+        )
+
+    def __init__(self, context: BubblejailRunContext) -> None:
+        super().__init__(context)
+        self.pasta_process: AsyncioProcess | None = None
+
+    async def post_init_hook(self, pid: int) -> None:
+        settings = self.context.get_settings(PastaNetwork.Settings)
+
+        pasta_args: list[str] = ["pasta", "--config-net", "--foreground"]
+
+        from lxns.namespaces import NetworkNamespace
+
+        with ExitStack() as exit_stack:
+            self_pid = getpid()
+
+            network_namespace = exit_stack.enter_context(NetworkNamespace.from_pid(pid))
+            parent_ns = exit_stack.enter_context(network_namespace.get_user_namespace())
+            pasta_args.extend(("--userns", f"/proc/{self_pid}/fd/{parent_ns.fileno()}"))
+
+            ready_pipe_read_fd, ready_pipe_write_fd = pipe2(O_NONBLOCK | O_CLOEXEC)
+            exit_stack.enter_context(open(ready_pipe_write_fd))
+            ready_pipe = exit_stack.enter_context(open(ready_pipe_read_fd, mode="rb"))
+
+            pasta_args.extend(("--pid", f"/proc/{self_pid}/fd/{ready_pipe_write_fd}"))
+
+            self.pasta_process = await create_subprocess_exec(
+                *pasta_args, *settings.extra_args, str(pid)
+            )
+
+            await aread_once(ready_pipe)
+
+    async def post_shutdown_hook(self) -> None:
+        if self.pasta_process is None:
+            return
+
+        try:
+            self.pasta_process.terminate()
+            await wait_for(self.pasta_process.wait(), timeout=3)
+        except TimeoutError:
+            self.pasta_process.kill()
+        except ProcessLookupError:
+            ...
+
+    name = "pasta_network"
+    pretty_name = "pasta networking"
+    description = "Independent networking stack for sandbox. Requires pasta executable."
+    conflicts = frozenset(("network", "slirp4netns"))
+
+
 SERVICES_CLASSES: tuple[Type[BubblejailService], ...] = (
     CommonSettings,
     X11,
@@ -1273,6 +1337,7 @@ SERVICES_CLASSES: tuple[Type[BubblejailService], ...] = (
     NamespacesLimits,
     Debug,
     GameMode,
+    PastaNetwork,
 )
 
 SERVICES_MAP: dict[str, Type[BubblejailService]] = {

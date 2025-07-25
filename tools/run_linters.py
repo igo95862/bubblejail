@@ -71,7 +71,7 @@ def run_isort() -> bool:
     return False
 
 
-IGNORE_CODESPELL_WORDS = ("assertIn",)
+IGNORE_CODESPELL_WORDS = ("assertIn", "passt")
 
 
 def run_codespell() -> bool:
