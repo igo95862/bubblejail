@@ -28,7 +28,7 @@ from .bwrap_config import (
     LaunchArguments,
     SeccompDirective,
 )
-from .dbus_proxy import XdgDbusProxy
+from .dbus_proxy import DBusLogEnum, XdgDbusProxy
 from .services import ServiceWantsDbusSessionBind, ServiceWantsHomeBind
 
 if TYPE_CHECKING:
@@ -56,7 +56,7 @@ class BubblejailRunner:
         instance_config: BubblejailInstanceConfig,
         is_shell_debug: bool = False,
         is_helper_debug: bool = False,
-        is_log_dbus: bool = False,
+        log_dbus: DBusLogEnum = DBusLogEnum.NONE,
     ) -> None:
         self.home_bind_path = parent.path_home_directory
         self.runtime_dir = parent.runtime_dir
@@ -83,7 +83,7 @@ class BubblejailRunner:
         self.dbus_session_socket_path = parent.path_runtime_dbus_session_socket
         self.dbus_system_socket_path = parent.path_runtime_dbus_system_socket
         self.dbus_proxy = XdgDbusProxy(
-            self.dbus_session_socket_path, self.dbus_system_socket_path, is_log_dbus
+            self.dbus_session_socket_path, self.dbus_system_socket_path, log_dbus
         )
 
         # Args to bwrap
@@ -91,7 +91,6 @@ class BubblejailRunner:
         self.bwrap_extra_options: list[str] = []
         # Debug mode
         self.is_shell_debug = is_shell_debug
-        self.is_log_dbus = is_log_dbus
         # Instance config
         self.instance_config = instance_config
 

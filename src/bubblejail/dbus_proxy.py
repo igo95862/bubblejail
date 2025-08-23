@@ -2,12 +2,14 @@
 # SPDX-FileCopyrightText: 2025 igo95862
 from __future__ import annotations
 
-from asyncio import create_subprocess_exec, wait_for
+from asyncio import create_subprocess_exec, get_running_loop, wait_for
 from contextlib import AsyncExitStack, suppress
 from dataclasses import dataclass
+from enum import StrEnum
 from os import O_CLOEXEC, O_NONBLOCK, environ, pipe2
 from pathlib import Path
 from shutil import which
+from subprocess import PIPE
 from sys import stderr
 from typing import TYPE_CHECKING
 
@@ -15,6 +17,7 @@ from .bwrap_config import DbusSessionArgs, DbusSystemArgs
 from .utils import aread_once
 
 if TYPE_CHECKING:
+    from asyncio import StreamReader, Task
     from asyncio.subprocess import Process as AsyncioProcess
     from typing import BinaryIO
 
@@ -70,6 +73,10 @@ class DBusProxyLogParser:
                     interface_member_name="org.freedesktop.DBus.RequestName",
                 ):
                     if filtering_event.required_policy == "3":
+                        print(
+                            f"D-Bus: Blocked from owning name {filtering_event.dbus_name!r}",
+                            file=stderr,
+                        )
                         self.wants_own_names.add(filtering_event.dbus_name)
                         if self.wants_own_first_name is None:
                             self.wants_own_first_name = filtering_event.dbus_name
@@ -80,13 +87,30 @@ class DBusProxyLogParser:
                     service_name="org.freedesktop.DBus",
                     interface_member_name="org.freedesktop.DBus.StartServiceByName",
                 ):
+                    print(
+                        f"D-Bus: Blocked from inquiring about {filtering_event.dbus_name!r} service",
+                        file=stderr,
+                    )
                     self.wants_talk_to.add(filtering_event.dbus_name)
         elif call_match := self.call_regex.match(line):
             self.previous_call_line = DBusProxyLogParser.DBusCall(
                 **call_match.groupdict()
             )
         elif line.startswith("*HIDDEN*") and previous_call_line is not None:
+            print(
+                "D-Bus: Blocked from calling\n"
+                f"    Service name: {previous_call_line.service_name!r}\n"
+                f"    Object path: {previous_call_line.object_path!r}\n"
+                f"    Interface.Member: {previous_call_line.interface_member_name!r}",
+                file=stderr,
+            )
             self.wants_talk_to.add(previous_call_line.service_name)
+
+
+class DBusLogEnum(StrEnum):
+    NONE = "none"
+    RAW = "raw"
+    PARSE = "parse"
 
 
 class XdgDbusProxy:
@@ -94,7 +118,7 @@ class XdgDbusProxy:
         self,
         dbus_session_socket_path: Path,
         dbus_system_socket_path: Path,
-        log_dbus: bool,
+        log_dbus: DBusLogEnum,
     ):
         self.log_dbus = log_dbus
         self.dbus_session_socket_path = dbus_session_socket_path
@@ -104,6 +128,7 @@ class XdgDbusProxy:
         self.exit_stack = AsyncExitStack()
 
         self.dbus_proxy_process: AsyncioProcess | None = None
+        self.dbus_parser: DBusProxyLogParser | None = None
 
     def add_dbus_rule(self, rule: DbusSessionArgs | DbusSystemArgs) -> None:
         match rule:
@@ -126,7 +151,7 @@ class XdgDbusProxy:
         dbus_proxy_args.append(str(self.dbus_session_socket_path))
         dbus_proxy_args.extend(self.dbus_session_opts)
         dbus_proxy_args.append("--filter")
-        if self.log_dbus:
+        if self.log_dbus != DBusLogEnum.NONE:
             dbus_proxy_args.append("--log")
 
         # D-Bus system
@@ -134,7 +159,7 @@ class XdgDbusProxy:
         dbus_proxy_args.append(str(self.dbus_system_socket_path))
         dbus_proxy_args.extend(self.dbus_system_opts)
         dbus_proxy_args.append("--filter")
-        if self.log_dbus:
+        if self.log_dbus != DBusLogEnum.NONE:
             dbus_proxy_args.append("--log")
 
         return dbus_proxy_args
@@ -175,6 +200,7 @@ class XdgDbusProxy:
         self.dbus_proxy_process = await create_subprocess_exec(
             *dbus_proxy_args,
             pass_fds=[write_pipe.fileno()],
+            stdout=PIPE if self.log_dbus == DBusLogEnum.PARSE else None,
         )
         await aread_once(read_pipe)
         write_pipe.close()
@@ -184,3 +210,34 @@ class XdgDbusProxy:
             )
         self.exit_stack.callback(self.unlink_sockets)
         self.exit_stack.push_async_callback(self.terminate_dbus_proxy, read_pipe)
+
+        if self.log_dbus == DBusLogEnum.PARSE:
+            dbus_parser = DBusProxyLogParser()
+            loop = get_running_loop()
+            read_logs_task = loop.create_task(
+                self.read_proxy_logs(dbus_parser, self.dbus_proxy_process.stdout)
+            )
+            self.exit_stack.callback(read_logs_task.cancel)
+            read_logs_task.add_done_callback(self.check_parser_exc)
+
+    def check_parser_exc(self, parser_task: Task[None]) -> None:
+        if parser_task.cancelled():
+            return
+
+        if exc := parser_task.exception():
+            print(
+                "Parser failed with exception:",
+                exc,
+                file=stderr,
+            )
+
+    async def read_proxy_logs(
+        self,
+        dbus_parser: DBusProxyLogParser,
+        stream: StreamReader | None,
+    ) -> None:
+        if stream is None:
+            return
+
+        while line := await stream.readline():
+            dbus_parser.process_log_line(line.decode("utf-8"))

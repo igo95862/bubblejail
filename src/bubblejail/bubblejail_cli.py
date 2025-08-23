@@ -11,6 +11,7 @@ from typing import TYPE_CHECKING
 from .bubblejail_cli_metadata import BUBBLEJAIL_CMD
 from .bubblejail_directories import BubblejailDirectories
 from .bubblejail_utils import BubblejailSettings
+from .dbus_proxy import DBusLogEnum
 from .services import SERVICES_CLASSES
 
 if TYPE_CHECKING:
@@ -59,7 +60,7 @@ def run_bjail(
     dry_run: bool,
     debug_bwrap_args: list[list[str]],
     debug_shell: bool,
-    debug_log_dbus: bool,
+    debug_log_dbus: str | None,
     debug_helper_script: Optional[Path],
 ) -> None:
     try:
@@ -95,12 +96,16 @@ def run_bjail(
             else:
                 extra_bwrap_args = None
 
+            log_dbus = DBusLogEnum.NONE
+            if debug_log_dbus is not None:
+                log_dbus = DBusLogEnum(debug_log_dbus)
+
             async_run(
                 instance.async_run_init(
                     args_to_run=args_to_instance,
                     debug_shell=debug_shell,
                     debug_helper_script=debug_helper_script,
-                    debug_log_dbus=debug_log_dbus,
+                    log_dbus=log_dbus,
                     dry_run=dry_run,
                     extra_bwrap_args=extra_bwrap_args,
                 )

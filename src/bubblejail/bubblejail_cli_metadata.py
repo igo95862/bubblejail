@@ -41,8 +41,15 @@ BUBBLEJAIL_CMD: dict[str, CmdMetaDataDict] = {
                 "metavar": "script_path",
             },
             "--debug-log-dbus": {
-                "action": "store_true",
-                "help": "Enables D-Bus proxy logging.",
+                "action": "store",
+                "const": "parse",
+                "choices": ("raw", "parse"),
+                "nargs": "?",
+                "help": (
+                    "Enables D-Bus proxy logging. "
+                    "By default the D-Bus proxy log is captured from the proxy "
+                    "and is parsed in to human readable format."
+                ),
             },
             "--wait": {
                 "action": "store_true",

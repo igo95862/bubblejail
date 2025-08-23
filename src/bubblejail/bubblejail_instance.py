@@ -23,6 +23,7 @@ from xdg.BaseDirectory import get_runtime_dir
 from .bubblejail_helper import RequestRun
 from .bubblejail_runner import BubblejailRunner
 from .bubblejail_utils import FILE_NAME_METADATA, FILE_NAME_SERVICES
+from .dbus_proxy import DBusLogEnum
 from .exceptions import BubblejailException, BubblewrapRunError
 from .services import ServiceContainer as BubblejailInstanceConfig
 from .services import ServicesConfDictType
@@ -178,7 +179,7 @@ class BubblejailInstance:
         debug_shell: bool = False,
         dry_run: bool = False,
         debug_helper_script: Path | None = None,
-        debug_log_dbus: bool = False,
+        log_dbus: DBusLogEnum = DBusLogEnum.NONE,
         extra_bwrap_args: list[str] | None = None,
     ) -> None:
 
@@ -189,7 +190,7 @@ class BubblejailInstance:
             instance_config=instance_config,
             is_shell_debug=debug_shell,
             is_helper_debug=debug_helper_script is not None,
-            is_log_dbus=debug_log_dbus,
+            log_dbus=log_dbus,
         )
         if extra_bwrap_args:
             runner.bwrap_extra_options.extend(extra_bwrap_args)
