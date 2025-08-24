@@ -1,17 +1,17 @@
 # SPDX-License-Identifier: GPL-3.0-or-later
 # SPDX-FileCopyrightText: 2020 igo95862
 
-# Chromium
+# Vivaldi
 dot_desktop_path = [
-    "/usr/share/applications/chromium-browser.desktop",
-    "/usr/share/applications/chromium.desktop",
+    "/usr/share/applications/vivaldi-snapshot.desktop",
 ]
+
 description='''
-Chromium web browser
+Vivaldi web browser - snapshot
 '''
 
 [services.common]
-executable_name = "/usr/bin/chromium"
+executable_name = "/usr/bin/vivaldi-snapshot"
 [services.wayland]
 [services.network]
 [services.direct_rendering]
