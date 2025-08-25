@@ -17,7 +17,6 @@ from tempfile import TemporaryDirectory
 from tomllib import loads as toml_loads
 from typing import Any, cast
 
-from tomli_w import dump as toml_dump
 from xdg.BaseDirectory import get_runtime_dir
 
 from .bubblejail_helper import RequestRun
@@ -25,8 +24,7 @@ from .bubblejail_runner import BubblejailRunner
 from .bubblejail_utils import FILE_NAME_METADATA, FILE_NAME_SERVICES
 from .dbus_proxy import DBusLogEnum
 from .exceptions import BubblejailException, BubblewrapRunError
-from .services import ServiceContainer as BubblejailInstanceConfig
-from .services import ServicesConfDictType
+from .services import ServiceContainer, ServicesConfDictType
 
 
 class BubblejailInstance:
@@ -81,11 +79,13 @@ class BubblejailInstance:
             return {}
 
     def _save_metadata_key(self, key: str, value: Any) -> None:
+        from tomli_w import dumps as toml_dumps
+
         toml_dict = self._get_metadata_dict()
         toml_dict[key] = value
 
-        with open(self.path_metadata_file, mode="wb") as metadata_file:
-            toml_dump(toml_dict, metadata_file)
+        with open(self.path_metadata_file, mode="w") as metadata_file:
+            metadata_file.write(toml_dumps(toml_dict))
 
     def _get_metadata_value(self, key: str) -> str | None:
         try:
@@ -119,24 +119,27 @@ class BubblejailInstance:
             value=desktop_entry_name,
         )
 
-    def _read_config_file(self) -> str:
+    def read_services_file(self) -> str:
         with (self.path_config_file).open() as f:
             return f.read()
 
-    def _read_config(
-        self, config_contents: str | None = None
-    ) -> BubblejailInstanceConfig:
+    def read_services(self, services_data: str | None = None) -> ServiceContainer:
 
-        if config_contents is None:
-            config_contents = self._read_config_file()
+        if services_data is None:
+            services_data = self.read_services_file()
 
-        conf_dict = cast(ServicesConfDictType, toml_loads(config_contents))
+        services_dict = cast(ServicesConfDictType, toml_loads(services_data))
 
-        return BubblejailInstanceConfig(conf_dict)
+        return ServiceContainer(services_dict)
 
-    def save_config(self, config: BubblejailInstanceConfig) -> None:
-        with open(self.path_config_file, mode="wb") as conf_file:
-            toml_dump(config.get_service_conf_dict(), conf_file)
+    def save_services(self, services: ServiceContainer) -> None:
+        from tomli_w import dumps as toml_dumps
+
+        self.save_services_file(toml_dumps(services.get_service_conf_dict()))
+
+    def save_services_file(self, services_data: str) -> None:
+        with open(self.path_config_file, mode="w") as conf_file:
+            conf_file.write(services_data)
 
     async def send_run_rpc(
         self,
@@ -183,11 +186,9 @@ class BubblejailInstance:
         extra_bwrap_args: list[str] | None = None,
     ) -> None:
 
-        instance_config = self._read_config()
-
         runner = BubblejailRunner(
             parent=self,
-            instance_config=instance_config,
+            services_config=self.read_services(),
             is_shell_debug=debug_shell,
             is_helper_debug=debug_helper_script is not None,
             log_dbus=log_dbus,
@@ -248,7 +249,7 @@ class BubblejailInstance:
             # Create path to temporary file and write exists config
             temp_file_path = Path(tempdir + "temp.toml")
             with open(temp_file_path, mode="w") as tempfile:
-                tempfile.write(self._read_config_file())
+                tempfile.write(self.read_services_file())
 
             initial_modification_time = stat(temp_file_path).st_mtime
             # Launch EDITOR on the temporary file
@@ -264,12 +265,11 @@ class BubblejailInstance:
             # Verify that the new config is valid and save to variable
             with open(temp_file_path) as tempfile:
                 new_config_toml = tempfile.read()
-                BubblejailInstanceConfig(
+                ServiceContainer(
                     cast(ServicesConfDictType, toml_loads(new_config_toml))
                 )
             # Write to instance config file
-            with open(self.path_config_file, mode="w") as conf_file:
-                conf_file.write(new_config_toml)
+            self.save_services_file(new_config_toml)
 
 
 class BubblejailProfile:
@@ -295,7 +295,7 @@ class BubblejailProfile:
                     "not {dot_desktop_path!r}"
                 )
         self.is_gtk_application = is_gtk_application
-        self.config = BubblejailInstanceConfig(services)
+        self.config = ServiceContainer(services)
         self.description = description
         self.import_tips = import_tips
 

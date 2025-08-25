@@ -39,7 +39,7 @@ if TYPE_CHECKING:
     from typing import IO
 
     from .bubblejail_instance import BubblejailInstance
-    from .services import ServiceContainer as BubblejailInstanceConfig
+    from .services import ServiceContainer
 
 
 def copy_data_to_temp_file(data: bytes) -> IO[bytes]:
@@ -53,7 +53,7 @@ class BubblejailRunner:
     def __init__(
         self,
         parent: BubblejailInstance,
-        instance_config: BubblejailInstanceConfig,
+        services_config: ServiceContainer,
         is_shell_debug: bool = False,
         is_helper_debug: bool = False,
         log_dbus: DBusLogEnum = DBusLogEnum.NONE,
@@ -92,7 +92,7 @@ class BubblejailRunner:
         # Debug mode
         self.is_shell_debug = is_shell_debug
         # Instance config
-        self.instance_config = instance_config
+        self.services_config = services_config
 
         # Executable args
         self.executable_args: list[str] = []
@@ -147,7 +147,7 @@ class BubblejailRunner:
             if colorterm_env := environ.get("COLORTERM"):
                 self.bwrap_options_args.extend(("--setenv", "COLORTERM", colorterm_env))
 
-        for service in self.instance_config.iter_services():
+        for service in self.services_config.iter_services():
             config_iterator = service.iter_bwrap_options()
 
             while True:
@@ -197,8 +197,8 @@ class BubblejailRunner:
             self.bwrap_temp_files.append(seccomp_temp_file)
             self.bwrap_options_args.extend(("--seccomp", str(seccomp_fd)))
 
-        self.post_init_hooks.extend(self.instance_config.iter_post_init_hooks())
-        self.post_shutdown_hooks.extend(self.instance_config.iter_post_shutdown_hooks())
+        self.post_init_hooks.extend(self.services_config.iter_post_init_hooks())
+        self.post_shutdown_hooks.extend(self.services_config.iter_post_shutdown_hooks())
 
         # Bind twice, in /var and /run
         self.bwrap_options_args.extend(

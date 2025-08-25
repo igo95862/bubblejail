@@ -434,9 +434,9 @@ class InstanceEditWidget(CentralWidgets):
 
         # Instance
         self.bubblejail_instance = BubblejailDirectories.instance_get(instance_name)
-        self.instance_config = self.bubblejail_instance._read_config()
+        self.services_config = self.bubblejail_instance.read_services()
         services_settings_dicts: ServicesConfDictType = (
-            self.instance_config.get_service_conf_dict()
+            self.services_config.get_service_conf_dict()
         )
 
         self.service_widgets: List[ServiceWidget] = []
@@ -472,9 +472,9 @@ class InstanceEditWidget(CentralWidgets):
             for x in self.service_widgets
             if x.group_widget.isChecked()
         }
-        self.instance_config.set_services(new_config)
+        self.services_config.set_services(new_config)
 
-        self.bubblejail_instance.save_config(self.instance_config)
+        self.bubblejail_instance.save_services(self.services_config)
         self.parent.switch_to_selector()
 
     def refresh_conflicts(self, new_state: bool) -> None:
