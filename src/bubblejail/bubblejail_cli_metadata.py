@@ -66,6 +66,12 @@ BUBBLEJAIL_CMD: dict[str, CmdMetaDataDict] = {
                 ),
                 "metavar": ("bwrap_option", "bwrap_option_args"),
             },
+            "--wizard": {
+                "action": "store_true",
+                "help": (
+                    "Enable configuration wizard. Can only be use if instance is not running."
+                ),
+            },
             "instance_name": {
                 "help": "Instance to run.",
             },

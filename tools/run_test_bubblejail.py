@@ -47,9 +47,9 @@ def setup_mocks() -> None:
         self: BubblejailInstance,
         *args: Any,
         **kwargs: Any,
-    ) -> None:
+    ) -> Any:
         kwargs["debug_helper_script"] = helper_path
-        await original_run(
+        return await original_run(
             self,
             *args,
             **kwargs,

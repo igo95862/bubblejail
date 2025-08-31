@@ -184,7 +184,7 @@ class BubblejailInstance:
         debug_helper_script: Path | None = None,
         log_dbus: DBusLogEnum = DBusLogEnum.NONE,
         extra_bwrap_args: list[str] | None = None,
-    ) -> None:
+    ) -> BubblejailRunner:
 
         runner = BubblejailRunner(
             parent=self,
@@ -219,7 +219,7 @@ class BubblejailInstance:
 
             print("D-Bus session args:", file=stderr)
             print(" ".join(runner.dbus_proxy_args), file=stderr)
-            return
+            return runner
 
         async with AsyncExitStack() as exit_stack:
             bwrap_process = await runner.setup_runtime(exit_stack, args_to_run)
@@ -242,6 +242,7 @@ class BubblejailInstance:
                 )
 
             print("Bubblewrap terminated", file=stderr)
+            return runner
 
     async def edit_config_in_editor(self) -> None:
         # Create temporary directory

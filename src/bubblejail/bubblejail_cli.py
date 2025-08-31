@@ -4,6 +4,7 @@ from __future__ import annotations
 
 from argparse import ArgumentParser
 from asyncio import run as async_run
+from os import isatty
 from pathlib import Path
 from sys import argv, stderr, stdout
 from typing import TYPE_CHECKING
@@ -62,6 +63,7 @@ def run_bjail(
     debug_shell: bool,
     debug_log_dbus: str | None,
     debug_helper_script: Optional[Path],
+    wizard: bool,
 ) -> None:
     try:
         instance = BubblejailDirectories.instance_get(instance_name)
@@ -100,7 +102,15 @@ def run_bjail(
             if debug_log_dbus is not None:
                 log_dbus = DBusLogEnum(debug_log_dbus)
 
-            async_run(
+            if wizard:
+                if not isatty(stderr.fileno()):
+                    raise ValueError(
+                        "Configuration wizards can only be enabled when run from terminal"
+                    )
+
+                log_dbus = DBusLogEnum.PARSE
+
+            result = async_run(
                 instance.async_run_init(
                     args_to_run=args_to_instance,
                     debug_shell=debug_shell,
@@ -111,7 +121,6 @@ def run_bjail(
                 )
             )
     except Exception:
-        from os import isatty
 
         if not isatty(stderr.fileno()):
             from subprocess import run as subprocess_run
@@ -133,6 +142,12 @@ def run_bjail(
                 # Make notify-send optional
                 ...
         raise
+
+    if wizard:
+        if dbus_parser := result.dbus_proxy.dbus_parser:
+            from .wizard import DBusWizard
+
+            DBusWizard(instance, dbus_parser).run()
 
 
 def bjail_list(list_what: str) -> None:

@@ -213,6 +213,7 @@ class XdgDbusProxy:
 
         if self.log_dbus == DBusLogEnum.PARSE:
             dbus_parser = DBusProxyLogParser()
+            self.dbus_parser = dbus_parser
             loop = get_running_loop()
             read_logs_task = loop.create_task(
                 self.read_proxy_logs(dbus_parser, self.dbus_proxy_process.stdout)

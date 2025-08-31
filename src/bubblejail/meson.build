@@ -17,6 +17,7 @@ source_files = [
    'exceptions.py',
    'services.py',
    'utils.py',
+   'wizard.py',
    'py.typed',
 ]
 
