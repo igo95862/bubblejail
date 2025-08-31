@@ -18,6 +18,8 @@ from .services import SERVICES_CLASSES
 if TYPE_CHECKING:
     from collections.abc import Callable, Generator, Iterable, Iterator
 
+    from .bubblejail_instance import BubblejailInstance
+
 
 def iter_instance_names() -> Generator[str, None, None]:
     for instance_directory in BubblejailDirectories.iter_instances_path():
@@ -53,6 +55,56 @@ def _extra_args_converter(command_sequence: list[str]) -> Generator[str, None, N
     yield from command_iter
 
 
+def run_running_instance(
+    instance: BubblejailInstance,
+    args_to_instance: list[str],
+    wait: bool,
+    dry_run: bool,
+) -> None:
+    if dry_run:
+        print("Found helper socket.", file=stderr)
+        print("Args would be be sent: ", args_to_instance, file=stderr)
+        return
+    else:
+        print("Instance already running.", file=stderr)
+        print(
+            "Sending command to the instance: ",
+            args_to_instance,
+            file=stderr,
+        )
+
+    command_return_text = async_run(
+        instance.send_run_rpc(
+            args_to_run=args_to_instance,
+            wait_for_response=wait,
+        )
+    )
+    if wait and command_return_text is not None:
+        stdout.write(command_return_text)
+
+
+def send_exc_notificatoin(instance_name: str, exception: BaseException) -> None:
+    if not isatty(stderr.fileno()):
+        from subprocess import run as subprocess_run
+        from traceback import format_exception
+
+        try:
+            subprocess_run(
+                (
+                    "notify-send",
+                    "--urgency",
+                    "critical",
+                    "--icon",
+                    "bubblejail-config",
+                    f"Failed to run instance: {instance_name}",
+                    f"Exception: {format_exception(exception, limit=0)}",
+                )
+            )
+        except FileNotFoundError:
+            # Make notify-send optional
+            ...
+
+
 def run_bjail(
     instance_name: str,
     args_to_instance: list[str],
@@ -68,26 +120,21 @@ def run_bjail(
         instance = BubblejailDirectories.instance_get(instance_name)
 
         if instance.is_running():
-            if dry_run:
-                print("Found helper socket.", file=stderr)
-                print("Args would be be sent: ", args_to_instance, file=stderr)
-                return
-            else:
-                print("Instance already running.", file=stderr)
+            if wizard:
                 print(
-                    "Sending command to the instance: ",
-                    args_to_instance,
+                    "Configuration wizard can only be enabled if "
+                    "instance is not running.",
                     file=stderr,
                 )
+                raise SystemExit(1)
 
-            command_return_text = async_run(
-                instance.send_run_rpc(
-                    args_to_run=args_to_instance,
-                    wait_for_response=wait,
-                )
+            run_running_instance(
+                instance=instance,
+                args_to_instance=args_to_instance,
+                wait=wait,
+                dry_run=dry_run,
             )
-            if wait and command_return_text is not None:
-                stdout.write(command_return_text)
+            return
         else:
             extra_bwrap_args: list[str] | None
             if debug_bwrap_args is not None:
@@ -103,9 +150,11 @@ def run_bjail(
 
             if wizard:
                 if not isatty(stderr.fileno()):
-                    raise ValueError(
-                        "Configuration wizards can only be enabled when run from terminal"
+                    print(
+                        "Configuration wizard can only be enabled when run from terminal",
+                        file=stderr,
                     )
+                    raise SystemExit(1)
 
                 log_dbus = DBusLogEnum.PARSE
 
@@ -119,34 +168,15 @@ def run_bjail(
                     extra_bwrap_args=extra_bwrap_args,
                 )
             )
-    except Exception:
 
-        if not isatty(stderr.fileno()):
-            from subprocess import run as subprocess_run
-            from traceback import format_exc
+            if wizard:
+                if dbus_parser := result.dbus_proxy.dbus_parser:
+                    from .wizard import DBusWizard
 
-            try:
-                subprocess_run(
-                    (
-                        "notify-send",
-                        "--urgency",
-                        "critical",
-                        "--icon",
-                        "bubblejail-config",
-                        f"Failed to run instance: {instance_name}",
-                        f"Exception: {format_exc(0)}",
-                    )
-                )
-            except FileNotFoundError:
-                # Make notify-send optional
-                ...
+                    DBusWizard(instance, dbus_parser).run()
+    except Exception as e:
+        send_exc_notificatoin(instance_name, e)
         raise
-
-    if wizard:
-        if dbus_parser := result.dbus_proxy.dbus_parser:
-            from .wizard import DBusWizard
-
-            DBusWizard(instance, dbus_parser).run()
 
 
 def bjail_list(list_what: str) -> None:
