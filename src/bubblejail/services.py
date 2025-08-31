@@ -55,7 +55,7 @@ if TYPE_CHECKING:
     from asyncio.subprocess import Process as AsyncioProcess
     from collections.abc import Awaitable, Callable, Generator, Iterator
     from dataclasses import Field
-    from typing import Any, ClassVar, Type, TypeVar
+    from typing import Any, ClassVar, TypeVar
 
     from _typeshed import DataclassInstance
 
@@ -126,7 +126,7 @@ def generate_toolkits() -> Generator[ServiceIterTypes, None, None]:
 class BubblejailService:
     xdg_runtime_dir: ClassVar[Path] = Path(f"/run/user/{getuid()}")
 
-    Settings: Type[DataclassInstance] = make_dataclass("EmptySettings", ())
+    Settings: type[DataclassInstance] = make_dataclass("EmptySettings", ())
 
     def __init__(self, context: BubblejailRunContext):
         self.context = context
@@ -1315,7 +1315,7 @@ class PastaNetwork(BubblejailService):
     conflicts = frozenset(("network", "slirp4netns"))
 
 
-SERVICES_CLASSES: tuple[Type[BubblejailService], ...] = (
+SERVICES_CLASSES: tuple[type[BubblejailService], ...] = (
     CommonSettings,
     X11,
     Wayland,
@@ -1340,7 +1340,7 @@ SERVICES_CLASSES: tuple[Type[BubblejailService], ...] = (
     PastaNetwork,
 )
 
-SERVICES_MAP: dict[str, Type[BubblejailService]] = {
+SERVICES_MAP: dict[str, type[BubblejailService]] = {
     service.name: service for service in SERVICES_CLASSES
 }
 
@@ -1353,12 +1353,12 @@ class BubblejailRunContext:
     def __init__(
         self,
         services: dict[str, BubblejailService],
-        services_to_type_dict: dict[Type[Any], Any],
+        services_to_type_dict: dict[type[Any], Any],
     ):
         self.services = services
         self.services_to_type_dict = services_to_type_dict
 
-    def get_settings(self, settings_type: Type[T]) -> T:
+    def get_settings(self, settings_type: type[T]) -> T:
         settings = self.services_to_type_dict[settings_type]
 
         if isinstance(settings, settings_type):
@@ -1368,14 +1368,14 @@ class BubblejailRunContext:
 
     def is_service_enabled(
         self,
-        service_type: Type[BubblejailService],
+        service_type: type[BubblejailService],
     ) -> bool:
         return service_type.name in self.services
 
 
 class ServiceContainer:
     def __init__(self, conf_dict: ServicesConfDictType | None = None):
-        self.service_settings_to_type: dict[Type[Any], Any] = {}
+        self.service_settings_to_type: dict[type[Any], Any] = {}
         self.service_settings: dict[str, DataclassInstance] = {}
         self.services: dict[str, BubblejailService] = {}
         self.context = BubblejailRunContext(

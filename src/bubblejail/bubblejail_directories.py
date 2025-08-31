@@ -7,7 +7,7 @@ from pathlib import Path
 from subprocess import run as subprocess_run
 from sys import stderr
 from tomllib import load as toml_load
-from typing import Any, Dict, Generator, Optional
+from typing import TYPE_CHECKING
 
 from tomli_w import dump as toml_dump
 from xdg import IniFile
@@ -17,7 +17,11 @@ from .bubblejail_instance import BubblejailInstance, BubblejailProfile
 from .bubblejail_utils import FILE_NAME_SERVICES, BubblejailSettings
 from .exceptions import BubblejailException, BubblejailInstanceNotFoundError
 
-PathGeneratorType = Generator[Path, None, None]
+if TYPE_CHECKING:
+    from collections.abc import Iterator
+    from typing import Any
+
+    PathGeneratorType = Iterator[Path]
 
 UsrSharePath = Path(BubblejailSettings.SHARE_PATH_STR)
 SysConfPath = Path(BubblejailSettings.SYSCONF_PATH_STR)
@@ -40,7 +44,7 @@ def convert_old_conf_to_new() -> None:
         with open(old_conf_path, mode="rb") as old_conf_file:
             old_conf_dict = toml_load(old_conf_file)
 
-        new_conf: Dict[str, Any] = {}
+        new_conf: dict[str, Any] = {}
 
         try:
             services_list = old_conf_dict.pop("services")
@@ -92,7 +96,7 @@ class BubblejailDirectories:
         raise BubblejailException(f"Profile {profile_name} not found")
 
     @classmethod
-    def iter_profile_names(cls) -> Generator[str, None, None]:
+    def iter_profile_names(cls) -> Iterator[str]:
         for profiles_directory in BubblejailDirectories.iter_profile_directories():
             try:
                 for profile_file in profiles_directory.iterdir():
@@ -123,7 +127,7 @@ class BubblejailDirectories:
     def create_new_instance(
         cls,
         new_name: str,
-        profile_name: Optional[str] = None,
+        profile_name: str | None = None,
         create_dot_desktop: bool = False,
         print_import_tips: bool = False,
     ) -> BubblejailInstance:
@@ -198,7 +202,7 @@ class BubblejailDirectories:
         return Path(xdg_data_home + "/applications")
 
     @classmethod
-    def desktop_entry_name_to_path(cls, desktop_entry_name: str) -> Optional[Path]:
+    def desktop_entry_name_to_path(cls, desktop_entry_name: str) -> Path | None:
         if "/" not in desktop_entry_name:
             # Desktop entry was passed without absolute or relative path
             if not desktop_entry_name.endswith(".desktop"):
@@ -218,10 +222,10 @@ class BubblejailDirectories:
     def overwrite_desktop_entry_for_profile(
         cls,
         instance_name: str,
-        profile_object: Optional[BubblejailProfile] = None,
-        profile_name: Optional[str] = None,
-        desktop_entry_name: Optional[str] = None,
-        new_name: Optional[str] = None,
+        profile_object: BubblejailProfile | None = None,
+        profile_name: str | None = None,
+        desktop_entry_name: str | None = None,
+        new_name: str | None = None,
     ) -> None:
 
         instance = cls.instance_get(instance_name)

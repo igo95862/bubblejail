@@ -6,7 +6,7 @@ from dataclasses import MISSING
 from functools import partial
 from shlex import split as shlex_split
 from sys import argv
-from typing import Any, List, Optional, Tuple, Type, cast
+from typing import TYPE_CHECKING, cast
 
 from PyQt6.QtCore import QModelIndex
 from PyQt6.QtWidgets import (
@@ -40,6 +40,9 @@ from .services import (
     SettingFieldMetadata,
 )
 
+if TYPE_CHECKING:
+    from typing import Any
+
 
 class BubblejailGuiWidget:
     def __init__(self) -> None:
@@ -65,7 +68,7 @@ class OptionWidgetStrList(OptionWidgetBase):
         self,
         name: str,
         description: str,
-        data: List[str],
+        data: list[str],
         bubblejail_setting_name: str,
     ):
         super().__init__(
@@ -87,7 +90,7 @@ class OptionWidgetStrList(OptionWidgetBase):
         self.form_widget.setLayout(self.form_layout)
         self.vertical_layout.addWidget(self.form_widget)
 
-        self.line_edit_widgets: List[QLineEdit] = []
+        self.line_edit_widgets: list[QLineEdit] = []
 
         self.add_button = QPushButton("Add")
         self.add_button.setToolTip(self.description)
@@ -101,7 +104,7 @@ class OptionWidgetStrList(OptionWidgetBase):
                     existing_string=string,
                 )
 
-    def set_data(self, str_list: List[str]) -> None:
+    def set_data(self, str_list: list[str]) -> None:
         for string in str_list:
             self.add_line_edit(existing_string=string)
 
@@ -115,8 +118,8 @@ class OptionWidgetStrList(OptionWidgetBase):
 
     def add_line_edit(
         self,
-        *args: List[Any],
-        existing_string: Optional[str] = None,
+        *args: list[Any],
+        existing_string: str | None = None,
     ) -> None:
 
         if isinstance(existing_string, str):
@@ -292,7 +295,7 @@ class OptionWidgetCombobox(OptionWidgetBase):
 class ServiceWidget:
     def __init__(
         self,
-        service: Type[BubblejailService],
+        service: type[BubblejailService],
         service_settings: None | ServiceSettingsDict,
     ):
         self.service = service
@@ -323,7 +326,7 @@ class ServiceWidget:
 
             match str(setting_field.type):
                 case "bool":
-                    widget_class: Type[OptionWidgetBase] = OptionWidgetBool
+                    widget_class: type[OptionWidgetBase] = OptionWidgetBool
                 case "str":
                     widget_class = OptionWidgetStr
                 case "str | list[str]":
@@ -439,7 +442,7 @@ class InstanceEditWidget(CentralWidgets):
             self.services_config.get_service_conf_dict()
         )
 
-        self.service_widgets: List[ServiceWidget] = []
+        self.service_widgets: list[ServiceWidget] = []
         for service in SERVICES_CLASSES:
             try:
                 service_settings_dict: None | ServiceSettingsDict = (
@@ -544,7 +547,7 @@ class CreateInstanceWidget(CentralWidgets):
         self.profile_text = QLabel("No profile selected")
         self.main_layout.addWidget(self.profile_text)
 
-        self.current_profile: Optional[BubblejailProfile] = None
+        self.current_profile: BubblejailProfile | None = None
 
         profiles_names = set(BubblejailDirectories.iter_profile_names())
 
@@ -553,7 +556,7 @@ class CreateInstanceWidget(CentralWidgets):
 
         self.refresh_create_button()
 
-    def can_be_created(self) -> Tuple[bool, str]:
+    def can_be_created(self) -> tuple[bool, str]:
         current_name = self.name_widget.get_str()
         if not current_name:
             return False, "⚠ Name is empty"
@@ -608,7 +611,7 @@ class CreateInstanceWidget(CentralWidgets):
         new_instance_name = self.name_widget.get_str()
         if not new_instance_name:
             raise RuntimeError("No instance name given")
-        profile_name: Optional[str] = self.profile_select_widget.get_selected()
+        profile_name: str | None = self.profile_select_widget.get_selected()
         if profile_name == "None":
             profile_name = None
 

@@ -17,7 +17,6 @@ from .services import SERVICES_CLASSES
 
 if TYPE_CHECKING:
     from collections.abc import Callable, Generator, Iterable, Iterator
-    from typing import Optional
 
 
 def iter_instance_names() -> Generator[str, None, None]:
@@ -62,7 +61,7 @@ def run_bjail(
     debug_bwrap_args: list[list[str]],
     debug_shell: bool,
     debug_log_dbus: str | None,
-    debug_helper_script: Optional[Path],
+    debug_helper_script: Path | None,
     wizard: bool,
 ) -> None:
     try:
@@ -90,7 +89,7 @@ def run_bjail(
             if wait and command_return_text is not None:
                 stdout.write(command_return_text)
         else:
-            extra_bwrap_args: Optional[list[str]]
+            extra_bwrap_args: list[str] | None
             if debug_bwrap_args is not None:
                 extra_bwrap_args = []
                 for x in debug_bwrap_args:
@@ -167,7 +166,7 @@ def bjail_list(list_what: str) -> None:
 
 
 def bjail_create(
-    new_instance_name: str, profile: Optional[str], no_desktop_entry: bool
+    new_instance_name: str, profile: str | None, no_desktop_entry: bool
 ) -> None:
     BubblejailDirectories.create_new_instance(
         new_name=new_instance_name,
@@ -183,7 +182,7 @@ def bjail_edit(instance_name: str) -> None:
 
 
 def bjail_create_desktop_entry(
-    instance_name: str, profile: Optional[str], desktop_entry: Optional[str]
+    instance_name: str, profile: str | None, desktop_entry: str | None
 ) -> None:
     BubblejailDirectories.overwrite_desktop_entry_for_profile(
         instance_name=instance_name,
@@ -228,7 +227,7 @@ def create_arg_parser() -> ArgumentParser:
     return parser
 
 
-def bubblejail_main(arg_list: Optional[list[str]] = None) -> None:
+def bubblejail_main(arg_list: list[str] | None = None) -> None:
     # Short circuit to auto-complete
     if len(argv) > 1 and argv[1] == "auto-complete":
         from .bubblejail_cli_autocomplete import run_autocomplete

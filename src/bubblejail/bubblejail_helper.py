@@ -27,7 +27,7 @@ from typing import TYPE_CHECKING
 if TYPE_CHECKING:
     from asyncio import AbstractServer, StreamReader, StreamWriter, Task
     from collections.abc import Generator
-    from typing import Any, Literal, Type
+    from typing import Any, Literal
 
     RpcMethods = Literal["ping", "run"]
     RpcData = dict[str, bool | str | list[str]] | list[str]
@@ -368,7 +368,7 @@ class BubblejailHelper(Awaitable[bool]):
     async def __aenter__(self) -> None: ...
 
     async def __aexit__(
-        self, exc_type: Type[Exception], exc: Exception, tb: Any
+        self, exc_type: type[Exception], exc: Exception, tb: Any
     ) -> None:
         if (
             self.termninator_watcher_task is not None

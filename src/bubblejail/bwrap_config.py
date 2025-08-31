@@ -5,9 +5,10 @@ from __future__ import annotations
 from collections.abc import Generator
 from os import environ
 from pathlib import Path
-from typing import List, Optional, Union
+from typing import TYPE_CHECKING
 
-Pathlike = Union[str, Path]
+if TYPE_CHECKING:
+    Pathlike = str | Path
 
 
 class BwrapConfigBase:
@@ -22,7 +23,7 @@ class ShareNetwork(BwrapConfigBase):
 
 
 class BwrapOptionWithPermissions(BwrapConfigBase):
-    def __init__(self, permissions: Optional[int] = None):
+    def __init__(self, permissions: int | None = None):
         super().__init__()
         self.permissions = permissions
 
@@ -37,7 +38,7 @@ class BwrapOptionWithPermissions(BwrapConfigBase):
 class DirCreate(BwrapOptionWithPermissions):
     arg_word = "--dir"
 
-    def __init__(self, dest: Pathlike, permissions: Optional[int] = None):
+    def __init__(self, dest: Pathlike, permissions: int | None = None):
         super().__init__(permissions)
         self.dest = str(dest)
 
@@ -63,7 +64,7 @@ class Symlink(BwrapConfigBase):
 class EnvrimentalVar(BwrapConfigBase):
     arg_word = "--setenv"
 
-    def __init__(self, var_name: str, var_value: Optional[str] = None):
+    def __init__(self, var_name: str, var_value: str | None = None):
         super().__init__()
         self.var_name = var_name
         self.var_value = var_value
@@ -78,7 +79,7 @@ class EnvrimentalVar(BwrapConfigBase):
 class ReadOnlyBind(BwrapConfigBase):
     arg_word = "--ro-bind"
 
-    def __init__(self, source: Pathlike, dest: Optional[Pathlike] = None):
+    def __init__(self, source: Pathlike, dest: Pathlike | None = None):
         super().__init__()
         self.source = str(source)
         self.dest = str(dest) if dest is not None else str(source)
@@ -217,7 +218,7 @@ class SeccompSyscallErrno(SeccompDirective):
 class LaunchArguments:
     def __init__(
         self,
-        launch_args: List[str],
+        launch_args: list[str],
         priority: int = 0,
     ) -> None:
         self.launch_args = launch_args
