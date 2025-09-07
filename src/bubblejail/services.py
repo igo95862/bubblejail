@@ -10,13 +10,14 @@ from asyncio import (
     wait_for,
 )
 from contextlib import ExitStack
-from dataclasses import asdict, dataclass, field, fields, is_dataclass, make_dataclass
+from dataclasses import dataclass, field, fields, is_dataclass
+from functools import cache
 from multiprocessing import Process
 from os import O_CLOEXEC, O_NONBLOCK, environ, getpid, getuid, pipe2, readlink
 from pathlib import Path
 from shutil import which
 from sys import stderr
-from typing import TYPE_CHECKING, TypedDict
+from typing import TYPE_CHECKING, Any, TypedDict
 
 from xdg import BaseDirectory
 
@@ -55,9 +56,10 @@ if TYPE_CHECKING:
     from asyncio.subprocess import Process as AsyncioProcess
     from collections.abc import Awaitable, Callable, Generator, Iterator
     from dataclasses import Field
-    from typing import Any, ClassVar, TypeVar
+    from typing import ClassVar
 
     from _typeshed import DataclassInstance
+    from cattrs import Converter
 
 
 class ServiceWantsSend: ...
@@ -123,12 +125,16 @@ def generate_toolkits() -> Generator[ServiceIterTypes, None, None]:
         yield ReadOnlyBind(kde_globals_conf)
 
 
+@dataclass(slots=True)
+class EmptySettings: ...
+
+
 class BubblejailService:
     xdg_runtime_dir: ClassVar[Path] = Path(f"/run/user/{getuid()}")
 
-    Settings: type[DataclassInstance] = make_dataclass("EmptySettings", ())
+    Settings: type[DataclassInstance] = EmptySettings
 
-    def __init__(self, context: BubblejailRunContext):
+    def __init__(self, context: ServicesConfig):
         self.context = context
 
     def iter_bwrap_options(self) -> ServiceGeneratorType:
@@ -299,51 +305,53 @@ class BubblejailDefaults(BubblejailService):
     description = "Settings that must be present in any instance"
 
 
-class CommonSettings(BubblejailService):
+@dataclass(slots=True)
+class CommonSettingsSettings:
+    executable_name: str | list[str] = field(
+        default="",
+        metadata=SettingFieldMetadata(
+            pretty_name="Default arguments",
+            description=("Default arguments to run when no arguments were provided"),
+            is_deprecated=False,
+        ),
+    )
+    share_local_time: bool = field(
+        default=False,
+        metadata=SettingFieldMetadata(
+            pretty_name="Share local time",
+            description="This option has no effect since version 0.6.0",
+            is_deprecated=True,
+        ),
+    )
+    filter_disk_sync: bool = field(
+        default=False,
+        metadata=SettingFieldMetadata(
+            pretty_name="Filter disk sync",
+            description=(
+                "Do not allow flushing disk. "
+                "Useful for EA Origin client that tries to flush "
+                "to disk too often."
+            ),
+            is_deprecated=False,
+        ),
+    )
+    dbus_name: str = field(
+        default="",
+        metadata=SettingFieldMetadata(
+            pretty_name="Application's D-Bus name",
+            description="D-Bus name allowed to acquire and own",
+            is_deprecated=False,
+        ),
+    )
 
-    @dataclass
-    class Settings:
-        executable_name: str | list[str] = field(
-            default="",
-            metadata=SettingFieldMetadata(
-                pretty_name="Default arguments",
-                description=(
-                    "Default arguments to run when no arguments were provided"
-                ),
-                is_deprecated=False,
-            ),
-        )
-        share_local_time: bool = field(
-            default=False,
-            metadata=SettingFieldMetadata(
-                pretty_name="Share local time",
-                description="This option has no effect since version 0.6.0",
-                is_deprecated=True,
-            ),
-        )
-        filter_disk_sync: bool = field(
-            default=False,
-            metadata=SettingFieldMetadata(
-                pretty_name="Filter disk sync",
-                description=(
-                    "Do not allow flushing disk. "
-                    "Useful for EA Origin client that tries to flush "
-                    "to disk too often."
-                ),
-                is_deprecated=False,
-            ),
-        )
-        dbus_name: str = field(
-            default="",
-            metadata=SettingFieldMetadata(
-                pretty_name="Application's D-Bus name",
-                description="D-Bus name allowed to acquire and own",
-                is_deprecated=False,
-            ),
-        )
+
+class CommonSettings(BubblejailService):
+    Settings = CommonSettingsSettings
 
     def iter_bwrap_options(self) -> ServiceGeneratorType:
-        settings = self.context.get_settings(CommonSettings.Settings)
+        settings = self.context.common
+        if settings is None:
+            raise RuntimeError
 
         # Executable main arguments
         if settings.executable_name:
@@ -413,7 +421,7 @@ class X11(BubblejailService):
             if (
                 x == "XDG_SESSION_TYPE"
                 and environ[x] == "wayland"
-                and not self.context.is_service_enabled(Wayland)
+                and not self.context.wayland is None
             ):
                 yield EnvrimentalVar(x, "x11")
                 continue
@@ -504,22 +512,25 @@ class PulseAudio(BubblejailService):
     description = "Default audio system in most distros"
 
 
-class HomeShare(BubblejailService):
+@dataclass(slots=True)
+class HomeShareSettings:
+    home_paths: list[str] = field(
+        default_factory=list,
+        metadata=SettingFieldMetadata(
+            pretty_name="List of paths",
+            description="Path to share with sandbox",
+            is_deprecated=False,
+        ),
+    )
 
-    @dataclass
-    class Settings:
-        home_paths: list[str] = field(
-            default_factory=list,
-            metadata=SettingFieldMetadata(
-                pretty_name="List of paths",
-                description="Path to share with sandbox",
-                is_deprecated=False,
-            ),
-        )
+
+class HomeShare(BubblejailService):
+    Settings = HomeShareSettings
 
     def iter_bwrap_options(self) -> ServiceGeneratorType:
-
-        settings = self.context.get_settings(HomeShare.Settings)
+        settings = self.context.home_share
+        if settings is None:
+            raise RuntimeError
 
         for path_relative_to_home in settings.home_paths:
             yield Bind(
@@ -531,22 +542,24 @@ class HomeShare(BubblejailService):
     description = "Share directories or files relative to home"
 
 
-class DirectRendering(BubblejailService):
-
-    @dataclass
-    class Settings:
-        enable_aco: bool = field(
-            default=False,
-            metadata=SettingFieldMetadata(
-                pretty_name="Enable ACO",
-                description=(
-                    "Enables high performance vulkan shader "
-                    "compiler for AMD GPUs. Enabled by default "
-                    "since mesa 20.02"
-                ),
-                is_deprecated=True,
+@dataclass(slots=True)
+class DirectRenderingSettings:
+    enable_aco: bool = field(
+        default=False,
+        metadata=SettingFieldMetadata(
+            pretty_name="Enable ACO",
+            description=(
+                "Enables high performance vulkan shader "
+                "compiler for AMD GPUs. Enabled by default "
+                "since mesa 20.02"
             ),
-        )
+            is_deprecated=True,
+        ),
+    )
+
+
+class DirectRendering(BubblejailService):
+    Settings = DirectRenderingSettings
 
     def iter_bwrap_options(self) -> ServiceGeneratorType:
 
@@ -667,29 +680,33 @@ class Joystick(BubblejailService):
     )
 
 
-class RootShare(BubblejailService):
+@dataclass(slots=True)
+class RootShareSettings:
+    paths: list[str] = field(
+        default_factory=list,
+        metadata=SettingFieldMetadata(
+            pretty_name="Read/Write paths",
+            description="Path to share with sandbox",
+            is_deprecated=False,
+        ),
+    )
+    read_only_paths: list[str] = field(
+        default_factory=list,
+        metadata=SettingFieldMetadata(
+            pretty_name="Read only paths",
+            description="Path to share read-only with sandbox",
+            is_deprecated=False,
+        ),
+    )
 
-    @dataclass
-    class Settings:
-        paths: list[str] = field(
-            default_factory=list,
-            metadata=SettingFieldMetadata(
-                pretty_name="Read/Write paths",
-                description="Path to share with sandbox",
-                is_deprecated=False,
-            ),
-        )
-        read_only_paths: list[str] = field(
-            default_factory=list,
-            metadata=SettingFieldMetadata(
-                pretty_name="Read only paths",
-                description="Path to share read-only with sandbox",
-                is_deprecated=False,
-            ),
-        )
+
+class RootShare(BubblejailService):
+    Settings = RootShareSettings
 
     def iter_bwrap_options(self) -> ServiceGeneratorType:
-        settings = self.context.get_settings(RootShare.Settings)
+        settings = self.context.root_share
+        if settings is None:
+            raise RuntimeError
 
         for x in settings.paths:
             yield Bind(x)
@@ -722,37 +739,41 @@ class Notifications(BubblejailService):
     description = "Ability to send notifications to desktop"
 
 
-class GnomeToolkit(BubblejailService):
+@dataclass(slots=True)
+class GnomeToolkitSettings:
+    gnome_portal: bool = field(
+        default=False,
+        metadata=SettingFieldMetadata(
+            pretty_name="GNOME Portal",
+            description="Access to GNOME Portal D-Bus API",
+            is_deprecated=False,
+        ),
+    )
+    dconf_dbus: bool = field(
+        default=False,
+        metadata=SettingFieldMetadata(
+            pretty_name="Dconf D-Bus",
+            description="Access to dconf D-Bus API",
+            is_deprecated=False,
+        ),
+    )
+    gnome_vfs_dbus: bool = field(
+        default=False,
+        metadata=SettingFieldMetadata(
+            pretty_name="GNOME VFS",
+            description="Access to GNOME Virtual File System D-Bus API",
+            is_deprecated=False,
+        ),
+    )
 
-    @dataclass
-    class Settings:
-        gnome_portal: bool = field(
-            default=False,
-            metadata=SettingFieldMetadata(
-                pretty_name="GNOME Portal",
-                description="Access to GNOME Portal D-Bus API",
-                is_deprecated=False,
-            ),
-        )
-        dconf_dbus: bool = field(
-            default=False,
-            metadata=SettingFieldMetadata(
-                pretty_name="Dconf D-Bus",
-                description="Access to dconf D-Bus API",
-                is_deprecated=False,
-            ),
-        )
-        gnome_vfs_dbus: bool = field(
-            default=False,
-            metadata=SettingFieldMetadata(
-                pretty_name="GNOME VFS",
-                description="Access to GNOME Virtual File System D-Bus API",
-                is_deprecated=False,
-            ),
-        )
+
+class GnomeToolkit(BubblejailService):
+    Settings = GnomeToolkitSettings
 
     def iter_bwrap_options(self) -> ServiceGeneratorType:
-        settings = self.context.get_settings(GnomeToolkit.Settings)
+        settings = self.context.gnome_toolkit
+        if settings is None:
+            raise RuntimeError
 
         if settings.gnome_portal:
             yield EnvrimentalVar("GTK_USE_PORTAL", "1")
@@ -865,46 +886,48 @@ class Fcitx(BubblejailService):
     conflicts = frozenset(("ibus",))
 
 
+@dataclass(slots=True)
+class Slirp4netnsSettings:
+    dns_servers: list[str] = field(
+        default_factory=list,
+        metadata=SettingFieldMetadata(
+            pretty_name="DNS servers",
+            description=("DNS servers used. " "Internal DNS server is always used."),
+            is_deprecated=False,
+        ),
+    )
+    outbound_addr: str = field(
+        default="",
+        metadata=SettingFieldMetadata(
+            pretty_name="Outbound address or device",
+            description=(
+                "Address or device to bind to. "
+                "If not set the default address would be used."
+            ),
+            is_deprecated=False,
+        ),
+    )
+    disable_host_loopback: bool = field(
+        default=True,
+        metadata=SettingFieldMetadata(
+            pretty_name="Disable host loopback access",
+            description=("Prohibit connecting to host's loopback interface"),
+            is_deprecated=False,
+        ),
+    )
+
+
 class Slirp4netns(BubblejailService):
+    Settings = Slirp4netnsSettings
 
-    @dataclass
-    class Settings:
-        dns_servers: list[str] = field(
-            default_factory=list,
-            metadata=SettingFieldMetadata(
-                pretty_name="DNS servers",
-                description=(
-                    "DNS servers used. " "Internal DNS server is always used."
-                ),
-                is_deprecated=False,
-            ),
-        )
-        outbound_addr: str = field(
-            default="",
-            metadata=SettingFieldMetadata(
-                pretty_name="Outbound address or device",
-                description=(
-                    "Address or device to bind to. "
-                    "If not set the default address would be used."
-                ),
-                is_deprecated=False,
-            ),
-        )
-        disable_host_loopback: bool = field(
-            default=True,
-            metadata=SettingFieldMetadata(
-                pretty_name="Disable host loopback access",
-                description=("Prohibit connecting to host's loopback interface"),
-                is_deprecated=False,
-            ),
-        )
-
-    def __init__(self, context: BubblejailRunContext) -> None:
+    def __init__(self, context: ServicesConfig) -> None:
         super().__init__(context)
         self.slirp_process: AsyncioProcess | None = None
 
     def iter_bwrap_options(self) -> ServiceGeneratorType:
-        settings = self.context.get_settings(Slirp4netns.Settings)
+        settings = self.context.slirp4netns
+        if settings is None:
+            raise RuntimeError
 
         self.outbound_addr = settings.outbound_addr
         self.disable_host_loopback = settings.disable_host_loopback
@@ -926,7 +949,9 @@ class Slirp4netns(BubblejailService):
         )
 
     async def post_init_hook(self, pid: int) -> None:
-        settings = self.context.get_settings(Slirp4netns.Settings)
+        settings = self.context.slirp4netns
+        if settings is None:
+            raise RuntimeError
 
         outbound_addr = settings.outbound_addr
         disable_host_loopback = settings.disable_host_loopback
@@ -1010,77 +1035,79 @@ class Slirp4netns(BubblejailService):
     conflicts = frozenset(("network", "pasta_network"))
 
 
-class NamespacesLimits(BubblejailService):
+@dataclass(slots=True)
+class NamespacesLimitsSettings:
+    user: int = field(
+        default=0,
+        metadata=SettingFieldMetadata(
+            pretty_name="Max number of user namespaces",
+            description=(
+                "Limiting user namespaces blocks acquiring new "
+                "capabilities and privileges inside namespaces."
+            ),
+            is_deprecated=False,
+        ),
+    )
+    mount: int = field(
+        default=0,
+        metadata=SettingFieldMetadata(
+            pretty_name="Max number of mount namespaces",
+            description=("Limits number mount namespaces."),
+            is_deprecated=False,
+        ),
+    )
+    pid: int = field(
+        default=0,
+        metadata=SettingFieldMetadata(
+            pretty_name="Max number of PID namespaces",
+            description=("Limits number PID namespaces."),
+            is_deprecated=False,
+        ),
+    )
+    ipc: int = field(
+        default=0,
+        metadata=SettingFieldMetadata(
+            pretty_name="Max number of IPC namespaces",
+            description=("Limits number IPC namespaces."),
+            is_deprecated=False,
+        ),
+    )
+    net: int = field(
+        default=0,
+        metadata=SettingFieldMetadata(
+            pretty_name="Max number of net namespaces",
+            description=("Limits number net namespaces."),
+            is_deprecated=False,
+        ),
+    )
+    time: int = field(
+        default=0,
+        metadata=SettingFieldMetadata(
+            pretty_name="Max number of time namespaces",
+            description=("Limits number time namespaces."),
+            is_deprecated=False,
+        ),
+    )
+    uts: int = field(
+        default=0,
+        metadata=SettingFieldMetadata(
+            pretty_name="Max number of UTS namespaces",
+            description=("Limits number UTS namespaces."),
+            is_deprecated=False,
+        ),
+    )
+    cgroup: int = field(
+        default=0,
+        metadata=SettingFieldMetadata(
+            pretty_name="Max number of cgroups namespaces",
+            description=("Limits number cgroups namespaces."),
+            is_deprecated=False,
+        ),
+    )
 
-    @dataclass
-    class Settings:
-        user: int = field(
-            default=0,
-            metadata=SettingFieldMetadata(
-                pretty_name="Max number of user namespaces",
-                description=(
-                    "Limiting user namespaces blocks acquiring new "
-                    "capabilities and privileges inside namespaces."
-                ),
-                is_deprecated=False,
-            ),
-        )
-        mount: int = field(
-            default=0,
-            metadata=SettingFieldMetadata(
-                pretty_name="Max number of mount namespaces",
-                description=("Limits number mount namespaces."),
-                is_deprecated=False,
-            ),
-        )
-        pid: int = field(
-            default=0,
-            metadata=SettingFieldMetadata(
-                pretty_name="Max number of PID namespaces",
-                description=("Limits number PID namespaces."),
-                is_deprecated=False,
-            ),
-        )
-        ipc: int = field(
-            default=0,
-            metadata=SettingFieldMetadata(
-                pretty_name="Max number of IPC namespaces",
-                description=("Limits number IPC namespaces."),
-                is_deprecated=False,
-            ),
-        )
-        net: int = field(
-            default=0,
-            metadata=SettingFieldMetadata(
-                pretty_name="Max number of net namespaces",
-                description=("Limits number net namespaces."),
-                is_deprecated=False,
-            ),
-        )
-        time: int = field(
-            default=0,
-            metadata=SettingFieldMetadata(
-                pretty_name="Max number of time namespaces",
-                description=("Limits number time namespaces."),
-                is_deprecated=False,
-            ),
-        )
-        uts: int = field(
-            default=0,
-            metadata=SettingFieldMetadata(
-                pretty_name="Max number of UTS namespaces",
-                description=("Limits number UTS namespaces."),
-                is_deprecated=False,
-            ),
-        )
-        cgroup: int = field(
-            default=0,
-            metadata=SettingFieldMetadata(
-                pretty_name="Max number of cgroups namespaces",
-                description=("Limits number cgroups namespaces."),
-                is_deprecated=False,
-            ),
-        )
+
+class NamespacesLimits(BubblejailService):
+    Settings = NamespacesLimitsSettings
 
     @staticmethod
     def set_namespaces_limits(
@@ -1107,7 +1134,9 @@ class NamespacesLimits(BubblejailService):
                 f.write(str(limit_to_set))
 
     async def post_init_hook(self, pid: int) -> None:
-        settings = self.context.get_settings(NamespacesLimits.Settings)
+        settings = self.context.namespaces_limits
+        if settings is None:
+            raise RuntimeError
 
         namespace_files_to_limits: dict[str, int] = {}
         if (user_ns_limit := settings.user) >= 0:
@@ -1131,7 +1160,7 @@ class NamespacesLimits(BubblejailService):
             )
 
         if (net_ns_limit := settings.net) >= 0:
-            if not self.context.is_service_enabled(Network):
+            if self.context.network is None:
                 net_ns_limit += 1
 
             namespace_files_to_limits["max_net_namespaces"] = net_ns_limit
@@ -1177,46 +1206,50 @@ class NamespacesLimits(BubblejailService):
     )
 
 
-class Debug(BubblejailService):
+@dataclass(slots=True)
+class DebugSettings:
+    raw_bwrap_args: list[str] = field(
+        default_factory=list,
+        metadata=SettingFieldMetadata(
+            pretty_name="Raw bwrap args",
+            description=(
+                "Raw arguments to add to bwrap invocation. "
+                "See bubblewrap documentation."
+            ),
+            is_deprecated=False,
+        ),
+    )
+    raw_dbus_session_args: list[str] = field(
+        default_factory=list,
+        metadata=SettingFieldMetadata(
+            pretty_name="Raw xdg-dbus-proxy session args",
+            description=(
+                "Raw arguments to add to xdg-dbus-proxy session "
+                "invocation. See xdg-dbus-proxy documentation."
+            ),
+            is_deprecated=False,
+        ),
+    )
+    raw_dbus_system_args: list[str] = field(
+        default_factory=list,
+        metadata=SettingFieldMetadata(
+            pretty_name="Raw xdg-dbus-proxy system args",
+            description=(
+                "Raw arguments to add to xdg-dbus-proxy system "
+                "invocation. See xdg-dbus-proxy documentation."
+            ),
+            is_deprecated=False,
+        ),
+    )
 
-    @dataclass
-    class Settings:
-        raw_bwrap_args: list[str] = field(
-            default_factory=list,
-            metadata=SettingFieldMetadata(
-                pretty_name="Raw bwrap args",
-                description=(
-                    "Raw arguments to add to bwrap invocation. "
-                    "See bubblewrap documentation."
-                ),
-                is_deprecated=False,
-            ),
-        )
-        raw_dbus_session_args: list[str] = field(
-            default_factory=list,
-            metadata=SettingFieldMetadata(
-                pretty_name="Raw xdg-dbus-proxy session args",
-                description=(
-                    "Raw arguments to add to xdg-dbus-proxy session "
-                    "invocation. See xdg-dbus-proxy documentation."
-                ),
-                is_deprecated=False,
-            ),
-        )
-        raw_dbus_system_args: list[str] = field(
-            default_factory=list,
-            metadata=SettingFieldMetadata(
-                pretty_name="Raw xdg-dbus-proxy system args",
-                description=(
-                    "Raw arguments to add to xdg-dbus-proxy system "
-                    "invocation. See xdg-dbus-proxy documentation."
-                ),
-                is_deprecated=False,
-            ),
-        )
+
+class Debug(BubblejailService):
+    Settings = DebugSettings
 
     def iter_bwrap_options(self) -> ServiceGeneratorType:
-        settings = self.context.get_settings(Debug.Settings)
+        settings = self.context.debug
+        if settings is None:
+            raise RuntimeError
 
         if raw_bwrap_args := settings.raw_bwrap_args:
             yield BwrapRawArgs(raw_bwrap_args)
@@ -1252,27 +1285,32 @@ class GameMode(BubblejailService):
     )
 
 
-class PastaNetwork(BubblejailService):
-    @dataclass
-    class Settings:
-        extra_args: list[str] = field(
-            default_factory=list,
-            metadata=SettingFieldMetadata(
-                pretty_name="Extra arguments",
-                description=(
-                    "Extra arguments to pass to pasta. For example, interface "
-                    "binding, port forwarding... See `passt` man page."
-                ),
-                is_deprecated=False,
+@dataclass(slots=True)
+class PastaNetworkSettings:
+    extra_args: list[str] = field(
+        default_factory=list,
+        metadata=SettingFieldMetadata(
+            pretty_name="Extra arguments",
+            description=(
+                "Extra arguments to pass to pasta. For example, interface "
+                "binding, port forwarding... See `passt` man page."
             ),
-        )
+            is_deprecated=False,
+        ),
+    )
 
-    def __init__(self, context: BubblejailRunContext) -> None:
+
+class PastaNetwork(BubblejailService):
+    Settings = PastaNetworkSettings
+
+    def __init__(self, context: ServicesConfig) -> None:
         super().__init__(context)
         self.pasta_process: AsyncioProcess | None = None
 
     async def post_init_hook(self, pid: int) -> None:
-        settings = self.context.get_settings(PastaNetwork.Settings)
+        settings = self.context.pasta_network
+        if settings is None:
+            raise RuntimeError
 
         pasta_args: list[str] = ["pasta", "--config-net", "--foreground"]
 
@@ -1345,44 +1383,38 @@ SERVICES_MAP: dict[str, type[BubblejailService]] = {
 }
 
 
-if TYPE_CHECKING:
-    T = TypeVar("T", bound="object")
-
-
-class BubblejailRunContext:
-    def __init__(
-        self,
-        services: dict[str, BubblejailService],
-        services_to_type_dict: dict[type[Any], Any],
-    ):
-        self.services = services
-        self.services_to_type_dict = services_to_type_dict
-
-    def get_settings(self, settings_type: type[T]) -> T:
-        settings = self.services_to_type_dict[settings_type]
-
-        if isinstance(settings, settings_type):
-            return settings
-        else:
-            raise TypeError(f"Expected {settings_type!r} got {type(settings)!r}")
-
-    def is_service_enabled(
-        self,
-        service_type: type[BubblejailService],
-    ) -> bool:
-        return service_type.name in self.services
+@dataclass(slots=True)
+class ServicesConfig:
+    common: CommonSettingsSettings | None = None
+    x11: EmptySettings | None = None
+    wayland: EmptySettings | None = None
+    network: EmptySettings | None = None
+    pulse_audio: EmptySettings | None = None
+    home_share: HomeShareSettings | None = None
+    direct_rendering: DirectRenderingSettings | None = None
+    systray: EmptySettings | None = None
+    joystick: EmptySettings | None = None
+    root_share: RootShareSettings | None = None
+    openjdk: EmptySettings | None = None
+    notify: EmptySettings | None = None
+    gnome_toolkit: GnomeToolkitSettings | None = None
+    pipewire: EmptySettings | None = None
+    v4l: EmptySettings | None = None
+    ibus: EmptySettings | None = None
+    fcitx: EmptySettings | None = None
+    slirp4netns: Slirp4netnsSettings | None = None
+    namespaces_limits: NamespacesLimitsSettings | None = None
+    debug: DebugSettings | None = None
+    gamemode: EmptySettings | None = None
+    pasta_network: PastaNetworkSettings | None = None
 
 
 class ServiceContainer:
     def __init__(self, conf_dict: ServicesConfDictType | None = None):
-        self.service_settings_to_type: dict[type[Any], Any] = {}
-        self.service_settings: dict[str, DataclassInstance] = {}
+        self.services_config = ServicesConfig()
         self.services: dict[str, BubblejailService] = {}
-        self.context = BubblejailRunContext(
-            self.services,
-            self.service_settings_to_type,
-        )
-        self.default_service = BubblejailDefaults(self.context)
+
+        self.default_service = BubblejailDefaults(self.services_config)
 
         if conf_dict is not None:
             self.set_services(conf_dict)
@@ -1391,19 +1423,13 @@ class ServiceContainer:
 
         declared_services: set[str] = set()
         self.services.clear()
-        self.service_settings.clear()
-        self.service_settings_to_type.clear()
+        self.services_config = self.get_cattrs_converter().structure(
+            new_services_datas, ServicesConfig
+        )
 
-        for service_name, service_options_dict in new_services_datas.items():
+        for service_name in new_services_datas.keys():
             service_class = SERVICES_MAP[service_name]
-            service_settings_class = service_class.Settings
-
-            self.services[service_name] = service_class(self.context)
-
-            service_settings = service_settings_class(**service_options_dict)
-
-            self.service_settings_to_type[service_settings_class] = service_settings
-            self.service_settings[service_name] = service_settings
+            self.services[service_name] = service_class(self.services_config)
 
             declared_services.add(service_name)
 
@@ -1413,16 +1439,26 @@ class ServiceContainer:
                     f"{', '.join(conflicting_services)}"
                 )
 
+    @cache
+    def get_cattrs_converter(self) -> Converter:
+        from cattrs import Converter
+
+        new_converter = Converter(omit_if_default=True, forbid_extra_keys=True)
+
+        @new_converter.register_structure_hook
+        def structure_str_or_list_str(val: Any, _: Any) -> str | list[str]:
+            if isinstance(val, str):
+                return val
+            else:
+                return new_converter.structure(val, list[str])
+
+        return new_converter
+
     def get_service_conf_dict(self) -> ServicesConfDictType:
-        new_dict: ServicesConfDictType = {}
-
-        for k, v in self.service_settings.items():
-            try:
-                new_dict[k] = asdict(v)
-            except TypeError:
-                new_dict[k] = {}
-
-        return new_dict
+        conf_dict: ServicesConfDictType = self.get_cattrs_converter().unstructure(
+            self.services_config, ServicesConfig
+        )
+        return conf_dict
 
     def iter_services(
         self,

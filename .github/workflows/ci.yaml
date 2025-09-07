@@ -62,7 +62,7 @@ jobs:
         run: >
           pacman --noconfirm -Syu
           git gcc python-jinja meson-python
-          python python-pyxdg python-tomli-w
+          python python-pyxdg python-tomli-w python-cattrs
       - name: Checkout
         uses: actions/checkout@v4
         with:

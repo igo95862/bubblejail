@@ -28,16 +28,11 @@ class DBusWizard:
             print("No changes to services configuration.")
 
     def handle_dbus_name_owner(self, services_config: ServiceContainer) -> None:
-        try:
-            common_settings = services_config.context.get_settings(
-                CommonSettings.Settings
-            )
-        except KeyError:
+        common_settings = services_config.services_config.common
+
+        if common_settings is None:
             common_settings = CommonSettings.Settings()
-            services_config.service_settings[CommonSettings.name] = common_settings
-            services_config.service_settings_to_type[CommonSettings.Settings] = (
-                common_settings
-            )
+            services_config.services_config.common = common_settings
 
         if common_settings.dbus_name:
             print(

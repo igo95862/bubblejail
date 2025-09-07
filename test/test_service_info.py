@@ -2,12 +2,22 @@
 # SPDX-FileCopyrightText: 2020 igo95862
 from __future__ import annotations
 
+from dataclasses import fields
 from tomllib import loads as toml_loads
 from unittest import TestCase
 from unittest import main as unittest_main
 
 from bubblejail.exceptions import ServiceConflictError
-from bubblejail.services import SERVICES_CLASSES, SERVICES_MAP, X11, ServiceContainer
+from bubblejail.services import (
+    SERVICES_CLASSES,
+    SERVICES_MAP,
+    X11,
+    BubblejailDefaults,
+    BubblejailService,
+    EmptySettings,
+    ServiceContainer,
+    ServicesConfig,
+)
 
 
 class TestServices(TestCase):
@@ -67,6 +77,34 @@ class TestServices(TestCase):
 """
         test_good_config = toml_loads(test_good_config_str)
         ServiceContainer(test_good_config)
+
+    def test_services_classes(self) -> None:
+        for subcls in BubblejailService.__subclasses__():
+            if subcls is BubblejailDefaults:
+                continue
+
+            self.assertIn(subcls, SERVICES_CLASSES)
+
+        for service in SERVICES_CLASSES:
+            if not service.Settings is EmptySettings:
+                self.assertEqual(
+                    f"{service.__name__}Settings",
+                    service.Settings.__name__,
+                )
+
+    def test_services_config(self) -> None:
+        key_to_type_str = {f.name: f.type for f in fields(ServicesConfig)}
+
+        for service in SERVICES_CLASSES:
+            self.assertIn(service.name, key_to_type_str)
+            self.assertEqual(
+                (
+                    "EmptySettings | None"
+                    if service.Settings is EmptySettings
+                    else f"{service.__name__}Settings | None"
+                ),
+                key_to_type_str[service.name],
+            )
 
 
 if __name__ == "__main__":
