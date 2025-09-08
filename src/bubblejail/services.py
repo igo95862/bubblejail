@@ -421,7 +421,7 @@ class X11(BubblejailService):
             if (
                 x == "XDG_SESSION_TYPE"
                 and environ[x] == "wayland"
-                and not self.context.wayland is None
+                and self.context.wayland is None
             ):
                 yield EnvrimentalVar(x, "x11")
                 continue
