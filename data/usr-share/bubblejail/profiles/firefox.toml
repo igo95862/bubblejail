@@ -24,6 +24,7 @@ executable_name = "/usr/bin/firefox"
 [services.pulse_audio]
 [services.notify]
 [services.direct_rendering]
-
 [services.home_share]
 home_paths = ["Downloads",]
+[services.mpris]
+player_name = "firefox.*"
