@@ -1353,6 +1353,35 @@ class PastaNetwork(BubblejailService):
     conflicts = frozenset(("network", "slirp4netns"))
 
 
+@dataclass(slots=True)
+class MprisSettings:
+    player_name: str = field(
+        metadata=SettingFieldMetadata(
+            pretty_name="Player's D-Bus name",
+            description=(
+                "D-Bus name suffix the player wants to acquire. "
+                "Accepts glob patterns. (for example `firefox.\\*`)"
+            ),
+            is_deprecated=False,
+        ),
+    )
+
+
+class Mpris(BubblejailService):
+    Settings = MprisSettings
+
+    def iter_bwrap_options(self) -> ServiceGeneratorType:
+        settings = self.context.mpris
+        if settings is None:
+            raise RuntimeError
+
+        yield DbusSessionOwn(f"org.mpris.MediaPlayer2.{settings.player_name}")
+
+    name = "mpris"
+    pretty_name = "MPRIS"
+    description = "Media Player Remote Interfacing Specification"
+
+
 SERVICES_CLASSES: tuple[type[BubblejailService], ...] = (
     CommonSettings,
     X11,
@@ -1376,6 +1405,7 @@ SERVICES_CLASSES: tuple[type[BubblejailService], ...] = (
     Debug,
     GameMode,
     PastaNetwork,
+    Mpris,
 )
 
 SERVICES_MAP: dict[str, type[BubblejailService]] = {
@@ -1407,6 +1437,7 @@ class ServicesConfig:
     debug: DebugSettings | None = None
     gamemode: EmptySettings | None = None
     pasta_network: PastaNetworkSettings | None = None
+    mpris: MprisSettings | None = None
 
 
 class ServiceContainer:
