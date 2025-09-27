@@ -36,18 +36,18 @@ folder from home directory with the sandbox.
 {% for service in services %}
 ## {{ service.name }}
 
-{{ service.pretty_name }}
+{{ service.pretty_name | markdown_escape }}
 
-{{ service. description }}
+{{ service.description | markdown_escape }}
 
 {% if service.has_settings() %}*Options:*
 {% endif %}
 {% for setting_field in service.iter_settings_fields() %}
-_{{ setting_field.name }}_: {{ setting_field.type }}
+_{{ setting_field.name | markdown_escape }}_: {{ setting_field.type }}
 
 {% if setting_field.metadata['is_deprecated'] %}{{ "*Deprecated*" | scdoc_indent }}{% endif %}
 
-{{ setting_field.metadata['description'] | scdoc_indent }}
+{{ setting_field.metadata['description'] | markdown_escape | scdoc_indent }}
 
 {% endfor %}
 {% endfor %}

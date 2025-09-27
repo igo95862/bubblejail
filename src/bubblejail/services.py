@@ -1360,7 +1360,7 @@ class MprisSettings:
             pretty_name="Player's D-Bus name",
             description=(
                 "D-Bus name suffix the player wants to acquire. "
-                "Accepts glob patterns. (for example `firefox.\\*`)"
+                "Accepts glob patterns. (for example `firefox.*`)"
             ),
             is_deprecated=False,
         ),

@@ -26,6 +26,20 @@ def scdoc_indent(s: str, indent_level: int = 1) -> str:
     return indent(s, "\t" * indent_level)
 
 
+MARKDOWN_ESCAPE_TABLE = str.maketrans(
+    {
+        "*": r"\*",
+        "_": r"\_",
+        "#": r"\#",
+        "\\": "\\\\",
+    }
+)
+
+
+def markdown_escape(s: str) -> str:
+    return s.translate(MARKDOWN_ESCAPE_TABLE)
+
+
 SUBCOMMAND_HELP = {
     "run": """The arguments are optional if you have
 _executable_name_ key set in config.
@@ -116,7 +130,7 @@ def get_option_description(subcommand: str, option: str) -> tuple[str, ...]:
     except KeyError:
         option_extra_description = ""
 
-    return option_help, option_extra_description
+    return markdown_escape(option_help), option_extra_description
 
 
 def get_options(subcommand: str) -> tuple[str, ...]:
@@ -145,7 +159,7 @@ def format_arg_names(subcommand: str) -> Iterator[str]:
 
 def get_subcommand_description(subcommand: str) -> tuple[str, ...]:
     return (
-        BUBBLEJAIL_CMD[subcommand]["description"],
+        markdown_escape(BUBBLEJAIL_CMD[subcommand]["description"]),
         SUBCOMMAND_HELP.get(subcommand, ""),
     )
 
@@ -157,6 +171,7 @@ def generate_cmd_man(template_dir: Path) -> None:
     )
     env.filters["scdoc_indent"] = scdoc_indent
     env.filters["scdoc_paragraph"] = scdoc_paragraph
+    env.filters["markdown_escape"] = markdown_escape
 
     template = env.get_template("bubblejail.1.scd.jinja2")
 
@@ -182,6 +197,7 @@ def generate_services_man(template_dir: Path) -> None:
         undefined=StrictUndefined,
     )
     env.filters["scdoc_indent"] = scdoc_indent
+    env.filters["markdown_escape"] = markdown_escape
 
     template = env.get_template("bubblejail.services.5.scd.jinja2")
 
