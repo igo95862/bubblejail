@@ -10,7 +10,7 @@ from asyncio import (
     wait_for,
 )
 from contextlib import ExitStack
-from dataclasses import dataclass, field, fields, is_dataclass
+from dataclasses import dataclass, field, fields
 from functools import cache
 from multiprocessing import Process
 from os import O_CLOEXEC, O_NONBLOCK, environ, getpid, getuid, pipe2, readlink
@@ -146,7 +146,7 @@ class BubblejailService:
 
     @classmethod
     def has_settings(cls) -> bool:
-        return is_dataclass(cls.Settings)
+        return cls.Settings is not EmptySettings
 
     @classmethod
     def iter_settings_fields(cls) -> Iterator[Field[Any]]:
