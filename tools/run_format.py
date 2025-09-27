@@ -37,6 +37,28 @@ def format_with_isort(check: bool = False) -> None:
     )
 
 
+def format_meson(check: bool = False) -> None:
+    meson_args = [
+        "meson",
+        "format",
+        "--configuration",
+        str(PROJECT_ROOT_PATH / "meson.format"),
+        "--recursive",
+    ]
+
+    if check:
+        meson_args.append("--check")
+    else:
+        meson_args.append("--inplace")
+
+    run(
+        args=meson_args,
+        cwd=PROJECT_ROOT_PATH,
+        check=check,
+    )
+
+
 if __name__ == "__main__":
     format_with_isort()
     format_with_black()
+    format_meson()
