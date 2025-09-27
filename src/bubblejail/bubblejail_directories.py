@@ -271,10 +271,11 @@ class BubblejailDirectories:
             )
 
         # Modify name
+        old_name = new_dot_desktop.get(key="Name", group="Desktop Entry")
         new_dot_desktop.set(
             key="Name",
             group="Desktop Entry",
-            value=f"{instance_name} bubble",
+            value=f"{old_name or instance_name} (bubble)",
         )
 
         # Three ways to resolve what file to write to
