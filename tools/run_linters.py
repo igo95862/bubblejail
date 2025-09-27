@@ -7,7 +7,7 @@ from subprocess import PIPE, CalledProcessError, Popen, run
 from sys import stderr
 
 from .base import BUILD_DIR, PROJECT_ROOT_PATH, PYTHON_SOURCES
-from .run_format import format_with_black, format_with_isort
+from .run_format import format_meson, format_with_black, format_with_isort
 
 LXNS_SUBPROJECT_PYTHON_SOURCE = PROJECT_ROOT_PATH / "subprojects/python-lxns/src/"
 
@@ -66,6 +66,17 @@ def run_isort() -> bool:
     try:
         format_with_isort(check=True)
     except CalledProcessError:
+        return True
+
+    return False
+
+
+def run_meson_format() -> bool:
+    print("Running: meson format", file=stderr)
+    try:
+        format_meson(check=True)
+    except CalledProcessError:
+        print("Meson format failed!", file=stderr)
         return True
 
     return False
@@ -149,6 +160,7 @@ def main() -> None:
     has_failed |= run_reuse()
     has_failed |= run_black()
     has_failed |= run_isort()
+    has_failed |= run_meson_format()
     has_failed |= run_codespell()
     has_failed |= run_codespell_on_commits()
 

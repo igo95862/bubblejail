@@ -1,10 +1,11 @@
 # SPDX-License-Identifier: GPL-3.0-or-later
 # SPDX-FileCopyrightText: 2020 igo95862
-project('bubblejail',
-    version : '0.9.5',
-    meson_version : '>=1.3.0',
+project(
+    'bubblejail',
+    version: '0.9.5',
+    meson_version: '>=1.3.0',
     # Patch out these lines to install bubblejail's packages to site-packages
-    default_options : {
+    default_options: {
         'python.purelibdir' : 'lib/bubblejail/python-packages',
         'python.platlibdir' : 'lib/bubblejail/python-packages',
     },
@@ -23,7 +24,7 @@ else
 endif
 
 if get_option('use-vendored-python-lxns').enabled()
-    subproject('python-lxns', default_options : {'use_limited_api': true})
+    subproject('python-lxns', default_options: {'use_limited_api': true})
 endif
 
 python_package_env = environment()

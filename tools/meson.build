@@ -24,19 +24,28 @@ jinja2_compiler = find_program('jinja2_run.py')
 
 jinja2_commands = [
     jinja2_compiler,
-    '--template-dir', templates_dir,
-    '--define', 'SHARE_PREFIX', share_prefix_path,
-    '--define', 'LIB_PREFIX', lib_prefix_path,
-    '--define', 'BUBBLEJAIL_VERSION', version_display,
-    '--define', 'SYSCONF_DIR', sysconf_dir_path,
-    '--define', 'PYTHON_SHEBANG_SHORT_OPTS', python_shebang_short_opts,
+    '--template-dir',
+    templates_dir,
+    '--define', 'SHARE_PREFIX',
+    share_prefix_path,
+    '--define', 'LIB_PREFIX',
+    lib_prefix_path,
+    '--define', 'BUBBLEJAIL_VERSION',
+    version_display,
+    '--define', 'SYSCONF_DIR',
+    sysconf_dir_path,
+    '--define', 'PYTHON_SHEBANG_SHORT_OPTS',
+    python_shebang_short_opts,
 ]
 
 if extra_python_packages_dir != ''
-    jinja2_commands += ['--define', 'PYTHON_PACKAGES_DIR', extra_python_packages_dir]
+    jinja2_commands += [
+        '--define', 'PYTHON_PACKAGES_DIR',
+        extra_python_packages_dir,
+    ]
 endif
 
-jinja2_commands +=  '@PLAINNAME@'
+jinja2_commands += '@PLAINNAME@'
 
 base_launch_kwargs = {
     'build_by_default': true,
@@ -49,27 +58,27 @@ base_launch_kwargs = {
 
 bubblejail_cli_launch = custom_target(
     'bubblejail_cli_launch',
-    input : files( templates_dir / 'bubblejail_launch_cli.py.jinja'),
-    output : 'bubblejail',
-    install_dir : get_option('bindir'),
-    install_tag : 'runtime',
-    kwargs : base_launch_kwargs,
+    input: files(templates_dir / 'bubblejail_launch_cli.py.jinja'),
+    output: 'bubblejail',
+    install_dir: get_option('bindir'),
+    install_tag: 'runtime',
+    kwargs: base_launch_kwargs,
 )
 
 bubblejail_gui_qt_launch = custom_target(
     'bubblejail_gui_qt_launch',
-    input : files( templates_dir / 'bubblejail_launch_gui_qt.py.jinja'),
-    output : 'bubblejail-config',
-    install_dir : get_option('bindir'),
-    install_tag : 'bubblejail-gui',
-    kwargs : base_launch_kwargs,
+    input: files(templates_dir / 'bubblejail_launch_gui_qt.py.jinja'),
+    output: 'bubblejail-config',
+    install_dir: get_option('bindir'),
+    install_tag: 'bubblejail-gui',
+    kwargs: base_launch_kwargs,
 )
 
 bubblejail_helper_launch = custom_target(
     'bubblejail_helper_launch',
-    input : files( templates_dir / 'bubblejail_launch_helper.py.jinja'),
-    output : 'bubblejail-helper',
-    install_dir : get_option('libdir') / 'bubblejail',
-    install_tag : 'runtime',
-    kwargs : base_launch_kwargs,
+    input: files(templates_dir / 'bubblejail_launch_helper.py.jinja'),
+    output: 'bubblejail-helper',
+    install_dir: get_option('libdir') / 'bubblejail',
+    install_tag: 'runtime',
+    kwargs: base_launch_kwargs,
 )
