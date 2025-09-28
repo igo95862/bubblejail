@@ -12,6 +12,7 @@ if TYPE_CHECKING:
 
 
 class BwrapConfigBase:
+    __slots__ = ()
     arg_word: str
 
     def to_args(self) -> Generator[str, None, None]:
@@ -19,10 +20,13 @@ class BwrapConfigBase:
 
 
 class ShareNetwork(BwrapConfigBase):
+    __slots__ = ()
     arg_word = "--share-net"
 
 
 class BwrapOptionWithPermissions(BwrapConfigBase):
+    __slots__ = ("permissions",)
+
     def __init__(self, permissions: int | None = None):
         super().__init__()
         self.permissions = permissions
@@ -36,6 +40,7 @@ class BwrapOptionWithPermissions(BwrapConfigBase):
 
 
 class DirCreate(BwrapOptionWithPermissions):
+    __slots__ = ("dest",)
     arg_word = "--dir"
 
     def __init__(self, dest: Pathlike, permissions: int | None = None):
@@ -48,6 +53,7 @@ class DirCreate(BwrapOptionWithPermissions):
 
 
 class Symlink(BwrapConfigBase):
+    __slots__ = ("source", "dest")
     arg_word = "--symlink"
 
     def __init__(self, source: Pathlike, dest: Pathlike):
@@ -62,6 +68,7 @@ class Symlink(BwrapConfigBase):
 
 
 class EnvrimentalVar(BwrapConfigBase):
+    __slots__ = ("var_name", "var_value")
     arg_word = "--setenv"
 
     def __init__(self, var_name: str, var_value: str | None = None):
@@ -77,6 +84,7 @@ class EnvrimentalVar(BwrapConfigBase):
 
 
 class ReadOnlyBind(BwrapConfigBase):
+    __slots__ = ("source", "dest")
     arg_word = "--ro-bind"
 
     def __init__(self, source: Pathlike, dest: Pathlike | None = None):
@@ -92,26 +100,32 @@ class ReadOnlyBind(BwrapConfigBase):
 
 
 class ReadOnlyBindTry(ReadOnlyBind):
+    __slots__ = ()
     arg_word = "--ro-bind-try"
 
 
 class Bind(ReadOnlyBind):
+    __slots__ = ()
     arg_word = "--bind"
 
 
 class BindTry(ReadOnlyBind):
+    __slots__ = ()
     arg_word = "--bind-try"
 
 
 class DevBind(ReadOnlyBind):
+    __slots__ = ()
     arg_word = "--dev-bind"
 
 
 class DevBindTry(ReadOnlyBind):
+    __slots__ = ()
     arg_word = "--dev-bind-try"
 
 
 class ChangeDir(BwrapConfigBase):
+    __slots__ = ("dest",)
     arg_word = "--chdir"
 
     def __init__(self, dest: Pathlike):
@@ -124,6 +138,7 @@ class ChangeDir(BwrapConfigBase):
 
 
 class BwrapRawArgs(BwrapConfigBase):
+    __slots__ = ("raw_args",)
     arg_word = ""
 
     def __init__(self, raw_args: list[str]):
@@ -135,12 +150,15 @@ class BwrapRawArgs(BwrapConfigBase):
 
 
 class FileTransfer:
+    __slots__ = ("content", "dest")
+
     def __init__(self, content: bytes, dest: Pathlike):
         self.content = content
         self.dest = str(dest)
 
 
 class DbusCommon:
+    __slots__ = ("bus_name",)
     arg_word: str = "ERROR"
 
     def __init__(self, bus_name: str):
@@ -150,21 +168,27 @@ class DbusCommon:
         return f"{self.arg_word}={self.bus_name}"
 
 
-class DbusSessionArgs(DbusCommon): ...
+class DbusSessionArgs(DbusCommon):
+    __slots__ = ()
 
 
-class DbusSystemArgs(DbusCommon): ...
+class DbusSystemArgs(DbusCommon):
+    __slots__ = ()
 
 
 class DbusSessionTalkTo(DbusSessionArgs):
+    __slots__ = ()
     arg_word = "--talk"
 
 
 class DbusSessionOwn(DbusSessionArgs):
+    __slots__ = ()
     arg_word = "--own"
 
 
 class DbusSessionRule(DbusSessionArgs):
+    __slots__ = ("interface_name", "object_path")
+
     def __init__(
         self,
         bus_name: str,
@@ -183,27 +207,36 @@ class DbusSessionRule(DbusSessionArgs):
 
 
 class DbusSessionCall(DbusSessionRule):
+    __slots__ = ()
     arg_word = "--call"
 
 
 class DbusSessionBroadcast(DbusSessionRule):
+    __slots__ = ()
     arg_word = "--broadcast"
 
 
 class DbusSessionRawArg(DbusSessionArgs):
+    __slots__ = ()
+
     def to_args(self) -> str:
         return self.bus_name
 
 
 class DbusSystemRawArg(DbusSystemArgs):
+    __slots__ = ()
+
     def to_args(self) -> str:
         return self.bus_name
 
 
-class SeccompDirective: ...
+class SeccompDirective:
+    __slots__ = ()
 
 
 class SeccompSyscallErrno(SeccompDirective):
+    __slots__ = ("syscall_name", "errno", "skip_on_not_exists")
+
     def __init__(
         self,
         syscall_name: str,
@@ -216,6 +249,8 @@ class SeccompSyscallErrno(SeccompDirective):
 
 
 class LaunchArguments:
+    __slots__ = ("launch_args", "priority")
+
     def __init__(
         self,
         launch_args: list[str],
