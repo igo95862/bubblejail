@@ -34,6 +34,7 @@ from .exceptions import BubblejailInstanceNotFoundError
 from .services import (
     SERVICES_CLASSES,
     BubblejailService,
+    ServiceFlags,
     ServicesConfDictType,
     ServiceSettingsDict,
     ServiceSettingsTypes,
@@ -321,7 +322,11 @@ class ServiceWidget:
                 SettingFieldMetadata,
                 setting_field.metadata,
             )
-            if setting_metadata["is_deprecated"]:
+            setting_flags = setting_metadata.get("flags", ServiceFlags(0))
+            if (
+                ServiceFlags.DEPRECATED in setting_flags
+                or ServiceFlags.EXPERIMENTAL in setting_flags
+            ):
                 continue
 
             match str(setting_field.type):

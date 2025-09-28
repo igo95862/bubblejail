@@ -11,13 +11,15 @@ from asyncio import (
 )
 from contextlib import ExitStack
 from dataclasses import dataclass, field, fields
+from enum import IntFlag
+from enum import auto as enum_auto
 from functools import cache
 from multiprocessing import Process
 from os import O_CLOEXEC, O_NONBLOCK, environ, getpid, getuid, pipe2, readlink
 from pathlib import Path
 from shutil import which
 from sys import stderr
-from typing import TYPE_CHECKING, Any, TypedDict
+from typing import TYPE_CHECKING, Any, ClassVar, NotRequired, TypedDict
 
 from xdg import BaseDirectory
 
@@ -56,7 +58,6 @@ if TYPE_CHECKING:
     from asyncio.subprocess import Process as AsyncioProcess
     from collections.abc import Awaitable, Callable, Generator, Iterator
     from dataclasses import Field
-    from typing import ClassVar
 
     from _typeshed import DataclassInstance
     from cattrs import Converter
@@ -91,10 +92,15 @@ ServiceSettingsDict = dict[str, ServiceSettingsTypes]
 ServicesConfDictType = dict[str, ServiceSettingsDict]
 
 
+class ServiceFlags(IntFlag):
+    DEPRECATED = enum_auto()
+    EXPERIMENTAL = enum_auto()
+
+
 class SettingFieldMetadata(TypedDict):
     pretty_name: str
     description: str
-    is_deprecated: bool
+    flags: NotRequired[ServiceFlags]
 
 
 XDG_DESKTOP_VARS: frozenset[str] = frozenset(
@@ -312,7 +318,6 @@ class CommonSettingsSettings:
         metadata=SettingFieldMetadata(
             pretty_name="Default arguments",
             description=("Default arguments to run when no arguments were provided"),
-            is_deprecated=False,
         ),
     )
     share_local_time: bool = field(
@@ -320,7 +325,7 @@ class CommonSettingsSettings:
         metadata=SettingFieldMetadata(
             pretty_name="Share local time",
             description="This option has no effect since version 0.6.0",
-            is_deprecated=True,
+            flags=ServiceFlags.DEPRECATED,
         ),
     )
     filter_disk_sync: bool = field(
@@ -332,7 +337,6 @@ class CommonSettingsSettings:
                 "Useful for EA Origin client that tries to flush "
                 "to disk too often."
             ),
-            is_deprecated=False,
         ),
     )
     dbus_name: str = field(
@@ -340,7 +344,6 @@ class CommonSettingsSettings:
         metadata=SettingFieldMetadata(
             pretty_name="Application's D-Bus name",
             description="D-Bus name allowed to acquire and own",
-            is_deprecated=False,
         ),
     )
 
@@ -519,7 +522,6 @@ class HomeShareSettings:
         metadata=SettingFieldMetadata(
             pretty_name="List of paths",
             description="Path to share with sandbox",
-            is_deprecated=False,
         ),
     )
 
@@ -553,7 +555,7 @@ class DirectRenderingSettings:
                 "compiler for AMD GPUs. Enabled by default "
                 "since mesa 20.02"
             ),
-            is_deprecated=True,
+            flags=ServiceFlags.DEPRECATED,
         ),
     )
 
@@ -687,7 +689,6 @@ class RootShareSettings:
         metadata=SettingFieldMetadata(
             pretty_name="Read/Write paths",
             description="Path to share with sandbox",
-            is_deprecated=False,
         ),
     )
     read_only_paths: list[str] = field(
@@ -695,7 +696,6 @@ class RootShareSettings:
         metadata=SettingFieldMetadata(
             pretty_name="Read only paths",
             description="Path to share read-only with sandbox",
-            is_deprecated=False,
         ),
     )
 
@@ -746,7 +746,6 @@ class GnomeToolkitSettings:
         metadata=SettingFieldMetadata(
             pretty_name="GNOME Portal",
             description="Access to GNOME Portal D-Bus API",
-            is_deprecated=False,
         ),
     )
     dconf_dbus: bool = field(
@@ -754,7 +753,6 @@ class GnomeToolkitSettings:
         metadata=SettingFieldMetadata(
             pretty_name="Dconf D-Bus",
             description="Access to dconf D-Bus API",
-            is_deprecated=False,
         ),
     )
     gnome_vfs_dbus: bool = field(
@@ -762,7 +760,6 @@ class GnomeToolkitSettings:
         metadata=SettingFieldMetadata(
             pretty_name="GNOME VFS",
             description="Access to GNOME Virtual File System D-Bus API",
-            is_deprecated=False,
         ),
     )
 
@@ -893,7 +890,6 @@ class Slirp4netnsSettings:
         metadata=SettingFieldMetadata(
             pretty_name="DNS servers",
             description=("DNS servers used. " "Internal DNS server is always used."),
-            is_deprecated=False,
         ),
     )
     outbound_addr: str = field(
@@ -904,7 +900,6 @@ class Slirp4netnsSettings:
                 "Address or device to bind to. "
                 "If not set the default address would be used."
             ),
-            is_deprecated=False,
         ),
     )
     disable_host_loopback: bool = field(
@@ -912,7 +907,6 @@ class Slirp4netnsSettings:
         metadata=SettingFieldMetadata(
             pretty_name="Disable host loopback access",
             description=("Prohibit connecting to host's loopback interface"),
-            is_deprecated=False,
         ),
     )
 
@@ -1045,7 +1039,6 @@ class NamespacesLimitsSettings:
                 "Limiting user namespaces blocks acquiring new "
                 "capabilities and privileges inside namespaces."
             ),
-            is_deprecated=False,
         ),
     )
     mount: int = field(
@@ -1053,7 +1046,6 @@ class NamespacesLimitsSettings:
         metadata=SettingFieldMetadata(
             pretty_name="Max number of mount namespaces",
             description=("Limits number mount namespaces."),
-            is_deprecated=False,
         ),
     )
     pid: int = field(
@@ -1061,7 +1053,6 @@ class NamespacesLimitsSettings:
         metadata=SettingFieldMetadata(
             pretty_name="Max number of PID namespaces",
             description=("Limits number PID namespaces."),
-            is_deprecated=False,
         ),
     )
     ipc: int = field(
@@ -1069,7 +1060,6 @@ class NamespacesLimitsSettings:
         metadata=SettingFieldMetadata(
             pretty_name="Max number of IPC namespaces",
             description=("Limits number IPC namespaces."),
-            is_deprecated=False,
         ),
     )
     net: int = field(
@@ -1077,7 +1067,6 @@ class NamespacesLimitsSettings:
         metadata=SettingFieldMetadata(
             pretty_name="Max number of net namespaces",
             description=("Limits number net namespaces."),
-            is_deprecated=False,
         ),
     )
     time: int = field(
@@ -1085,7 +1074,6 @@ class NamespacesLimitsSettings:
         metadata=SettingFieldMetadata(
             pretty_name="Max number of time namespaces",
             description=("Limits number time namespaces."),
-            is_deprecated=False,
         ),
     )
     uts: int = field(
@@ -1093,7 +1081,6 @@ class NamespacesLimitsSettings:
         metadata=SettingFieldMetadata(
             pretty_name="Max number of UTS namespaces",
             description=("Limits number UTS namespaces."),
-            is_deprecated=False,
         ),
     )
     cgroup: int = field(
@@ -1101,7 +1088,6 @@ class NamespacesLimitsSettings:
         metadata=SettingFieldMetadata(
             pretty_name="Max number of cgroups namespaces",
             description=("Limits number cgroups namespaces."),
-            is_deprecated=False,
         ),
     )
 
@@ -1216,7 +1202,6 @@ class DebugSettings:
                 "Raw arguments to add to bwrap invocation. "
                 "See bubblewrap documentation."
             ),
-            is_deprecated=False,
         ),
     )
     raw_dbus_session_args: list[str] = field(
@@ -1227,7 +1212,6 @@ class DebugSettings:
                 "Raw arguments to add to xdg-dbus-proxy session "
                 "invocation. See xdg-dbus-proxy documentation."
             ),
-            is_deprecated=False,
         ),
     )
     raw_dbus_system_args: list[str] = field(
@@ -1238,7 +1222,6 @@ class DebugSettings:
                 "Raw arguments to add to xdg-dbus-proxy system "
                 "invocation. See xdg-dbus-proxy documentation."
             ),
-            is_deprecated=False,
         ),
     )
 
@@ -1295,7 +1278,6 @@ class PastaNetworkSettings:
                 "Extra arguments to pass to pasta. For example, interface "
                 "binding, port forwarding... See `passt` man page."
             ),
-            is_deprecated=False,
         ),
     )
 
@@ -1362,7 +1344,6 @@ class MprisSettings:
                 "D-Bus name suffix the player wants to acquire. "
                 "Accepts glob patterns. (for example `firefox.*`)"
             ),
-            is_deprecated=False,
         ),
     )
 

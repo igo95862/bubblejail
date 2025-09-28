@@ -45,7 +45,9 @@ folder from home directory with the sandbox.
 {% for setting_field in service.iter_settings_fields() %}
 _{{ setting_field.name | markdown_escape }}_: {{ setting_field.type }}
 
-{% if setting_field.metadata['is_deprecated'] %}{{ "*Deprecated*" | scdoc_indent }}{% endif %}
+{% if ServiceFlags.DEPRECATED in setting_field.metadata.get("flags", ServiceFlags(0)) %}
+{{- "*Deprecated*" | scdoc_indent }}
+{%- endif %}
 
 {{ setting_field.metadata['description'] | markdown_escape | scdoc_indent }}
 
