@@ -2,7 +2,6 @@
 # SPDX-FileCopyrightText: 2019-2022 igo95862
 from __future__ import annotations
 
-from dataclasses import MISSING
 from functools import partial
 from shlex import split as shlex_split
 from sys import argv
@@ -55,7 +54,7 @@ class OptionWidgetBase(BubblejailGuiWidget):
         self,
         name: str,
         description: str,
-        data: ServiceSettingsTypes,
+        data: ServiceSettingsTypes | None,
         bubblejail_setting_name: str,
     ):
         super().__init__()
@@ -69,7 +68,7 @@ class OptionWidgetStrList(OptionWidgetBase):
         self,
         name: str,
         description: str,
-        data: list[str],
+        data: list[str] | None,
         bubblejail_setting_name: str,
     ):
         super().__init__(
@@ -97,6 +96,8 @@ class OptionWidgetStrList(OptionWidgetBase):
         self.add_button.setToolTip(self.description)
         self.vertical_layout.addWidget(self.add_button)
         self.add_button.clicked.connect(self.add_line_edit)
+        if data is None:
+            data = []
         if not data:
             self.add_line_edit()
         else:
@@ -150,7 +151,7 @@ class OptionWidgetBool(OptionWidgetBase):
         self,
         name: str,
         description: str,
-        data: bool,
+        data: bool | None,
         bubblejail_setting_name: str,
     ):
         super().__init__(
@@ -161,7 +162,8 @@ class OptionWidgetBool(OptionWidgetBase):
         )
         self.widget = QCheckBox(name)
         self.widget.setToolTip(description)
-
+        if data is None:
+            data = False
         self.widget.setChecked(data)
 
     def get_boolean(self) -> bool:
@@ -174,7 +176,7 @@ class OptionWidgetStr(OptionWidgetBase):
         self,
         name: str,
         description: str,
-        data: str,
+        data: str | None,
         bubblejail_setting_name: str,
     ):
         super().__init__(
@@ -191,6 +193,8 @@ class OptionWidgetStr(OptionWidgetBase):
         self.label.setToolTip(description)
         self.horizontal_layout.addWidget(self.label)
 
+        if data is None:
+            data = ""
         self.line_edit = QLineEdit(data)
         self.line_edit.setToolTip(description)
         self.horizontal_layout.addWidget(self.line_edit)
@@ -204,7 +208,7 @@ class OptionWidgetInt(OptionWidgetBase):
         self,
         name: str,
         description: str,
-        data: int,
+        data: int | None,
         bubblejail_setting_name: str,
     ):
         super().__init__(
@@ -223,6 +227,8 @@ class OptionWidgetInt(OptionWidgetBase):
 
         self.spin_box = QSpinBox()
         self.spin_box.setMinimum(-1000)
+        if data is None:
+            data = 0
         self.spin_box.setValue(data)
         self.spin_box.setToolTip(description)
         self.horizontal_layout.addWidget(self.spin_box)
@@ -236,11 +242,13 @@ class OptionWidgetSpaceSeparatedStr(OptionWidgetStr):
         self,
         name: str,
         description: str,
-        data: str | list[str],
+        data: str | list[str] | None,
         bubblejail_setting_name: str,
     ):
         if isinstance(data, list):
             data = " ".join(data)
+        elif data is None:
+            data = ""
 
         super().__init__(
             name=name,
@@ -347,14 +355,6 @@ class ServiceWidget:
                     )
 
             setting_value = service_settings.get(setting_field.name, None)
-
-            if setting_value is None:
-                default_value = setting_field.default
-                if default_value is MISSING:
-                    assert setting_field.default_factory is not MISSING
-                    default_value = setting_field.default_factory()
-
-                setting_value = default_value
 
             new_widget = widget_class(
                 name=setting_metadata["pretty_name"],
