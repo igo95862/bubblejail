@@ -1,0 +1,36 @@
+# SPDX-License-Identifier: GPL-3.0-or-later
+# SPDX-FileCopyrightText: 2025 PACHAKUTlQ
+
+# Typora markdown editor
+dot_desktop_path = ["/usr/share/applications/typora.desktop"]
+description = '''
+Typora markdown editor
+'''
+
+import_tips = '''
+Manually add `/usr/bin/typora --enable-features=UseOzonePlatform --ozone-platform=wayland --enable-wayland-ime %F` to Typora-bubblejail desktop entry to enable opening files from CLI/double-clicking using Typora.
+'''
+
+[services.common]
+executable_name = [
+    "/usr/bin/typora",
+    "--enable-features=UseOzonePlatform",
+    "--ozone-platform=wayland",
+    "--enable-wayland-ime",
+    "%F",
+]
+share_local_time = false
+filter_disk_sync = false
+dbus_name = ""
+
+[services.wayland]
+
+[services.network]
+
+[services.home_share]
+home_paths = ["Downloads", "Documents"]
+
+[services.direct_rendering]
+enable_aco = false
+
+[services.fcitx]

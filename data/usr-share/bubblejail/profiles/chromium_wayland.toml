@@ -1,0 +1,49 @@
+# SPDX-License-Identifier: GPL-3.0-or-later
+# SPDX-FileCopyrightText: 2025 PACHAKUTlQ
+
+# Chromium on Wayland
+dot_desktop_path = [
+    "/usr/share/applications/chromium-browser.desktop",
+    "/usr/share/applications/chromium.desktop",
+]
+is_gtk_application = true
+description = '''
+Chromium web browser using Wayland display protocol.
+'''
+
+import_tips='''
+Manually add `/usr/bin/chromium --enable-features=UseOzonePlatform --ozone-platform=wayland --enable-wayland-ime %U` to Chromium-bubblejail desktop entry to enable opening files or URL from CLI/double-clicking using Chromium.
+'''
+
+[services.common]
+executable_name = [
+    "/usr/bin/chromium",
+    "--enable-features=UseOzonePlatform",
+    "--ozone-platform=wayland",
+    "--enable-wayland-ime",
+    "%U",
+]
+share_local_time = false
+filter_disk_sync = false
+dbus_name = ""
+
+[services.wayland]
+
+[services.network]
+
+[services.pulse_audio]
+
+[services.home_share]
+# Add .config/chromium and .cache/chromium so Chromium can run both with/without sandbox without losing data
+home_paths = ["Downloads", ".config/chromium", ".cache/chromium"]
+
+[services.direct_rendering]
+enable_aco = false
+
+[services.notify]
+
+[services.pipewire]
+
+[services.v4l]
+
+[services.fcitx]

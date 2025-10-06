@@ -1,0 +1,21 @@
+# SPDX-License-Identifier: GPL-3.0-or-later
+# SPDX-FileCopyrightText: 2025 PACHAKUTlQ
+
+# Localsend
+dot_desktop_path = ["/usr/share/applications/localsend.desktop"]
+description = '''
+Localsend local file sharing
+'''
+
+[services.common]
+executable_name = ["/usr/bin/localsend"]
+share_local_time = false
+filter_disk_sync = false
+dbus_name = ""
+
+[services.wayland]
+
+[services.network]
+
+[services.home_share]
+home_paths = ["Downloads"]
