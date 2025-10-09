@@ -456,7 +456,11 @@ class Wayland(BubblejailService):
 
         try:
             wayland_display_env = environ["WAYLAND_DISPLAY"]
+            original_socket_path = (
+                Path(BaseDirectory.get_runtime_dir()) / wayland_display_env
+            )
         except KeyError:
+            original_socket_path = Path(BaseDirectory.get_runtime_dir())
             print("wayland: No wayland display.", file=stderr)
 
         for x in XDG_DESKTOP_VARS:
@@ -468,9 +472,6 @@ class Wayland(BubblejailService):
         yield EnvrimentalVar("MOZ_ENABLE_WAYLAND", "1")
 
         yield EnvrimentalVar("WAYLAND_DISPLAY", "wayland-0")
-        original_socket_path = (
-            Path(BaseDirectory.get_runtime_dir()) / wayland_display_env
-        )
 
         new_socket_path = self.xdg_runtime_dir / "wayland-0"
         yield Bind(original_socket_path, new_socket_path)
