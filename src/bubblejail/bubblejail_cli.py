@@ -7,16 +7,18 @@ from asyncio import run as async_run
 from os import environ, isatty, stat
 from pathlib import Path
 from sys import argv, stderr, stdout
+from tomllib import loads as toml_loads
 from typing import TYPE_CHECKING
 
 from .bubblejail_cli_metadata import BUBBLEJAIL_CMD
 from .bubblejail_directories import BubblejailDirectories
 from .bubblejail_utils import BubblejailSettings
 from .dbus_proxy import DBusLogEnum
-from .services import SERVICES_CLASSES
+from .services import SERVICES_CLASSES, ServiceContainer, ServiceFlags
 
 if TYPE_CHECKING:
     from collections.abc import Callable, Generator, Iterable, Iterator
+    from typing import Any
 
     from .bubblejail_instance import BubblejailInstance
 
@@ -206,6 +208,29 @@ def bjail_create(
     )
 
 
+def bubblejail_edit_check_flags(new_services_dict: dict[str, dict[str, Any]]) -> None:
+    services_metadata = ServiceContainer.get_services_settings_metadata()
+    for service_name, service_dict in new_services_dict.items():
+        for setting_name in service_dict:
+            setting_metadata = services_metadata[service_name][setting_name]
+            setting_flags = setting_metadata.get("flags", ServiceFlags(0))
+            if ServiceFlags.DEPRECATED in setting_flags:
+                print(
+                    f"WARNING: Setting {setting_name!r} of "
+                    f"{service_name!r} service is deprecated "
+                    "and will be removed in the future.",
+                    file=stderr,
+                )
+
+            if ServiceFlags.EXPERIMENTAL in setting_flags:
+                print(
+                    f"WARNING: Setting {setting_name!r} of "
+                    f"{service_name!r} service is experimental "
+                    "and can be altered or removed in the future.",
+                    file=stderr,
+                )
+
+
 def bjail_edit(instance_name: str) -> None:
     instance = BubblejailDirectories.instance_get(instance_name)
 
@@ -234,7 +259,12 @@ def bjail_edit(instance_name: str) -> None:
         # Verify that the new config is valid
         with open(temp_file_path) as tempfile:
             new_config_toml = tempfile.read()
-            instance.read_services(new_config_toml)
+            new_services_dict = toml_loads(new_config_toml)
+            instance.read_services(new_services_dict)
+
+        # Check for deprecated or experimental settings and emit warnings
+        bubblejail_edit_check_flags(new_services_dict)
+
         # Write to instance config file
         instance.save_services_file(new_config_toml)
 

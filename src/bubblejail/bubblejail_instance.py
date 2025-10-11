@@ -120,12 +120,16 @@ class BubblejailInstance:
         with (self.path_config_file).open() as f:
             return f.read()
 
-    def read_services(self, services_data: str | None = None) -> ServiceContainer:
-
+    def read_services(
+        self, services_data: str | dict[str, Any] | None = None
+    ) -> ServiceContainer:
         if services_data is None:
             services_data = self.read_services_file()
 
-        return ServiceContainer(toml_loads(services_data))
+        if not isinstance(services_data, dict):
+            services_data = toml_loads(services_data)
+
+        return ServiceContainer(services_data)
 
     def save_services(self, services: ServiceContainer) -> None:
         from tomli_w import dumps as toml_dumps

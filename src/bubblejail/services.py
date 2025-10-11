@@ -1503,3 +1503,16 @@ class ServiceContainer:
                 continue
 
             yield service.post_shutdown_hook
+
+    @classmethod
+    def get_services_settings_metadata(
+        cls,
+    ) -> dict[str, dict[str, SettingFieldMetadata]]:
+
+        return {
+            service_name: {
+                setting_field.name: setting_metadata
+                for setting_field, setting_metadata in service.iter_settings_fields_and_meta()
+            }
+            for service_name, service in SERVICES_MAP.items()
+        }
