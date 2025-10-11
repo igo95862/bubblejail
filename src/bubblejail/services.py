@@ -458,6 +458,7 @@ class Wayland(BubblejailService):
             wayland_display_env = environ["WAYLAND_DISPLAY"]
         except KeyError:
             print("wayland: No wayland display.", file=stderr)
+            raise
 
         for x in XDG_DESKTOP_VARS:
             if x in environ:
