@@ -12,7 +12,7 @@ from functools import cached_property
 from pathlib import Path
 from sys import stderr
 from tomllib import loads as toml_loads
-from typing import Any, cast
+from typing import Any
 
 from xdg.BaseDirectory import get_runtime_dir
 
@@ -125,9 +125,7 @@ class BubblejailInstance:
         if services_data is None:
             services_data = self.read_services_file()
 
-        services_dict = cast(ServicesConfDictType, toml_loads(services_data))
-
-        return ServiceContainer(services_dict)
+        return ServiceContainer(toml_loads(services_data))
 
     def save_services(self, services: ServiceContainer) -> None:
         from tomli_w import dumps as toml_dumps

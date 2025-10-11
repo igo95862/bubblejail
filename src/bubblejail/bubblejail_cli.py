@@ -231,14 +231,10 @@ def bjail_edit(instance_name: str) -> None:
             print("File not modified. Not overwriting config.", file=stderr)
             return
 
-        from tomllib import loads as toml_loads
-
-        from .services import ServiceContainer
-
         # Verify that the new config is valid
         with open(temp_file_path) as tempfile:
             new_config_toml = tempfile.read()
-            ServiceContainer(toml_loads(new_config_toml))
+            instance.read_services(new_config_toml)
         # Write to instance config file
         instance.save_services_file(new_config_toml)
 
