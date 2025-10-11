@@ -4,7 +4,7 @@ from __future__ import annotations
 
 from argparse import ArgumentParser
 from asyncio import run as async_run
-from os import isatty
+from os import environ, isatty, stat
 from pathlib import Path
 from sys import argv, stderr, stdout
 from typing import TYPE_CHECKING
@@ -208,7 +208,39 @@ def bjail_create(
 
 def bjail_edit(instance_name: str) -> None:
     instance = BubblejailDirectories.instance_get(instance_name)
-    async_run(instance.edit_config_in_editor())
+
+    from tempfile import TemporaryDirectory
+
+    with TemporaryDirectory("bubblejail-edit") as tempdir:
+        # Create path to temporary file and write existing config
+        temp_file_path = Path(tempdir + "temp.toml")
+        with open(temp_file_path, mode="x") as tempfile:
+            tempfile.write(instance.read_services_file())
+
+        initial_modification_time = stat(temp_file_path).st_mtime
+        # Launch EDITOR on the temporary file
+        from subprocess import run as subprocess_run
+
+        subprocess_run(
+            args=(environ["EDITOR"], str(temp_file_path)),
+            check=True,
+        )
+
+        # If file was not modified do nothing
+        if initial_modification_time >= stat(temp_file_path).st_mtime:
+            print("File not modified. Not overwriting config.", file=stderr)
+            return
+
+        from tomllib import loads as toml_loads
+
+        from .services import ServiceContainer
+
+        # Verify that the new config is valid
+        with open(temp_file_path) as tempfile:
+            new_config_toml = tempfile.read()
+            ServiceContainer(toml_loads(new_config_toml))
+        # Write to instance config file
+        instance.save_services_file(new_config_toml)
 
 
 def bjail_create_desktop_entry(

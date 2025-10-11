@@ -4,16 +4,13 @@ from __future__ import annotations
 
 from asyncio import (
     CancelledError,
-    create_subprocess_exec,
     open_unix_connection,
     wait_for,
 )
 from contextlib import AsyncExitStack
 from functools import cached_property
-from os import environ, stat
 from pathlib import Path
 from sys import stderr
-from tempfile import TemporaryDirectory
 from tomllib import loads as toml_loads
 from typing import Any, cast
 
@@ -243,34 +240,6 @@ class BubblejailInstance:
 
             print("Bubblewrap terminated", file=stderr)
             return runner
-
-    async def edit_config_in_editor(self) -> None:
-        # Create temporary directory
-        with TemporaryDirectory() as tempdir:
-            # Create path to temporary file and write exists config
-            temp_file_path = Path(tempdir + "temp.toml")
-            with open(temp_file_path, mode="w") as tempfile:
-                tempfile.write(self.read_services_file())
-
-            initial_modification_time = stat(temp_file_path).st_mtime
-            # Launch EDITOR on the temporary file
-            run_args = [environ["EDITOR"], str(temp_file_path)]
-            p = await create_subprocess_exec(*run_args)
-            await p.wait()
-
-            # If file was not modified do nothing
-            if initial_modification_time >= stat(temp_file_path).st_mtime:
-                print("File not modified. Not overwriting config", file=stderr)
-                return
-
-            # Verify that the new config is valid and save to variable
-            with open(temp_file_path) as tempfile:
-                new_config_toml = tempfile.read()
-                ServiceContainer(
-                    cast(ServicesConfDictType, toml_loads(new_config_toml))
-                )
-            # Write to instance config file
-            self.save_services_file(new_config_toml)
 
 
 class BubblejailProfile:
