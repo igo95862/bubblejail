@@ -42,14 +42,14 @@ folder from home directory with the sandbox.
 
 {% if service.has_settings() %}*Options:*
 {% endif %}
-{% for setting_field in service.iter_settings_fields() %}
+{% for setting_field, settings_meta in service.iter_settings_fields_and_meta() %}
 _{{ setting_field.name | markdown_escape }}_: {{ setting_field.type }}
 
-{% if ServiceFlags.DEPRECATED in setting_field.metadata.get("flags", ServiceFlags(0)) %}
+{% if ServiceFlags.DEPRECATED in settings_meta.get("flags", ServiceFlags(0)) %}
 {{- "*Deprecated*" | scdoc_indent }}
 {%- endif %}
 
-{{ setting_field.metadata['description'] | markdown_escape | scdoc_indent }}
+{{ settings_meta['description'] | markdown_escape | scdoc_indent }}
 
 {% endfor %}
 {% endfor %}

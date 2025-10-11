@@ -19,7 +19,7 @@ from os import O_CLOEXEC, O_NONBLOCK, environ, getpid, getuid, pipe2, readlink
 from pathlib import Path
 from shutil import which
 from sys import stderr
-from typing import TYPE_CHECKING, Any, ClassVar, NotRequired, TypedDict
+from typing import TYPE_CHECKING, Any, ClassVar, NotRequired, TypedDict, cast
 
 from xdg import BaseDirectory
 
@@ -155,11 +155,15 @@ class BubblejailService:
         return cls.Settings is not EmptySettings
 
     @classmethod
-    def iter_settings_fields(cls) -> Iterator[Field[Any]]:
-        try:
-            yield from fields(cls.Settings)
-        except TypeError:
-            yield from ()
+    def iter_settings_fields_and_meta(
+        cls,
+    ) -> Iterator[tuple[Field[Any], SettingFieldMetadata]]:
+        for setting_field in fields(cls.Settings):
+            setting_metadata = cast(
+                SettingFieldMetadata,
+                setting_field.metadata,
+            )
+            yield setting_field, setting_metadata
 
     name: ClassVar[str]
     pretty_name: ClassVar[str]

@@ -5,7 +5,7 @@ from __future__ import annotations
 from functools import partial
 from shlex import split as shlex_split
 from sys import argv
-from typing import TYPE_CHECKING, cast
+from typing import TYPE_CHECKING
 
 from PyQt6.QtCore import QModelIndex
 from PyQt6.QtWidgets import (
@@ -37,7 +37,6 @@ from .services import (
     ServicesConfDictType,
     ServiceSettingsDict,
     ServiceSettingsTypes,
-    SettingFieldMetadata,
 )
 
 if TYPE_CHECKING:
@@ -325,11 +324,7 @@ class ServiceWidget:
         if service_settings is None:
             service_settings = {}
 
-        for setting_field in service.iter_settings_fields():
-            setting_metadata = cast(
-                SettingFieldMetadata,
-                setting_field.metadata,
-            )
+        for setting_field, setting_metadata in service.iter_settings_fields_and_meta():
             setting_flags = setting_metadata.get("flags", ServiceFlags(0))
             if (
                 ServiceFlags.DEPRECATED in setting_flags
