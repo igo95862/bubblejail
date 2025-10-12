@@ -131,7 +131,7 @@ BUBBLEJAIL_CMD: dict[str, CmdMetaDataDict] = {
                 "metavar": "profile",
             },
             "--desktop-entry": {
-                "help": "Desktop entry name or path to use.",
+                "help": "Desktop entry name or absolute path to use as a template.",
                 "metavar": "name_or_path",
             },
             "instance_name": {
@@ -139,6 +139,14 @@ BUBBLEJAIL_CMD: dict[str, CmdMetaDataDict] = {
             },
         },
         "argument": "instance",
-        "description": "Generate XDG desktop entry for an instance.",
+        "description": (
+            "Generate XDG desktop entry for an instance and place it in to the "
+            "user's desktop entries folder. "
+            "(usually at $XDG_DATA_HOME/applications folder) "
+            "MIME database will also be updated after desktop entry is placed. "
+            "Optional arguments can be used to specify a desktop entry "
+            "to use as template. The desktop entry used as a template will have its "
+            "Exec keys modified to run command inside the bubblejail instance."
+        ),
     },
 }
