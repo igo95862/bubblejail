@@ -1,7 +1,7 @@
 {#
 SPDX-License-Identifier: GPL-3.0-or-later
 SPDX-FileCopyrightText: 2023 igo95862
--#}
+#}
 bubblejail(1)
 
 # NAME
@@ -50,7 +50,10 @@ the application has.
 
 {{ get_subcommand_description(subcommand) | scdoc_paragraph }}
 
-{% if get_options(subcommand) %}*Options:*{% endif %}
+{% if get_options(subcommand) %}
+*Options:*
+{% endif %}
+
 {% for option in get_options(subcommand) %}
 {{ format_option(subcommand, option) | join(' ') }}
 

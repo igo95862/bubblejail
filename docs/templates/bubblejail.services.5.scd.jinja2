@@ -1,7 +1,7 @@
 {#
 SPDX-License-Identifier: GPL-3.0-or-later
 SPDX-FileCopyrightText: 2023 igo95862
--#}
+#}
 bubblejail.services(5)
 
 # NAME
@@ -40,15 +40,17 @@ folder from home directory with the sandbox.
 
 {{ service.description | markdown_escape }}
 
-{% if service.has_settings() %}*Options:*
+{% if service.has_settings() %}
+*Options:*
 {% endif %}
+
 {% for setting_field, settings_meta in service.iter_settings_fields_and_meta() %}
 _{{ setting_field.name | markdown_escape }}_: {{ setting_field.type }}
 
 {% if ServiceFlags.DEPRECATED in settings_meta.get("flags", ServiceFlags(0)) %}
-{{- "*Deprecated*" | scdoc_indent }}
-{%- endif %}
+{{ "*Deprecated*" | scdoc_indent }}
 
+{% endif %}
 {{ settings_meta['description'] | markdown_escape | scdoc_indent }}
 
 {% endfor %}

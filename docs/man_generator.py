@@ -168,6 +168,8 @@ def generate_cmd_man(template_dir: Path) -> None:
     env = Environment(
         loader=FileSystemLoader(template_dir),
         undefined=StrictUndefined,
+        trim_blocks=True,
+        lstrip_blocks=True,
     )
     env.filters["scdoc_indent"] = scdoc_indent
     env.filters["scdoc_paragraph"] = scdoc_paragraph
@@ -195,6 +197,8 @@ def generate_services_man(template_dir: Path) -> None:
     env = Environment(
         loader=FileSystemLoader(template_dir),
         undefined=StrictUndefined,
+        trim_blocks=True,
+        lstrip_blocks=True,
     )
     env.filters["scdoc_indent"] = scdoc_indent
     env.filters["markdown_escape"] = markdown_escape
