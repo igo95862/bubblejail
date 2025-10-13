@@ -95,6 +95,7 @@ ServicesConfDictType = dict[str, ServiceSettingsDict]
 class ServiceFlags(IntFlag):
     DEPRECATED = enum_auto()
     EXPERIMENTAL = enum_auto()
+    NO_GUI = enum_auto()
 
 
 class SettingFieldMetadata(TypedDict):
@@ -169,7 +170,7 @@ class BubblejailService:
     pretty_name: ClassVar[str]
     description: ClassVar[str]
     conflicts: ClassVar[frozenset[str]] = frozenset()
-    display_in_gui: ClassVar[bool] = True
+    flags: ClassVar[ServiceFlags] = ServiceFlags(0)
 
 
 # Pre version 0.6.0 home bind path
@@ -729,7 +730,7 @@ class OpenJDK(BubblejailService):
     pretty_name = "Java"
     description = "Enable for applications that require Java\n" "Example: Minecraft"
 
-    display_in_gui = False
+    flags = ServiceFlags.DEPRECATED
 
 
 class Notifications(BubblejailService):
@@ -794,7 +795,7 @@ class GnomeToolkit(BubblejailService):
     name = "gnome_toolkit"
     pretty_name = "GNOME toolkit"
     description = "Access to GNOME APIs"
-    display_in_gui = False
+    flags = ServiceFlags.EXPERIMENTAL
 
 
 class Pipewire(BubblejailService):
@@ -1254,7 +1255,7 @@ class Debug(BubblejailService):
         "Various debug options such as adding arguments "
         "to the bwrap or xdg-dbus-proxy."
     )
-    display_in_gui = False
+    flags = ServiceFlags.NO_GUI
 
 
 class GameMode(BubblejailService):

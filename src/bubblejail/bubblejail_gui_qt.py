@@ -452,7 +452,11 @@ class InstanceEditWidget(CentralWidgets):
                 service_settings_dict = None
 
             new_service_widget = ServiceWidget(service, service_settings_dict)
-            if service.display_in_gui:
+            if (
+                ServiceFlags.DEPRECATED not in service.flags
+                and ServiceFlags.EXPERIMENTAL not in service.flags
+                and ServiceFlags.NO_GUI not in service.flags
+            ):
                 self.scrolled_layout.addWidget(new_service_widget.group_widget)
             self.service_widgets.append(new_service_widget)
 

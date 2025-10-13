@@ -38,6 +38,15 @@ folder from home directory with the sandbox.
 
 {{ service.pretty_name | markdown_escape }}
 
+{% if ServiceFlags.DEPRECATED in service.flags %}
+*Deprecated*: will be removed in the future
+
+{% endif %}
+{% if ServiceFlags.EXPERIMENTAL in service.flags %}
+*Experimental*: maybe altered in the future
+
+{% endif %}
+
 {{ service.description | markdown_escape }}
 
 {% if service.has_settings() %}
