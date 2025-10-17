@@ -2,6 +2,7 @@
 # SPDX-FileCopyrightText: 2019-2022 igo95862
 from __future__ import annotations
 
+from contextlib import suppress as exc_suppress
 from functools import partial
 from shlex import split as shlex_split
 from sys import argv
@@ -34,7 +35,6 @@ from .services import (
     SERVICES_CLASSES,
     BubblejailService,
     ServiceFlags,
-    ServicesConfDictType,
     ServiceSettingsDict,
     ServiceSettingsTypes,
 )
@@ -438,26 +438,26 @@ class InstanceEditWidget(CentralWidgets):
         # Instance
         self.bubblejail_instance = BubblejailDirectories.instance_get(instance_name)
         self.services_config = self.bubblejail_instance.read_services()
-        services_settings_dicts: ServicesConfDictType = (
-            self.services_config.get_service_conf_dict()
-        )
+        self.services_config_dict = self.services_config.get_service_conf_dict()
 
         self.service_widgets: list[ServiceWidget] = []
         for service in SERVICES_CLASSES:
+            if (
+                ServiceFlags.DEPRECATED in service.flags
+                or ServiceFlags.EXPERIMENTAL in service.flags
+                or ServiceFlags.NO_GUI in service.flags
+            ):
+                continue
+
             try:
                 service_settings_dict: None | ServiceSettingsDict = (
-                    services_settings_dicts[service.name]
+                    self.services_config_dict[service.name]
                 )
             except KeyError:
                 service_settings_dict = None
 
             new_service_widget = ServiceWidget(service, service_settings_dict)
-            if (
-                ServiceFlags.DEPRECATED not in service.flags
-                and ServiceFlags.EXPERIMENTAL not in service.flags
-                and ServiceFlags.NO_GUI not in service.flags
-            ):
-                self.scrolled_layout.addWidget(new_service_widget.group_widget)
+            self.scrolled_layout.addWidget(new_service_widget.group_widget)
             self.service_widgets.append(new_service_widget)
 
             new_service_widget.group_widget.clicked.connect(
@@ -474,12 +474,17 @@ class InstanceEditWidget(CentralWidgets):
         self.refresh_conflicts(True)
 
     def set_instance_data(self) -> None:
-        new_config = {
-            x.service.name: x.bubblejail_read_service_dict()
-            for x in self.service_widgets
-            if x.group_widget.isChecked()
-        }
-        self.services_config.set_services(new_config)
+        for service_widget in self.service_widgets:
+            service_name = service_widget.service.name
+            if service_widget.group_widget.isChecked():
+                self.services_config_dict[service_name] = (
+                    service_widget.bubblejail_read_service_dict()
+                )
+            else:
+                with exc_suppress(KeyError):
+                    self.services_config_dict.pop(service_name)
+
+        self.services_config.set_services(self.services_config_dict)
 
         self.bubblejail_instance.save_services(self.services_config)
         self.parent.switch_to_selector()
