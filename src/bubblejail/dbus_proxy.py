@@ -139,12 +139,14 @@ class XdgDbusProxy:
             case _:
                 raise TypeError(f"Expected D-Bus rule, got {rule!r}")
 
-    def generate_args(self, ready_pipe: BinaryIO) -> list[str]:
+    def generate_args(self, ready_pipe: BinaryIO | None) -> list[str]:
         dbus_proxy_binary = which("xdg-dbus-proxy")
         if dbus_proxy_binary is None:
             raise RuntimeError("xdg-dbus-proxy not found")
 
-        dbus_proxy_args: list[str] = [dbus_proxy_binary, f"--fd={ready_pipe.fileno()}"]
+        dbus_proxy_args: list[str] = [dbus_proxy_binary]
+        if ready_pipe is not None:
+            dbus_proxy_args.append(f"--fd={ready_pipe.fileno()}")
 
         # D-Bus session
         dbus_proxy_args.append(environ["DBUS_SESSION_BUS_ADDRESS"])

@@ -72,13 +72,6 @@ class BubblejailRunner:
         self.helper_socket_fd = self.helper_socket.fileno()
         self.file_descriptors_to_pass.append(self.helper_socket_fd)
 
-        # Args to dbus proxy
-        self.dbus_proxy_args: list[str] = []
-        self.dbus_proxy_process: Process | None = None
-
-        self.dbus_proxy_pipe_read: int = -1
-        self.dbus_proxy_pipe_write: int = -1
-
         # D-Bus proxy
         self.dbus_session_socket_path = parent.path_runtime_dbus_session_socket
         self.dbus_system_socket_path = parent.path_runtime_dbus_system_socket

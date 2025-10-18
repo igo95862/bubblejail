@@ -216,8 +216,8 @@ class BubblejailInstance:
             print("Run args:", file=stderr)
             print(" ".join(args_to_run), file=stderr)
 
-            print("D-Bus session args:", file=stderr)
-            print(" ".join(runner.dbus_proxy_args), file=stderr)
+            print("D-Bus proxy args:", file=stderr)
+            print(" ".join(runner.dbus_proxy.generate_args(None)), file=stderr)
             return runner
 
         async with AsyncExitStack() as exit_stack:
