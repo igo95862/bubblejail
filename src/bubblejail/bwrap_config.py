@@ -186,6 +186,11 @@ class DbusSessionOwn(DbusSessionArgs):
     arg_word = "--own"
 
 
+class DbusSessionSee(DbusSessionArgs):
+    __slots__ = ()
+    arg_word = "--see"
+
+
 class DbusSessionRule(DbusSessionArgs):
     __slots__ = ("interface_name", "object_path")
 

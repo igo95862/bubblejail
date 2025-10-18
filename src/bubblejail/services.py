@@ -32,6 +32,7 @@ from .bwrap_config import (
     DbusSessionCall,
     DbusSessionOwn,
     DbusSessionRawArg,
+    DbusSessionSee,
     DbusSessionTalkTo,
     DbusSystemRawArg,
     DevBind,
@@ -1369,6 +1370,126 @@ class Mpris(BubblejailService):
     description = "Media Player Remote Interfacing Specification"
 
 
+@dataclass(slots=True)
+class XdgDesktopPortalSettings:
+    add_flatpak_info: bool = field(
+        default=True,
+        metadata=SettingFieldMetadata(
+            pretty_name="Add .flatpak-info",
+            description=(
+                "Add /.flatpak-info file to sandbox which some applications "
+                "use as a trigger to use portals."
+            ),
+        ),
+    )
+    open_uri: bool = field(
+        default=True,
+        metadata=SettingFieldMetadata(
+            pretty_name="Enable OpenURI portal",
+            description=(
+                "Enable OpenUri portal which allows opening " "files and links."
+            ),
+        ),
+    )
+    file_chooser: bool = field(
+        default=True,
+        metadata=SettingFieldMetadata(
+            pretty_name="Enable File Chooser portal",
+            description=(
+                "Enable File Chooser portal which allows "
+                "spawning file chooser outside sandbox."
+            ),
+        ),
+    )
+    settings: bool = field(
+        default=True,
+        metadata=SettingFieldMetadata(
+            pretty_name="Enable Trash portal",
+            description=(
+                "Enable Settings portal which allows "
+                "reading common GUI settings like dark mode."
+            ),
+        ),
+    )
+    trash: bool = field(
+        default=True,
+        metadata=SettingFieldMetadata(
+            pretty_name="Enable Trash portal",
+            description=(
+                "Enable Trash portal which allows "
+                "sending trashed files to unified location outside sandbox."
+            ),
+        ),
+    )
+
+
+class XdgDesktopPortal(BubblejailService):
+    Settings = XdgDesktopPortalSettings
+
+    def iter_bwrap_options(self) -> ServiceGeneratorType:
+        settings = self.context.xdg_desktop_portal
+        if settings is None:
+            raise RuntimeError
+
+        yield DbusSessionSee("org.freedesktop.portal.Desktop")
+        # Required to read "version" property of each portal interface
+        yield DbusSessionCall(
+            bus_name="org.freedesktop.portal.Desktop",
+            interface_name="org.freedesktop.DBus.Properties.*",
+            object_path="/org/freedesktop/portal/desktop",
+        )
+        # Interfaces that are used by multiple portals to wait for
+        # user interaction.
+        yield DbusSessionCall(
+            bus_name="org.freedesktop.portal.Desktop",
+            interface_name="org.freedesktop.portal.Request.*",
+            object_path="/org/freedesktop/portal/desktop",
+        )
+        yield DbusSessionCall(
+            bus_name="org.freedesktop.portal.Desktop",
+            interface_name="org.freedesktop.portal.Session.*",
+            object_path="/org/freedesktop/portal/desktop",
+        )
+
+        if settings.add_flatpak_info:
+            yield FileTransfer(b"", "/.flatpak-info")
+
+        if settings.open_uri:
+            yield DbusSessionCall(
+                bus_name="org.freedesktop.portal.Desktop",
+                interface_name="org.freedesktop.portal.OpenURI.*",
+                object_path="/org/freedesktop/portal/desktop",
+            )
+
+        if settings.file_chooser:
+            yield DbusSessionCall(
+                bus_name="org.freedesktop.portal.Desktop",
+                interface_name="org.freedesktop.portal.FileChooser.*",
+                object_path="/org/freedesktop/portal/desktop",
+            )
+
+        if settings.settings:
+            yield DbusSessionCall(
+                bus_name="org.freedesktop.portal.Desktop",
+                interface_name="org.freedesktop.portal.Settings.*",
+                object_path="/org/freedesktop/portal/desktop",
+            )
+
+        if settings.trash:
+            yield DbusSessionCall(
+                bus_name="org.freedesktop.portal.Desktop",
+                interface_name="org.freedesktop.portal.Trash.*",
+                object_path="/org/freedesktop/portal/desktop",
+            )
+
+    name = "xdg_desktop_portal"
+    pretty_name = "XDG Desktop Portal"
+    description = (
+        "D-Bus API that allows access for sandboxed application "
+        "to resources outside of it."
+    )
+
+
 SERVICES_CLASSES: tuple[type[BubblejailService], ...] = (
     CommonSettings,
     X11,
@@ -1393,6 +1514,7 @@ SERVICES_CLASSES: tuple[type[BubblejailService], ...] = (
     GameMode,
     PastaNetwork,
     Mpris,
+    XdgDesktopPortal,
 )
 
 SERVICES_MAP: dict[str, type[BubblejailService]] = {
@@ -1425,6 +1547,7 @@ class ServicesConfig:
     gamemode: EmptySettings | None = None
     pasta_network: PastaNetworkSettings | None = None
     mpris: MprisSettings | None = None
+    xdg_desktop_portal: XdgDesktopPortalSettings | None = None
 
 
 class ServiceContainer:
