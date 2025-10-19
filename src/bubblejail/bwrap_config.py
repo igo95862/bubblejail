@@ -192,22 +192,22 @@ class DbusSessionSee(DbusSessionArgs):
 
 
 class DbusSessionRule(DbusSessionArgs):
-    __slots__ = ("interface_name", "object_path")
+    __slots__ = ("interface_method", "object_path")
 
     def __init__(
         self,
         bus_name: str,
-        interface_name: str = "*",
+        interface_method: str = "*",
         object_path: str = "/*",
     ):
         super().__init__(bus_name)
-        self.interface_name = interface_name
+        self.interface_method = interface_method
         self.object_path = object_path
 
     def to_args(self) -> str:
         return (
             f"{self.arg_word}={self.bus_name}="
-            f"{self.interface_name}@{self.object_path}"
+            f"{self.interface_method}@{self.object_path}"
         )
 
 

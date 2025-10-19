@@ -1435,19 +1435,19 @@ class XdgDesktopPortal(BubblejailService):
         # Required to read "version" property of each portal interface
         yield DbusSessionCall(
             bus_name="org.freedesktop.portal.Desktop",
-            interface_name="org.freedesktop.DBus.Properties.*",
+            interface_method="org.freedesktop.DBus.Properties.*",
             object_path="/org/freedesktop/portal/desktop",
         )
         # Interfaces that are used by multiple portals to wait for
         # user interaction.
         yield DbusSessionCall(
             bus_name="org.freedesktop.portal.Desktop",
-            interface_name="org.freedesktop.portal.Request.*",
+            interface_method="org.freedesktop.portal.Request.*",
             object_path="/org/freedesktop/portal/desktop",
         )
         yield DbusSessionCall(
             bus_name="org.freedesktop.portal.Desktop",
-            interface_name="org.freedesktop.portal.Session.*",
+            interface_method="org.freedesktop.portal.Session.*",
             object_path="/org/freedesktop/portal/desktop",
         )
 
@@ -1457,28 +1457,28 @@ class XdgDesktopPortal(BubblejailService):
         if settings.open_uri:
             yield DbusSessionCall(
                 bus_name="org.freedesktop.portal.Desktop",
-                interface_name="org.freedesktop.portal.OpenURI.*",
+                interface_method="org.freedesktop.portal.OpenURI.*",
                 object_path="/org/freedesktop/portal/desktop",
             )
 
         if settings.file_chooser:
             yield DbusSessionCall(
                 bus_name="org.freedesktop.portal.Desktop",
-                interface_name="org.freedesktop.portal.FileChooser.*",
+                interface_method="org.freedesktop.portal.FileChooser.*",
                 object_path="/org/freedesktop/portal/desktop",
             )
 
         if settings.settings:
             yield DbusSessionCall(
                 bus_name="org.freedesktop.portal.Desktop",
-                interface_name="org.freedesktop.portal.Settings.*",
+                interface_method="org.freedesktop.portal.Settings.*",
                 object_path="/org/freedesktop/portal/desktop",
             )
 
         if settings.trash:
             yield DbusSessionCall(
                 bus_name="org.freedesktop.portal.Desktop",
-                interface_name="org.freedesktop.portal.Trash.*",
+                interface_method="org.freedesktop.portal.Trash.*",
                 object_path="/org/freedesktop/portal/desktop",
             )
 
