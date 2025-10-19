@@ -1373,7 +1373,7 @@ class Mpris(BubblejailService):
 @dataclass(slots=True)
 class XdgDesktopPortalSettings:
     add_flatpak_info: bool = field(
-        default=True,
+        default=False,
         metadata=SettingFieldMetadata(
             pretty_name="Add .flatpak-info",
             description=(
