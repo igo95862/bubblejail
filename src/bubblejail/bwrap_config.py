@@ -67,7 +67,7 @@ class Symlink(BwrapConfigBase):
         yield self.dest
 
 
-class EnvrimentalVar(BwrapConfigBase):
+class EnvironVar(BwrapConfigBase):
     __slots__ = ("var_name", "var_value")
     arg_word = "--setenv"
 

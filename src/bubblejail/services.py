@@ -38,7 +38,7 @@ from .bwrap_config import (
     DevBind,
     DevBindTry,
     DirCreate,
-    EnvrimentalVar,
+    EnvironVar,
     FileTransfer,
     LaunchArguments,
     ReadOnlyBind,
@@ -223,7 +223,7 @@ class BubblejailDefaults(BubblejailService):
         real_home = Path.home()
         home_path = yield ServiceWantsHomeBind()
         yield Bind(home_path, real_home)
-        yield EnvrimentalVar("HOME", str(real_home))
+        yield EnvironVar("HOME", str(real_home))
         # Compatibility symlink
         if real_home != OLD_HOME_BIND:
             yield Symlink(real_home, OLD_HOME_BIND)
@@ -233,12 +233,12 @@ class BubblejailDefaults(BubblejailService):
         # Set environmental variables
         from getpass import getuser
 
-        yield EnvrimentalVar("USER", getuser())
-        yield EnvrimentalVar("USERNAME", getuser())
-        yield EnvrimentalVar("PATH", generate_path_var())
-        yield EnvrimentalVar("XDG_RUNTIME_DIR", str(self.xdg_runtime_dir))
+        yield EnvironVar("USER", getuser())
+        yield EnvironVar("USERNAME", getuser())
+        yield EnvironVar("PATH", generate_path_var())
+        yield EnvironVar("XDG_RUNTIME_DIR", str(self.xdg_runtime_dir))
 
-        yield EnvrimentalVar("LANG")
+        yield EnvironVar("LANG")
 
         if not environ.get("BUBBLEJAIL_DISABLE_SECCOMP_DEFAULTS"):
             for blocked_syscal in (
@@ -301,7 +301,7 @@ class BubblejailDefaults(BubblejailService):
         # Bind session socket inside the sandbox
         dbus_session_inside_path = self.xdg_runtime_dir / "bus"
         dbus_session_outside_path = yield ServiceWantsDbusSessionBind()
-        yield EnvrimentalVar(
+        yield EnvironVar(
             "DBUS_SESSION_BUS_ADDRESS", f"unix:path={dbus_session_inside_path}"
         )
         yield Bind(
@@ -432,12 +432,12 @@ class X11(BubblejailService):
                 and environ[x] == "wayland"
                 and self.context.wayland is None
             ):
-                yield EnvrimentalVar(x, "x11")
+                yield EnvironVar(x, "x11")
                 continue
 
-            yield EnvrimentalVar(x)
+            yield EnvironVar(x)
 
-        yield EnvrimentalVar("DISPLAY")
+        yield EnvironVar("DISPLAY")
 
         if x11_socket_path := self.x11_socket_path(environ["DISPLAY"]):
             yield ReadOnlyBind(x11_socket_path)
@@ -445,7 +445,7 @@ class X11(BubblejailService):
         x_authority_path_str = environ.get("XAUTHORITY")
         if x_authority_path_str is not None:
             yield ReadOnlyBind(x_authority_path_str, "/tmp/.Xauthority")
-            yield EnvrimentalVar("XAUTHORITY", "/tmp/.Xauthority")
+            yield EnvironVar("XAUTHORITY", "/tmp/.Xauthority")
 
         yield from generate_toolkits()
 
@@ -468,13 +468,13 @@ class Wayland(BubblejailService):
 
         for x in XDG_DESKTOP_VARS:
             if x in environ:
-                yield EnvrimentalVar(x)
+                yield EnvironVar(x)
 
-        yield EnvrimentalVar("GDK_BACKEND", "wayland")
-        yield EnvrimentalVar("MOZ_DBUS_REMOTE", "1")
-        yield EnvrimentalVar("MOZ_ENABLE_WAYLAND", "1")
+        yield EnvironVar("GDK_BACKEND", "wayland")
+        yield EnvironVar("MOZ_DBUS_REMOTE", "1")
+        yield EnvironVar("MOZ_ENABLE_WAYLAND", "1")
 
-        yield EnvrimentalVar("WAYLAND_DISPLAY", "wayland-0")
+        yield EnvironVar("WAYLAND_DISPLAY", "wayland-0")
         original_socket_path = (
             Path(BaseDirectory.get_runtime_dir()) / wayland_display_env
         )
@@ -780,7 +780,7 @@ class GnomeToolkit(BubblejailService):
             raise RuntimeError
 
         if settings.gnome_portal:
-            yield EnvrimentalVar("GTK_USE_PORTAL", "1")
+            yield EnvironVar("GTK_USE_PORTAL", "1")
             yield DbusSessionTalkTo("org.freedesktop.portal.*")
 
         if settings.dconf_dbus:
@@ -854,11 +854,11 @@ class VideoForLinux(BubblejailService):
 
 class IBus(BubblejailService):
     def iter_bwrap_options(self) -> ServiceGeneratorType:
-        yield EnvrimentalVar("IBUS_USE_PORTAL", "1")
-        yield EnvrimentalVar("GTK_IM_MODULE", "ibus")
-        yield EnvrimentalVar("QT_IM_MODULE", "ibus")
-        yield EnvrimentalVar("XMODIFIERS", "@im=ibus")
-        yield EnvrimentalVar("GLFW_IM_MODULE", "ibus")
+        yield EnvironVar("IBUS_USE_PORTAL", "1")
+        yield EnvironVar("GTK_IM_MODULE", "ibus")
+        yield EnvironVar("QT_IM_MODULE", "ibus")
+        yield EnvironVar("XMODIFIERS", "@im=ibus")
+        yield EnvironVar("GLFW_IM_MODULE", "ibus")
         yield DbusSessionTalkTo("org.freedesktop.portal.IBus.*")
 
     name = "ibus"
@@ -873,11 +873,11 @@ class IBus(BubblejailService):
 class Fcitx(BubblejailService):
 
     def iter_bwrap_options(self) -> ServiceGeneratorType:
-        yield EnvrimentalVar("GTK_IM_MODULE", "fcitx")
-        yield EnvrimentalVar("QT_IM_MODULE", "fcitx")
-        yield EnvrimentalVar("XMODIFIERS", "@im=fcitx")
-        yield EnvrimentalVar("SDL_IM_MODULE", "fcitx")
-        yield EnvrimentalVar("GLFW_IM_MODULE", "ibus")
+        yield EnvironVar("GTK_IM_MODULE", "fcitx")
+        yield EnvironVar("QT_IM_MODULE", "fcitx")
+        yield EnvironVar("XMODIFIERS", "@im=fcitx")
+        yield EnvironVar("SDL_IM_MODULE", "fcitx")
+        yield EnvironVar("GLFW_IM_MODULE", "ibus")
         yield DbusSessionTalkTo("org.freedesktop.portal.Fcitx.*")
         yield DbusSessionTalkTo("org.freedesktop.portal.IBus.*")
 
