@@ -1382,15 +1382,6 @@ class XdgDesktopPortalSettings:
             ),
         ),
     )
-    open_uri: bool = field(
-        default=True,
-        metadata=SettingFieldMetadata(
-            pretty_name="Enable OpenURI portal",
-            description=(
-                "Enable OpenUri portal which allows opening " "files and links."
-            ),
-        ),
-    )
     file_chooser: bool = field(
         default=True,
         metadata=SettingFieldMetadata(
@@ -1408,6 +1399,25 @@ class XdgDesktopPortalSettings:
             description=(
                 "Enable Global Shortcuts portal which allows "
                 "application to create shortcuts that will work on Wayland."
+            ),
+        ),
+    )
+    notification: bool = field(
+        default=True,
+        metadata=SettingFieldMetadata(
+            pretty_name="Enable Notification portal",
+            description=(
+                "Enable Notification portal which allows "
+                "application to send notifications."
+            ),
+        ),
+    )
+    open_uri: bool = field(
+        default=True,
+        metadata=SettingFieldMetadata(
+            pretty_name="Enable OpenURI portal",
+            description=(
+                "Enable OpenUri portal which allows opening " "files and links."
             ),
         ),
     )
@@ -1464,12 +1474,6 @@ class XdgDesktopPortal(BubblejailService):
         if settings.add_flatpak_info:
             yield FileTransfer(b"", "/.flatpak-info")
 
-        if settings.open_uri:
-            yield DbusSessionCall(
-                bus_name="org.freedesktop.portal.Desktop",
-                interface_method="org.freedesktop.portal.OpenURI.*",
-                object_path="/org/freedesktop/portal/desktop",
-            )
 
         if settings.file_chooser:
             yield DbusSessionCall(
@@ -1482,6 +1486,20 @@ class XdgDesktopPortal(BubblejailService):
             yield DbusSessionCall(
                 bus_name="org.freedesktop.portal.Desktop",
                 interface_method="org.freedesktop.portal.GlobalShortcuts.*",
+                object_path="/org/freedesktop/portal/desktop",
+            )
+
+        if settings.notification:
+            yield DbusSessionCall(
+                bus_name="org.freedesktop.portal.Desktop",
+                interface_method="org.freedesktop.portal.Notification.*",
+                object_path="/org/freedesktop/portal/desktop",
+            )
+
+        if settings.open_uri:
+            yield DbusSessionCall(
+                bus_name="org.freedesktop.portal.Desktop",
+                interface_method="org.freedesktop.portal.OpenURI.*",
                 object_path="/org/freedesktop/portal/desktop",
             )
 
