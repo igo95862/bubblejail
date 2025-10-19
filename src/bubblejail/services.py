@@ -1402,6 +1402,16 @@ class XdgDesktopPortalSettings:
             ),
         ),
     )
+    inhibit: bool = field(
+        default=True,
+        metadata=SettingFieldMetadata(
+            pretty_name="Enable Inhibit portal",
+            description=(
+                "Enable Inhibit portal which allows "
+                "application to prevent desktop from suspending or idling."
+            ),
+        ),
+    )
     notification: bool = field(
         default=True,
         metadata=SettingFieldMetadata(
@@ -1474,7 +1484,6 @@ class XdgDesktopPortal(BubblejailService):
         if settings.add_flatpak_info:
             yield FileTransfer(b"", "/.flatpak-info")
 
-
         if settings.file_chooser:
             yield DbusSessionCall(
                 bus_name="org.freedesktop.portal.Desktop",
@@ -1486,6 +1495,13 @@ class XdgDesktopPortal(BubblejailService):
             yield DbusSessionCall(
                 bus_name="org.freedesktop.portal.Desktop",
                 interface_method="org.freedesktop.portal.GlobalShortcuts.*",
+                object_path="/org/freedesktop/portal/desktop",
+            )
+
+        if settings.inhibit:
+            yield DbusSessionCall(
+                bus_name="org.freedesktop.portal.Desktop",
+                interface_method="org.freedesktop.portal.Inhibit.*",
                 object_path="/org/freedesktop/portal/desktop",
             )
 
