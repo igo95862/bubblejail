@@ -1401,6 +1401,16 @@ class XdgDesktopPortalSettings:
             ),
         ),
     )
+    global_shortcuts: bool = field(
+        default=True,
+        metadata=SettingFieldMetadata(
+            pretty_name="Enable Global Shortcuts portal",
+            description=(
+                "Enable Global Shortcuts portal which allows "
+                "application to create shortcuts that will work on Wayland."
+            ),
+        ),
+    )
     settings: bool = field(
         default=True,
         metadata=SettingFieldMetadata(
@@ -1465,6 +1475,13 @@ class XdgDesktopPortal(BubblejailService):
             yield DbusSessionCall(
                 bus_name="org.freedesktop.portal.Desktop",
                 interface_method="org.freedesktop.portal.FileChooser.*",
+                object_path="/org/freedesktop/portal/desktop",
+            )
+
+        if settings.global_shortcuts:
+            yield DbusSessionCall(
+                bus_name="org.freedesktop.portal.Desktop",
+                interface_method="org.freedesktop.portal.GlobalShortcuts.*",
                 object_path="/org/freedesktop/portal/desktop",
             )
 
