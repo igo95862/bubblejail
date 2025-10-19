@@ -1480,6 +1480,9 @@ class XdgDesktopPortal(BubblejailService):
             interface_method="org.freedesktop.portal.Session.*",
             object_path="/org/freedesktop/portal/desktop",
         )
+        # GTK_USE_PORTAL=1 seems to still have effect on Firefox
+        # but GDK_DEBUG=portals does not.
+        yield EnvironVar("GTK_USE_PORTAL", "1")
 
         if settings.add_flatpak_info:
             yield FileTransfer(b"", "/.flatpak-info")
