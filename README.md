@@ -60,6 +60,7 @@ If your distro does not have a package you can try to manually install with meso
 * Python 3 (>= 3.11) - python interpreter
 * Python PyXDG - XDG standards for python
 * Python Tomli-W - writer part of `tomli`
+* Python cattrs - dataclass serialization library
 * Bubblewrap (>= 0.5.0) - sandboxing command line utility
 * XDG D-Bus Proxy - filtering D-Bus proxy
 * Python Qt6 - for GUI
