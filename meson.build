@@ -2,7 +2,7 @@
 # SPDX-FileCopyrightText: 2020 igo95862
 project(
     'bubblejail',
-    version: '0.9.5',
+    version: '0.10.0',
     meson_version: '>=1.3.0',
     # Patch out these lines to install bubblejail's packages to site-packages
     default_options: {

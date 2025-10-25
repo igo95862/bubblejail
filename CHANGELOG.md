@@ -3,6 +3,66 @@ SPDX-License-Identifier: GPL-3.0-or-later
 SPDX-FileCopyrightText: 2023 igo95862
 -->
 
+# 0.10.0
+
+## Features
+
+### New dependency `python-cattrs`
+
+Bubblejail is now using this package to convert services TOML file
+to internal data structures. As a benefit the default values will
+no longer be inserted in the services TOML when a new instance
+is generated or updated from GUI.
+
+### Added initial configuration wizard
+
+This wizard can be enabled when running a instance.
+For example, `bubblejail run --wizard -- my-instance`.
+Once the instance exits the wizard will prompt user with suggested
+changes.
+
+Initial version only supports setting the owned D-Bus name. More
+supported tweaks will be added in the future.
+[The wizard can be discussed in this thread.](https://github.com/igo95862/bubblejail/discussions/168)
+
+### Added experimental `xdg_desktop_portal` service
+
+This service is **experimental** and might change its configuration in
+the future releases. It allows access to different portal interfaces
+and also generates `/.flatpak-info` file to signal that portals
+are enabled.
+
+[Please add feedback to this discussion.](https://github.com/igo95862/bubblejail/discussions/196)
+
+See `bubblejail.services` man page for the list of supported settings.
+
+### Added `pasta_network` service
+
+This is an alternative network stack to `slirp4netns`.
+Looks like it is more actively developed and supports more features
+such as binding to a specific device.
+
+### Added `mpris` service
+
+Allows sandbox to own the `org.mpris.MediaPlayer2.{player_name}` D-Bus
+name. MPRIS is a media players integration standard.
+
+Firefox profiles have been updated to use it.
+
+### Other features
+
+* `--debug-log-dbus` now parses the output in to human readable format.
+  To output the raw unparsed output use `--debug-log-dbus=raw`.
+* Generated desktop entries will now use `{original_name} (bubble)` format.
+  For example, `Firefox` -> `Firefox (bubble)`. (idea by @effectsbot)
+* `bubblejail edit` will now emit warnings if a deprecated or experimental
+  option was enabled.
+
+### Fixes
+
+* Fixed `wayland` service not raising `KeyError` if `WAYLAND_DISPLAY` environment
+  variable is missing. (reported by @Pair-of-dice)
+
 # 0.9.5
 
 ## Fixes
