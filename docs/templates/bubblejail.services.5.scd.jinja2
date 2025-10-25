@@ -54,7 +54,7 @@ folder from home directory with the sandbox.
 {% endif %}
 
 {% for setting_field, settings_meta in service.iter_settings_fields_and_meta() %}
-_{{ setting_field.name | markdown_escape }}_: {{ setting_field.type }}
+_{{ setting_field.name | markdown_escape }}_: {{ setting_field.type }}{% if setting_field.default is boolean or setting_field.default is number %} = {{ setting_field.default }}{% endif %}
 
 {% if ServiceFlags.DEPRECATED in settings_meta.get("flags", ServiceFlags(0)) %}
 {{ "*Deprecated*" | scdoc_indent }}
