@@ -1434,7 +1434,7 @@ class XdgDesktopPortalSettings:
     settings: bool = field(
         default=True,
         metadata=SettingFieldMetadata(
-            pretty_name="Enable Trash portal",
+            pretty_name="Enable Settings portal",
             description=(
                 "Enable Settings portal which allows "
                 "reading common GUI settings like dark mode."
