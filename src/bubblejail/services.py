@@ -1542,6 +1542,7 @@ class XdgDesktopPortal(BubblejailService):
         "D-Bus API that allows access for sandboxed application "
         "to resources outside of it."
     )
+    flags = ServiceFlags.EXPERIMENTAL
 
 
 SERVICES_CLASSES: tuple[type[BubblejailService], ...] = (
