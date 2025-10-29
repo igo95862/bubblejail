@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 from contextlib import suppress as exc_suppress
+from dataclasses import MISSING as DATACLASS_MISSING
 from functools import partial
 from shlex import split as shlex_split
 from sys import argv
@@ -349,7 +350,14 @@ class ServiceWidget:
                         f"of setting {setting_field.name}"
                     )
 
-            setting_value = service_settings.get(setting_field.name, None)
+            setting_value = service_settings.get(
+                setting_field.name,
+                (
+                    setting_field.default
+                    if setting_field.default is not DATACLASS_MISSING
+                    else None
+                ),
+            )
 
             new_widget = widget_class(
                 name=setting_metadata["pretty_name"],
