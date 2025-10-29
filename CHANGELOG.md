@@ -3,6 +3,14 @@ SPDX-License-Identifier: GPL-3.0-or-later
 SPDX-FileCopyrightText: 2023 igo95862
 -->
 
+# 0.10.1
+
+## Fixes
+
+* Fix `xdg_desktop_portal` setting `settings` having incorrect pretty name. (fixed by @natthias)
+* Fix `xdg_desktop_portal` not being marked as experimental.
+* Fix GUI not using proper default values for not enabled services.
+
 # 0.10.0
 
 ## Features
