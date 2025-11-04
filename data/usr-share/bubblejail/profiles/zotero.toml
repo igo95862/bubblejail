@@ -1,0 +1,27 @@
+# SPDX-License-Identifier: GPL-3.0-or-later
+# SPDX-FileCopyrightText: 2025 PACHAKUTlQ
+
+# Zotero
+dot_desktop_path = ["/usr/share/applications/zotero.desktop"]
+description = '''
+Zotero reference manager
+'''
+
+[services.common]
+executable_name = ["/usr/bin/zotero", "-url %U"]
+share_local_time = false
+filter_disk_sync = false
+dbus_name = ""
+
+[services.wayland]
+
+[services.network]
+
+[services.home_share]
+home_paths = ["Zotero", "Downloads"]
+
+[services.systray]
+
+[services.notify]
+
+[services.fcitx]

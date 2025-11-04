@@ -1,0 +1,29 @@
+# SPDX-License-Identifier: GPL-3.0-or-later
+# SPDX-FileCopyrightText: 2025 PACHAKUTlQ
+
+# Tor browser on Wayland
+dot_desktop_path = "/usr/share/applications/tor-browser.desktop"
+is_gtk_application = true
+description = '''
+Tor browser using Wayland display protocol.
+'''
+
+[services.common]
+executable_name = "/usr/bin/tor-browser"
+share_local_time = false
+filter_disk_sync = false
+dbus_name = ""
+
+[services.wayland]
+
+[services.network]
+
+[services.pulse_audio]
+
+[services.home_share]
+home_paths = ["Downloads", ".local/share/torbrowser", ".local/opt/tor-browser"]
+
+[services.direct_rendering]
+enable_aco = false
+
+[services.fcitx]

@@ -1,0 +1,33 @@
+# SPDX-License-Identifier: GPL-3.0-or-later
+# SPDX-FileCopyrightText: 2025 PACHAKUTlQ
+
+# Telegram desktop
+dot_desktop_path = [
+    "/usr/share/applications/org.telegram.desktop.desktop",
+    "/usr/share/applications/telegram-desktop.desktop",
+    "/usr/share/applications/telegram.desktop",
+]
+description = '''
+Telegram desktop
+'''
+
+[services.common]
+executable_name = ["/usr/bin/telegram-desktop"]
+share_local_time = false
+filter_disk_sync = false
+dbus_name = "org.telegram.*"
+
+[services.wayland]
+
+[services.network]
+
+[services.pulse_audio]
+
+[services.home_share]
+home_paths = ["Downloads"]
+
+[services.systray]
+
+[services.notify]
+
+[services.fcitx]
