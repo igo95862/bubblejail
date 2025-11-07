@@ -3,7 +3,7 @@
 from __future__ import annotations
 
 from collections.abc import Generator
-from os import environ
+from os import environ, path
 from pathlib import Path
 from typing import TYPE_CHECKING
 
@@ -143,7 +143,7 @@ class BwrapRawArgs(BwrapConfigBase):
 
     def __init__(self, raw_args: list[str]):
         super().__init__()
-        self.raw_args = raw_args
+        self.raw_args = list(map(path.expandvars, raw_args))
 
     def to_args(self) -> Generator[str, None, None]:
         yield from self.raw_args
