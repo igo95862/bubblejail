@@ -248,7 +248,6 @@ class BubblejailProfile:
     def __init__(
         self,
         dot_desktop_path: list[str] | str | None = None,
-        is_gtk_application: bool = False,
         services: ServicesConfDictType | None = None,
         description: str = "No description",
         import_tips: str = "None",
@@ -266,7 +265,6 @@ class BubblejailProfile:
                     "Desktop entry path be a str, list[str] or None "
                     "not {dot_desktop_path!r}"
                 )
-        self.is_gtk_application = is_gtk_application
         self.config = ServiceContainer(services)
         self.description = description
         self.import_tips = import_tips
