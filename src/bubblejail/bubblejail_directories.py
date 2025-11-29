@@ -106,12 +106,12 @@ class BubblejailDirectories:
 
     @classmethod
     def iter_profile_directories(cls) -> PathGeneratorType:
-        for conf_dir in cls.iterm_config_dirs():
+        for conf_dir in cls.iter_config_dirs():
             profiles_dir = conf_dir / "profiles"
             yield profiles_dir
 
     @classmethod
-    def iterm_config_dirs(cls) -> PathGeneratorType:
+    def iter_config_dirs(cls) -> PathGeneratorType:
         try:
             conf_directories = environ["BUBBLEJAIL_CONFDIRS"]
         except KeyError:

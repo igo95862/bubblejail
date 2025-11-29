@@ -85,7 +85,7 @@ def run_running_instance(
         stdout.write(command_return_text)
 
 
-def send_exc_notificatoin(instance_name: str, exception: BaseException) -> None:
+def send_exc_notification(instance_name: str, exception: BaseException) -> None:
     if not isatty(stderr.fileno()):
         from subprocess import run as subprocess_run
         from traceback import format_exception
@@ -177,7 +177,7 @@ def run_bjail(
 
                     DBusWizard(instance, dbus_parser).run()
     except Exception as e:
-        send_exc_notificatoin(instance_name, e)
+        send_exc_notification(instance_name, e)
         raise
 
 
