@@ -137,6 +137,9 @@ def generate_toolkits() -> Generator[ServiceIterTypes, None, None]:
 class EmptySettings: ...
 
 
+SERVICES_MAP: dict[str, type[BubblejailService]] = {}
+
+
 class BubblejailService:
     xdg_runtime_dir: ClassVar[Path] = Path(f"/run/user/{getuid()}")
 
@@ -144,6 +147,10 @@ class BubblejailService:
 
     def __init__(self, context: ServicesConfig):
         self.context = context
+
+    def __init_subclass__(cls) -> None:
+        super().__init_subclass__()
+        SERVICES_MAP[cls.name] = cls
 
     def iter_bwrap_options(self) -> ServiceGeneratorType:
         yield from ()
@@ -1543,38 +1550,6 @@ class XdgDesktopPortal(BubblejailService):
         "to resources outside of it."
     )
     flags = ServiceFlags.EXPERIMENTAL
-
-
-SERVICES_CLASSES: tuple[type[BubblejailService], ...] = (
-    CommonSettings,
-    X11,
-    Wayland,
-    Network,
-    PulseAudio,
-    HomeShare,
-    DirectRendering,
-    Systray,
-    Joystick,
-    RootShare,
-    OpenJDK,
-    Notifications,
-    GnomeToolkit,
-    Pipewire,
-    VideoForLinux,
-    IBus,
-    Fcitx,
-    Slirp4netns,
-    NamespacesLimits,
-    Debug,
-    GameMode,
-    PastaNetwork,
-    Mpris,
-    XdgDesktopPortal,
-)
-
-SERVICES_MAP: dict[str, type[BubblejailService]] = {
-    service.name: service for service in SERVICES_CLASSES
-}
 
 
 @dataclass(slots=True)

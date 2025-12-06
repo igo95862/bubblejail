@@ -14,7 +14,7 @@ from .bubblejail_cli_metadata import BUBBLEJAIL_CMD
 from .bubblejail_directories import BubblejailDirectories
 from .bubblejail_utils import BubblejailSettings
 from .dbus_proxy import DBusLogEnum
-from .services import SERVICES_CLASSES, ServiceContainer, ServiceFlags
+from .services import SERVICES_MAP, ServiceContainer, ServiceFlags
 
 if TYPE_CHECKING:
     from collections.abc import Callable, Generator, Iterable, Iterator
@@ -189,7 +189,7 @@ def bjail_list(list_what: str) -> None:
     elif list_what == "profiles":
         str_iterator = BubblejailDirectories.iter_profile_names()
     elif list_what == "services":
-        str_iterator = (x.name for x in SERVICES_CLASSES)
+        str_iterator = (x.name for x in SERVICES_MAP.values())
     elif list_what == "subcommands":
         str_iterator = iter_subcommands()
 

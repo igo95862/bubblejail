@@ -9,7 +9,6 @@ from unittest import main as unittest_main
 
 from bubblejail.exceptions import ServiceConflictError
 from bubblejail.services import (
-    SERVICES_CLASSES,
     SERVICES_MAP,
     X11,
     BubblejailDefaults,
@@ -52,7 +51,7 @@ class TestServices(TestCase):
     def test_service_conflict_relationship(self) -> None:
         # Test that conflict points to existing service
         # and reverse relationship exists
-        for service in SERVICES_CLASSES:
+        for service in SERVICES_MAP.values():
             for conflict in service.conflicts:
                 conflict_service = SERVICES_MAP[conflict]
                 self.assertIn(
@@ -79,13 +78,14 @@ class TestServices(TestCase):
         ServiceContainer(test_good_config)
 
     def test_services_classes(self) -> None:
+        services_classes = set(SERVICES_MAP.values())
         for subcls in BubblejailService.__subclasses__():
             if subcls is BubblejailDefaults:
                 continue
 
-            self.assertIn(subcls, SERVICES_CLASSES)
+            self.assertIn(subcls, services_classes)
 
-        for service in SERVICES_CLASSES:
+        for service in SERVICES_MAP.values():
             if not service.Settings is EmptySettings:
                 self.assertEqual(
                     f"{service.__name__}Settings",
@@ -95,7 +95,7 @@ class TestServices(TestCase):
     def test_services_config(self) -> None:
         key_to_type_str = {f.name: f.type for f in fields(ServicesConfig)}
 
-        for service in SERVICES_CLASSES:
+        for service in SERVICES_MAP.values():
             self.assertIn(service.name, key_to_type_str)
             self.assertEqual(
                 (
