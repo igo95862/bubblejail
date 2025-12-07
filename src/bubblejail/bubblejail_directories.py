@@ -137,8 +137,6 @@ class BubblejailDirectories:
 
         # Exception will be raised if directory already exists
         instance_directory.mkdir(mode=0o700, parents=True)
-        # Make home directory
-        (instance_directory / "home").mkdir(mode=0o700)
 
         # Profile
         profile: BubblejailProfile = (

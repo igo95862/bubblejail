@@ -313,6 +313,10 @@ class BubblejailDefaults(BubblejailService):
             dbus_session_inside_path,
         )
 
+    def create_hook(self, parent: BubblejailInstance) -> None:
+        # Make home directory
+        parent.path_home_directory.mkdir(mode=0o700)
+
     def __repr__(self) -> str:
         return "Bubblejail defaults."
 
