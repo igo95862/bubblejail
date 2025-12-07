@@ -63,6 +63,8 @@ if TYPE_CHECKING:
     from _typeshed import DataclassInstance
     from cattrs import Converter
 
+    from .bubblejail_instance import BubblejailInstance
+
 
 class ServiceWantsSend: ...
 
@@ -147,6 +149,8 @@ class BubblejailService:
 
     def iter_bwrap_options(self) -> ServiceGeneratorType:
         yield from ()
+
+    def create_hook(self, parent: BubblejailInstance) -> None: ...
 
     async def post_init_hook(self, pid: int) -> None: ...
 
@@ -308,6 +312,10 @@ class BubblejailDefaults(BubblejailService):
             dbus_session_outside_path,
             dbus_session_inside_path,
         )
+
+    def create_hook(self, parent: BubblejailInstance) -> None:
+        # Make home directory
+        parent.path_home_directory.mkdir(mode=0o700)
 
     def __repr__(self) -> str:
         return "Bubblejail defaults."
