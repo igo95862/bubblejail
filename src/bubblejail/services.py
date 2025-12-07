@@ -1554,6 +1554,7 @@ class XdgDesktopPortal(BubblejailService):
 
 @dataclass(slots=True)
 class ServicesConfig:
+    default: EmptySettings | None = None
     common: CommonSettingsSettings | None = None
     x11: EmptySettings | None = None
     wayland: EmptySettings | None = None
