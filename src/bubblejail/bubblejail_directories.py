@@ -16,6 +16,7 @@ from xdg.BaseDirectory import xdg_config_home, xdg_data_home
 from .bubblejail_instance import BubblejailInstance, BubblejailProfile
 from .bubblejail_utils import FILE_NAME_SERVICES, BubblejailSettings
 from .exceptions import BubblejailException, BubblejailInstanceNotFoundError
+from .services import ServiceContainer
 
 if TYPE_CHECKING:
     from collections.abc import Iterator
@@ -169,6 +170,10 @@ class BubblejailDirectories:
 
         if profile_name is not None and print_import_tips:
             print("Import tips: ", profile.import_tips, file=stderr)
+
+        services = ServiceContainer(profile.config.get_service_conf_dict())
+        for service in services.iter_services():
+            service.create_hook(instance)
 
         return instance
 
