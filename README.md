@@ -78,7 +78,10 @@ If your distro does not have a package you can try to manually install with meso
 
 #### Using meson to install
 
-1. Run `meson setup build` to setup build directory
+1. Clone repo `git clone https://github.com/igo95862/bubblejail`
+2. Change directory `cd bubblejail`
+3. Install `meson`: `sudo apt-get install meson`
+4. Run `meson setup build` to setup build directory
 1. Switch to build directory `cd build`
 1. Compile `meson compile`
 1. Install `sudo meson install`
