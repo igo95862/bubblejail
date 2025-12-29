@@ -47,7 +47,7 @@ def format_meson(check: bool = False) -> None:
     ]
 
     if check:
-        meson_args.append("--check")
+        meson_args.append("--check-only")
     else:
         meson_args.append("--inplace")
 
