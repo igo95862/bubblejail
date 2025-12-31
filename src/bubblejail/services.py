@@ -1610,10 +1610,10 @@ class ServiceContainer:
         self.services_config = ServicesConfig()
         self.services: dict[str, BubblejailService] = {}
 
-        self.default_service = BubblejailDefaults(self.services_config)
-
         if conf_dict is not None:
             self.set_services(conf_dict)
+
+        self.default_service = BubblejailDefaults(self.services_config)
 
     def set_services(self, new_services_datas: ServicesConfDictType) -> None:
 
