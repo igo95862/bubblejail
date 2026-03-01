@@ -1641,12 +1641,15 @@ class ServiceContainer:
 
         new_converter = Converter(omit_if_default=True, forbid_extra_keys=True)
 
-        @new_converter.register_structure_hook
         def structure_str_or_list_str(val: Any, _: Any) -> str | list[str]:
             if isinstance(val, str):
                 return val
             else:
                 return new_converter.structure(val, list[str])
+
+        new_converter.register_structure_hook(
+            str | list[str], structure_str_or_list_str
+        )
 
         return new_converter
 
