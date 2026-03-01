@@ -307,7 +307,7 @@ class BubblejailHelper(Awaitable[bool]):
         if std_in_out_mode is None:
             await p.wait()
         elif std_in_out_mode == PIPE:
-            (stdout_data, _) = await p.communicate()
+            stdout_data, _ = await p.communicate()
             return stdout_data.decode()
 
         return None

@@ -145,7 +145,7 @@ class BubblejailInstance:
         args_to_run: list[str],
         wait_for_response: bool = False,
     ) -> str | None:
-        (reader, writer) = await open_unix_connection(
+        reader, writer = await open_unix_connection(
             path=self.path_runtime_helper_socket,
         )
 

@@ -47,7 +47,7 @@ class HelperTests(IsolatedAsyncioTestCase):
         # Start helper
         await self.helper.start_async()
         # Get stream reader and writer
-        (reader, writer) = await open_unix_connection(
+        reader, writer = await open_unix_connection(
             path=self.test_socket_path,
         )
         self.reader: StreamReader = reader

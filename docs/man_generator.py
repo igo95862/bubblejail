@@ -75,8 +75,7 @@ _EDITOR_ environmental variable must be set.
 }
 
 OPTION_HELP = {
-    "run": {
-        "--debug-bwrap-args": """The instance name must be separated with
+    "run": {"--debug-bwrap-args": """The instance name must be separated with
 extra -- from the instance name.
 
 This option can be repeated multiple times for multiple args to bwrap.
@@ -87,16 +86,13 @@ Example with adding capability and running as UID and GID
 \tbubblejail run --debug-bwrap-args cap-add CAP_SYS_ADMIN
 \t\\--debug-bwrap-args uid 0 --debug-bwrap-args gid 0 -- test_instance
 
-"""
-    },
-    "create": {
-        "--profile": """If omitted an empty profile will be used and
+"""},
+    "create": {"--profile": """If omitted an empty profile will be used and
 the user will have to define the configuration manually.
 
 There is also a _generic_ profile which has some common settings such
 as network and windowing system access.
-"""
-    },
+"""},
 }
 
 
