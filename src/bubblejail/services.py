@@ -1451,6 +1451,16 @@ class XdgDesktopPortalSettings:
             ),
         ),
     )
+    screen_cast: bool = field(
+        default=False,
+        metadata=SettingFieldMetadata(
+            pretty_name="Enable ScreenCast portal",
+            description=(
+                "Enable ScreenCast portal which allows "
+                "creating screen cast sessions."
+            ),
+        ),
+    )
 
 
 class XdgDesktopPortal(BubblejailService):
@@ -1533,6 +1543,13 @@ class XdgDesktopPortal(BubblejailService):
             yield DbusSessionCall(
                 bus_name="org.freedesktop.portal.Desktop",
                 interface_method="org.freedesktop.portal.Trash.*",
+                object_path="/org/freedesktop/portal/desktop",
+            )
+
+        if settings.screen_cast:
+            yield DbusSessionCall(
+                bus_name="org.freedesktop.portal.Desktop",
+                interface_method="org.freedesktop.portal.ScreenCast.*",
                 object_path="/org/freedesktop/portal/desktop",
             )
 
