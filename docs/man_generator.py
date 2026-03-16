@@ -188,7 +188,7 @@ def generate_cmd_man(template_dir: Path) -> None:
 def generate_services_man(template_dir: Path) -> None:
     modules["xdg"] = MagicMock()
 
-    from bubblejail.services import SERVICES_CLASSES, ServiceFlags
+    from bubblejail.services import SERVICES_MAP, ServiceFlags
 
     env = Environment(
         loader=FileSystemLoader(template_dir),
@@ -203,7 +203,7 @@ def generate_services_man(template_dir: Path) -> None:
 
     print(
         template.render(
-            services=SERVICES_CLASSES,
+            services=list(SERVICES_MAP.values()),
             ServiceFlags=ServiceFlags,
         )
     )
