@@ -3,6 +3,13 @@ SPDX-License-Identifier: GPL-3.0-or-later
 SPDX-FileCopyrightText: 2023 igo95862
 -->
 
+# 0.10.2
+
+* Reduced `python-cattrs` version requirements. Should now be compatible with Linux Mint 22.2.
+  (reported by @Ken-g6)
+* Added `screen_cast` option to `xdg_desktop_portal` service which enables access to screen cast
+  portal. (requested by @effectsbot)
+
 # 0.10.1
 
 ## Fixes
