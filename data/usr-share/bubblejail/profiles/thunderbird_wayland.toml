@@ -1,0 +1,30 @@
+# SPDX-License-Identifier: GPL-3.0-or-later
+# SPDX-FileCopyrightText: 2025 PACHAKUTlQ
+
+# Thunderbird on Wayland
+dot_desktop_path = [
+    "/usr/share/applications/org.mozilla.Thunderbird.desktop",
+    "/usr/share/applications/thunderbird.desktop",
+    "/usr/share/applications/Thunderbird.desktop",
+]
+is_gtk_application = true
+description = '''
+Thunderbird client using Wayland display protocol.
+'''
+
+[services.common]
+executable_name = "/usr/bin/thunderbird"
+share_local_time = false
+filter_disk_sync = false
+dbus_name = "org.mozilla.Thunderbird"
+
+[services.wayland]
+
+[services.network]
+
+[services.home_share]
+home_paths = ["Downloads", ".mozilla", ".pki/nssdb"]
+
+[services.notify]
+
+[services.fcitx]
