@@ -16,5 +16,5 @@ Generic profile for average media player.
 [services.systray]
 
 [services.home_share]
-home_paths = ["Music"]
+home_paths = ["Music", "Videos"]
 
