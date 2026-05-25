@@ -1461,6 +1461,17 @@ class XdgDesktopPortalSettings:
             ),
         ),
     )
+    override_xdg_open: bool = field(
+        default=False,
+        metadata=SettingFieldMetadata(
+            pretty_name="Override xdg-open",
+            description=(
+                "Override xdg-open with a version that uses portals. "
+                "Currently depends on flatpak utils but will be replaced "
+                "with a standalone version in the future."
+            ),
+        ),
+    )
 
 
 class XdgDesktopPortal(BubblejailService):
@@ -1551,6 +1562,11 @@ class XdgDesktopPortal(BubblejailService):
                 bus_name="org.freedesktop.portal.Desktop",
                 interface_method="org.freedesktop.portal.ScreenCast.*",
                 object_path="/org/freedesktop/portal/desktop",
+            )
+
+        if settings.override_xdg_open:
+            yield ReadOnlyBind(
+                "/usr/lib/flatpak-xdg-utils/xdg-open", "/usr/bin/xdg-open"
             )
 
     name = "xdg_desktop_portal"
