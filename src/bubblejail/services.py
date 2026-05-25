@@ -1383,7 +1383,7 @@ class XdgDesktopPortalSettings:
         ),
     )
     file_chooser: bool = field(
-        default=True,
+        default=False,
         metadata=SettingFieldMetadata(
             pretty_name="Enable File Chooser portal",
             description=(
@@ -1393,7 +1393,7 @@ class XdgDesktopPortalSettings:
         ),
     )
     global_shortcuts: bool = field(
-        default=True,
+        default=False,
         metadata=SettingFieldMetadata(
             pretty_name="Enable Global Shortcuts portal",
             description=(
@@ -1403,7 +1403,7 @@ class XdgDesktopPortalSettings:
         ),
     )
     inhibit: bool = field(
-        default=True,
+        default=False,
         metadata=SettingFieldMetadata(
             pretty_name="Enable Inhibit portal",
             description=(
@@ -1413,7 +1413,7 @@ class XdgDesktopPortalSettings:
         ),
     )
     notification: bool = field(
-        default=True,
+        default=False,
         metadata=SettingFieldMetadata(
             pretty_name="Enable Notification portal",
             description=(
@@ -1423,7 +1423,7 @@ class XdgDesktopPortalSettings:
         ),
     )
     open_uri: bool = field(
-        default=True,
+        default=False,
         metadata=SettingFieldMetadata(
             pretty_name="Enable OpenURI portal",
             description=(
@@ -1432,7 +1432,7 @@ class XdgDesktopPortalSettings:
         ),
     )
     settings: bool = field(
-        default=True,
+        default=False,
         metadata=SettingFieldMetadata(
             pretty_name="Enable Settings portal",
             description=(
@@ -1442,7 +1442,7 @@ class XdgDesktopPortalSettings:
         ),
     )
     trash: bool = field(
-        default=True,
+        default=False,
         metadata=SettingFieldMetadata(
             pretty_name="Enable Trash portal",
             description=(
