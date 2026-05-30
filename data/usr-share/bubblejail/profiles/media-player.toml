@@ -1,0 +1,20 @@
+# SPDX-License-Identifier: GPL-3.0-or-later
+# SPDX-FileCopyrightText: 2020 igo95862
+
+description='''
+Generic profile for average media player.
+'''
+
+[services.common]
+[services.x11]
+[services.wayland]
+[services.network]
+[services.direct_rendering]
+[services.pulse_audio]
+[services.pipewire]
+[services.notify]
+[services.systray]
+
+[services.home_share]
+home_paths = ["Music", "Videos"]
+
