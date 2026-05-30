@@ -5,4 +5,5 @@ Type=Application
 Name=Bubblejail Configuration
 Icon=bubblejail-config
 Exec=bubblejail-config
+Keywords=bwrap;bubblewrap;sandbox;
 Categories=Settings;
