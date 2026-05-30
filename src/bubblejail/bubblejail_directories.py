@@ -295,6 +295,15 @@ class BubblejailDirectories:
                 cls.desktop_entries_dir_get() / f"bubble_{instance_name}.desktop"
             )
 
+        # DBusActivatable=true makes Exec line ignored:
+        # https://developer.gnome.org/documentation/guidelines/maintainer/integrating.html#d-bus-activation
+        if new_dot_desktop.get(
+            key="DBusActivatable", group="Desktop Entry", type="boolean"
+        ):
+            new_dot_desktop.set(
+                key="DBusActivatable", group="Desktop Entry", value="false"
+            )
+
         new_dot_desktop.write(filename=str(new_dot_desktop_path))
 
         # Update desktop MIME database
