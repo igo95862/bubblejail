@@ -26,7 +26,7 @@ jobs:
           python-black python-isort
           codespell meson
       - name: Checkout
-        uses: actions/checkout@v4
+        uses: actions/checkout@v6
       - name: Add safe git directory
         run: |
           git config --global --add safe.directory "$GITHUB_WORKSPACE"
@@ -45,7 +45,7 @@ jobs:
           pacman --noconfirm -Syu
           git python python-jinja scdoc meson
       - name: Checkout
-        uses: actions/checkout@v4
+        uses: actions/checkout@v6
       - name: Run meson
         run: |
           arch-meson -Dman=true build
@@ -64,7 +64,7 @@ jobs:
           git gcc python-jinja meson-python
           python python-pyxdg python-tomli-w python-cattrs
       - name: Checkout
-        uses: actions/checkout@v4
+        uses: actions/checkout@v6
         with:
           submodules: true
       - name: Create venv
