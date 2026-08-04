@@ -18,6 +18,7 @@ from json import dumps as json_dumps
 from json import loads as json_loads
 from os import WNOHANG, kill, wait3, waitpid
 from pathlib import Path
+from select import select
 from signal import SIGCHLD, SIGKILL, SIGTERM
 from socket import AF_UNIX, socket
 from sys import stderr
@@ -413,15 +414,25 @@ def get_helper_argument_parser() -> ArgumentParser:
     return parser
 
 
+def read_ready_fd(ready_fd: int) -> None:
+    # Wait for pipe become readable
+    ready_fds, _, _ = select((ready_fd,), (), (), 2.0)
+
+    if not ready_fds:
+        raise RuntimeError("Ready file descriptor timeout.")
+
+    with open(ready_fd, mode="r") as f:
+        if "bubblejail-ready" != f.read():
+            raise RuntimeError("Could not read 'bubblejail-ready' from ready fd.")
+
+
 def bubblejail_helper_main() -> None:
     parser = get_helper_argument_parser()
 
     parsed_args = parser.parse_args()
 
     if parsed_args.ready_fd is not None:
-        with open(parsed_args.ready_fd) as f:
-            if "bubblejail-ready" != f.read():
-                raise RuntimeError("Could not read 'bubblejail-ready' from ready fd.")
+        read_ready_fd(parsed_args.ready_fd)
 
     if not parsed_args.shell:
         startup_args = parsed_args.args_to_run
