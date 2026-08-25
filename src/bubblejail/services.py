@@ -715,11 +715,18 @@ class RootShare(BubblejailService):
         if settings is None:
             raise RuntimeError
 
-        for x in settings.paths:
-            yield Bind(x)
+        read_write_paths = set(settings.paths)
+        read_only_paths = set(settings.read_only_paths)
+        all_paths = [*read_write_paths, *read_only_paths]
+        all_paths.sort(key=len)
 
-        for x in settings.read_only_paths:
-            yield ReadOnlyBind(x)
+        for x in all_paths:
+            if x in read_write_paths:
+                yield Bind(x)
+            elif x in read_only_paths:
+                yield ReadOnlyBind(x)
+            else:
+                raise ValueError
 
     name = "root_share"
     pretty_name = "Root share"
