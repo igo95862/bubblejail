@@ -33,7 +33,7 @@ from .bubblejail_directories import BubblejailDirectories
 from .bubblejail_instance import BubblejailProfile
 from .exceptions import BubblejailInstanceNotFoundError
 from .services import (
-    SERVICES_CLASSES,
+    SERVICES_MAP,
     BubblejailService,
     ServiceFlags,
     ServiceSettingsDict,
@@ -449,7 +449,7 @@ class InstanceEditWidget(CentralWidgets):
         self.services_config_dict = self.services_config.get_service_conf_dict()
 
         self.service_widgets: list[ServiceWidget] = []
-        for service in SERVICES_CLASSES:
+        for service in SERVICES_MAP.values():
             if (
                 ServiceFlags.DEPRECATED in service.flags
                 or ServiceFlags.EXPERIMENTAL in service.flags
