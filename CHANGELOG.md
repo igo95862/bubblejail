@@ -3,6 +3,13 @@ SPDX-License-Identifier: GPL-3.0-or-later
 SPDX-FileCopyrightText: 2023 igo95862
 -->
 
+# 0.10.4
+
+* Fixed sandbox initialization sometimes failing because of race conditions.
+  Happens more often on Python 3.14. (reported by @kwobny)
+* `root_share`: paths are now sorted by length which allows read only and read write paths
+  be nested in each other. (requested by @imthosea)
+
 # 0.10.3
 
 * Fixed generated desktop entries not working if `DBusActivatable` was enabled in the template
