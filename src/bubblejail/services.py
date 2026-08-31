@@ -15,7 +15,7 @@ from enum import IntFlag
 from enum import auto as enum_auto
 from functools import cache
 from multiprocessing import Process
-from os import O_CLOEXEC, O_NONBLOCK, environ, getpid, getuid, pipe2, readlink
+from os import O_CLOEXEC, O_NONBLOCK, environ, getpid, getuid, path, pipe2, readlink
 from pathlib import Path
 from shutil import which
 from sys import stderr
@@ -722,9 +722,9 @@ class RootShare(BubblejailService):
 
         for x in all_paths:
             if x in read_write_paths:
-                yield Bind(x)
+                yield Bind(path.expandvars(x))
             elif x in read_only_paths:
-                yield ReadOnlyBind(x)
+                yield ReadOnlyBind(path.expandvars(x))
             else:
                 raise ValueError
 
