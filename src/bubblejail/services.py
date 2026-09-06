@@ -531,6 +531,13 @@ class HomeShareSettings:
             description="Path to share with sandbox",
         ),
     )
+    home_paths_ro: list[str] = field(
+        default_factory=list,
+        metadata=SettingFieldMetadata(
+            pretty_name="List of read-only paths",
+            description="Path to share as read-only with sandbox",
+        ),
+    )
 
 
 class HomeShare(BubblejailService):
@@ -543,6 +550,11 @@ class HomeShare(BubblejailService):
 
         for path_relative_to_home in settings.home_paths:
             yield Bind(
+                Path.home() / path_relative_to_home,
+            )
+
+        for path_relative_to_home in settings.home_paths_ro:
+            yield ReadOnlyBind(
                 Path.home() / path_relative_to_home,
             )
 
