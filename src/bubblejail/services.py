@@ -1597,6 +1597,38 @@ class XdgDesktopPortal(BubblejailService):
     flags = ServiceFlags.EXPERIMENTAL
 
 
+@dataclass(slots=True)
+class NtsyncSettings:
+    required: bool = field(
+        default=True,
+        metadata=SettingFieldMetadata(
+            pretty_name="Require /dev/ntsync mounted",
+            description=(
+                "/dev/ntsync is only present on the system if the driver is loaded. "
+                "Some distros like Arch Linux always preload it if Steam is installed."
+            ),
+        ),
+    )
+
+
+class Ntsync(BubblejailService):
+    Settings = NtsyncSettings
+
+    def iter_bwrap_options(self) -> ServiceGeneratorType:
+        settings = self.context.ntsync
+        if settings is None:
+            raise RuntimeError
+
+        if settings.required:
+            yield DevBind("/dev/ntsync")
+        else:
+            yield DevBindTry("/dev/ntsync")
+
+    name = "ntsync"
+    pretty_name = "NT synchronization primitive driver"
+    description = "Allows better simulation of Wine/Proton."
+
+
 SERVICES_CLASSES: tuple[type[BubblejailService], ...] = (
     CommonSettings,
     X11,
@@ -1622,6 +1654,7 @@ SERVICES_CLASSES: tuple[type[BubblejailService], ...] = (
     PastaNetwork,
     Mpris,
     XdgDesktopPortal,
+    Ntsync,
 )
 
 SERVICES_MAP: dict[str, type[BubblejailService]] = {
@@ -1655,6 +1688,7 @@ class ServicesConfig:
     pasta_network: PastaNetworkSettings | None = None
     mpris: MprisSettings | None = None
     xdg_desktop_portal: XdgDesktopPortalSettings | None = None
+    ntsync: NtsyncSettings | None = None
 
 
 class ServiceContainer:
