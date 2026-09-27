@@ -26,3 +26,6 @@ dbus_name = "com.steampowered.*"
 [services.direct_rendering]
 [services.joystick]
 [services.gamemode]
+[services.ntsync]
+# Some distros don't have the ntsync driver preload
+required = false
