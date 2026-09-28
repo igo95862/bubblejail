@@ -611,6 +611,7 @@ class DirectRendering(BubblejailService):
                 yield DevBind(x_resolved.parents[1])
 
         yield DevBind("/dev/dri")
+        yield DevBind("/sys/class/drm")
 
         # Nvidia specific binds
         for nv_dev in Path("/dev/").iterdir():
