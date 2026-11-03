@@ -163,6 +163,7 @@ class BubblejailRunner:
                     self.bwrap_temp_files.append(temp_f)
                     temp_file_descriptor = temp_f.fileno()
                     self.file_descriptors_to_pass.append(temp_file_descriptor)
+                    self.bwrap_options_args.extend(config.permissions_args())
                     self.bwrap_options_args.extend(
                         (
                             "--ro-bind-data",

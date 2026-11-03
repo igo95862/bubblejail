@@ -586,29 +586,54 @@ class DirectRendering(BubblejailService):
 
         # TODO: Allow to select which DRM devices to pass
 
-        # Bind /dev/dri and /sys/dev/char and /sys/devices
-        # Get names of cardX and renderX in /dev/dri
-        dev_dri_path = Path("/dev/dri/")
-        device_names = set()
-        for x in dev_dri_path.iterdir():
-            if x.is_char_device():
-                device_names.add(x.stem)
+        # Create DRM class dir
+        drm_class_dir = Path("/sys/class/drm")
+        yield DirCreate(drm_class_dir, permissions=0o755)
+        # Version file
+        drm_version_path = Path("/sys/class/drm/version")
+        yield FileTransfer(
+            drm_version_path.read_bytes(), drm_version_path, permissions=0o444
+        )
 
-        # Resolve links in /sys/dev/char/
-        sys_dev_char_path = Path("/sys/dev/char/")
-        # For each symlink in /sys/dev/char/ resolve
-        # and see if they point to cardX or renderX
-        for x in sys_dev_char_path.iterdir():
-            x_resolved = x.resolve()
-            if x_resolved.name in device_names:
-                # Found the dri device
-                # Add the /sys/dev/char/ path
-                yield Symlink(x_resolved, x)
-                # Add the two times parent (parents[1])
-                # Seems like the dri devices are stored as
-                # /sys/devices/..pcie_id../drm/dri
-                # We want to bind the /sys/devices/..pcie_id../
-                yield DevBind(x_resolved.parents[1])
+        # Recreate DRM class dir links and find the PCI directory
+        pcie_directories: set[Path] = set()
+        for drm_class_symlink in drm_class_dir.iterdir():
+            if not drm_class_symlink.is_symlink():
+                # version file, skip
+                continue
+
+            # Recreate same symlink, apparently Proton-GE needs that
+            yield Symlink(drm_class_symlink.readlink(), drm_class_symlink)
+
+            # Find PCIe directory
+            # The usual form is /sys/devices/..pcie_id../drm/renderD128
+            # or /sys/devices/..pcie_id../drm/card1/card1-DP-8 so
+            # find drm parent directory and bind its parent
+            next_is_pcie_dir = False
+            for parent_dir in drm_class_symlink.resolve().parents:
+                if next_is_pcie_dir:
+                    pcie_directories.add(parent_dir)
+                    break
+
+                next_is_pcie_dir = parent_dir.name == "drm"
+
+        # Bind all PCIe directories
+        for pcie_dir in pcie_directories:
+            yield DevBind(pcie_dir)
+
+        # Iterate over /sys/dev/char/ symlinks and recreate the ones that
+        # point to the PCIe directories
+        sys_dev_char_path = Path("/sys/dev/char")
+        for sys_dev_char_path in Path("/sys/dev/char").iterdir():
+            if not sys_dev_char_path.is_symlink():
+                continue
+
+            char_path_resolved = sys_dev_char_path.resolve()
+
+            for pcie_dir in pcie_directories:
+                if char_path_resolved.is_relative_to(pcie_dir):
+                    yield Symlink(sys_dev_char_path.readlink(), sys_dev_char_path)
+                    break
 
         yield DevBind("/dev/dri")
 

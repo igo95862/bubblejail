@@ -150,11 +150,17 @@ class BwrapRawArgs(BwrapConfigBase):
 
 
 class FileTransfer:
-    __slots__ = ("content", "dest")
+    __slots__ = ("content", "dest", "permissions")
 
-    def __init__(self, content: bytes, dest: Pathlike):
+    def __init__(self, content: bytes, dest: Pathlike, permissions: int | None = None):
         self.content = content
         self.dest = str(dest)
+        self.permissions = permissions
+
+    def permissions_args(self) -> Generator[str, None, None]:
+        if self.permissions is not None:
+            yield "--perms"
+            yield f"{self.permissions:04o}"
 
 
 class DbusCommon:
