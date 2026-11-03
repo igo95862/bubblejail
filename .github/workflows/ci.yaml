@@ -22,9 +22,13 @@ jobs:
           pacman --noconfirm -Syu
           git
           python-pyflakes reuse
-          mypy python-pyqt6 python-tomli-w python-cattrs
+          mypy python-tomli-w python-cattrs
           python-black python-isort
           codespell meson
+      - name: Install PyQt6 from archives
+        run: >
+          pacman --noconfirm -U
+          https://archive.archlinux.org/packages/p/python-pyqt6/python-pyqt6-6.11.0-4-x86_64.pkg.tar.zst
       - name: Checkout
         uses: actions/checkout@df4cb1c069e1874edd31b4311f1884172cec0e10 # v6.0.3
       - name: Add safe git directory
