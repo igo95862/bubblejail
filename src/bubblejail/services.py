@@ -18,6 +18,7 @@ from multiprocessing import Process
 from os import O_CLOEXEC, O_NONBLOCK, environ, getpid, getuid, pipe2, readlink
 from pathlib import Path
 from shutil import which
+import subprocess
 from sys import stderr
 from typing import TYPE_CHECKING, Any, ClassVar, NotRequired, TypedDict, cast
 
@@ -636,6 +637,10 @@ class DirectRendering(BubblejailService):
                     break
 
         yield DevBind("/dev/dri")
+
+        # Nvidia initialization check
+        if Path("/dev/nvidiactl").exists() and not Path("/dev/nvidia-modeset").exists():
+            subprocess.run(["nvidia-modprobe", "-m"])
 
         # Nvidia specific binds
         for nv_dev in Path("/dev/").iterdir():
