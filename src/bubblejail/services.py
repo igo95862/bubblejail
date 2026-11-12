@@ -13,7 +13,7 @@ from contextlib import ExitStack
 from dataclasses import dataclass, field, fields
 from enum import IntFlag
 from enum import auto as enum_auto
-from functools import cache
+from functools import cache, singledispatch
 from multiprocessing import Process
 from os import O_CLOEXEC, O_NONBLOCK, environ, getpid, getuid, pipe2, readlink
 from pathlib import Path
@@ -25,6 +25,7 @@ from xdg import BaseDirectory
 
 from .bwrap_config import (
     Bind,
+    BindTry,
     BwrapConfigBase,
     BwrapRawArgs,
     ChangeDir,
@@ -725,17 +726,25 @@ class Joystick(BubblejailService):
         "This service provides access to them."
     )
 
+@dataclass(slots=True)
+class Mount:
+    src: Path = field(default=None,metadata=SettingFieldMetadata(
+        description="Must be a list of mounts, ['path'] or [['/src','/dst','optinal']]"))
+    dst: Path = field(default=None,metadata=SettingFieldMetadata(
+        description="To define a bind mount the long form must be used, [['/src','/dst']]"))
+    optional: bool = field(default=False,metadata=SettingFieldMetadata(
+        description="Try to mount, if it exists. Accepts 'optional' or 'try' [['/src','optinal']]"))
 
 @dataclass(slots=True)
 class RootShareSettings:
-    paths: list[str] = field(
+    paths: list[Mount] = field(
         default_factory=list,
         metadata=SettingFieldMetadata(
             pretty_name="Read/Write paths",
             description="Path to share with sandbox",
         ),
     )
-    read_only_paths: list[str] = field(
+    read_only_paths: list[Mount] = field(
         default_factory=list,
         metadata=SettingFieldMetadata(
             pretty_name="Read only paths",
@@ -743,6 +752,8 @@ class RootShareSettings:
         ),
     )
 
+def PathLen(mount : Mount):
+    return len(mount.dst.parts)
 
 class RootShare(BubblejailService):
     Settings = RootShareSettings
@@ -752,16 +763,22 @@ class RootShare(BubblejailService):
         if settings is None:
             raise RuntimeError
 
-        read_write_paths = set(settings.paths)
-        read_only_paths = set(settings.read_only_paths)
+        read_write_paths = settings.paths
+        read_only_paths = settings.read_only_paths
         all_paths = [*read_write_paths, *read_only_paths]
-        all_paths.sort(key=len)
+        all_paths.sort(key=PathLen)
 
         for x in all_paths:
             if x in read_write_paths:
-                yield Bind(x)
+                if x.optional:
+                    yield BindTry(x.src,x.dst)
+                else:
+                    yield Bind(x.src,x.dst)
             elif x in read_only_paths:
-                yield ReadOnlyBind(x)
+                if x.optional:
+                    yield ReadOnlyBindTry(x.src,x.dst)
+                else:
+                    yield ReadOnlyBind(x.src,x.dst)
             else:
                 raise ValueError
 
@@ -1760,8 +1777,62 @@ class ServiceContainer:
             else:
                 return new_converter.structure(val, list[str])
 
+        def parse_field(val: str, mount: Mount) -> Path | None:
+            x = Path(val)
+            if x.is_absolute():
+                return x
+
+            if x.parts[0] == '~':
+                return x.expanduser()
+
+            match val:
+                case 'try' | 'optional':
+                    mount.optional = True
+                    return None
+
+            raise ValueError(fields(Mount)[0].metadata['description'])
+
+        @singledispatch
+        def structure_Mount(val, Any):
+            raise ValueError(fields(Mount)[0].metadata['description'])
+
+        @structure_Mount.register
+        def _(val: str, str) -> Mount:
+            mount = Mount()
+            field = parse_field(val, mount)
+
+            if isinstance(field, Path):
+                mount.src = field
+                mount.dst = mount.src
+                return mount
+
+            raise ValueError(fields(Mount)[0].metadata['description'])
+
+        @structure_Mount.register
+        def _(array: list, list) -> Mount:
+            mount = Mount()
+
+            for val in array:
+                field = parse_field(val, mount)
+                if isinstance(field, Path):
+                    if not mount.src:
+                        mount.src = field
+                    else:
+                        mount.dst = field
+
+            if mount.src:
+                if not mount.dst:
+                    mount.dst = mount.src
+                return mount
+
+            raise ValueError(fields(Mount)[0].metadata['description'])
+
         new_converter.register_structure_hook(
             str | list[str], structure_str_or_list_str
+        )
+
+        new_converter.register_structure_hook(
+            Mount, structure_Mount
         )
 
         return new_converter
